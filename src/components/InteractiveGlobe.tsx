@@ -15,7 +15,7 @@ import type { LocationData } from '@/types';
 const Globe = dynamic(() => import('@/components/GlobeWrapper'), { ssr: false });
 
 /** 初始相机高度（地球半径倍数），越大地球越远 */
-const INITIAL_ALTITUDE = 3.5;
+const INITIAL_ALTITUDE = 5.5;
 const POV_TRANSITION_MS = 1000;
 
 interface InteractiveGlobeProps {
