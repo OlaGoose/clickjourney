@@ -1,0 +1,163 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import StarField from '@/components/StarField';
+import InteractiveGlobe from '@/components/InteractiveGlobe';
+import Carousel from '@/components/Carousel';
+import MemoryDetail from '@/components/MemoryDetail';
+import InfoModal from '@/components/InfoModal';
+import { useOptionalAuth } from '@/lib/auth';
+import { getCarouselItems, buildCarouselItems } from '@/lib/storage';
+import type { LocationData, CarouselItem, GeminiResponse } from '@/types';
+import { ViewState } from '@/types';
+
+const INITIAL_LOCATION: LocationData = {
+  lat: 40.3956,
+  lng: -74.1768,
+  name: 'Orbit View',
+  country: 'Space',
+};
+
+const AVATAR_SEEDS = ['Felix', 'Aneka', 'Mark', 'Sora'];
+
+export default function HomePage() {
+  const auth = useOptionalAuth();
+  const userId = auth?.user?.id ?? null;
+
+  const [carouselItems, setCarouselItems] = useState<CarouselItem[]>(() => buildCarouselItems([]));
+  const [currentLocation, setCurrentLocation] = useState<LocationData>(INITIAL_LOCATION);
+  const [selectedItem, setSelectedItem] = useState<CarouselItem | null>(null);
+  const [viewState, setViewState] = useState<ViewState>(ViewState.IDLE);
+  const [infoModalData, setInfoModalData] = useState<GeminiResponse | null>(null);
+  const [infoModalLoading, setInfoModalLoading] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCarouselItems(userId).then((items) => {
+      if (!cancelled) setCarouselItems(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const handleItemClick = useCallback((item: CarouselItem) => {
+    setSelectedItem(item);
+    setViewState(ViewState.INFO);
+    if (item.coordinates) {
+      setCurrentLocation({
+        lat: item.coordinates.lat,
+        lng: item.coordinates.lng,
+        name: item.coordinates.name || item.title,
+        region: item.coordinates.region,
+        country: item.coordinates.country,
+      });
+    }
+  }, []);
+
+  const handleBack = useCallback(() => {
+    setSelectedItem(null);
+    setViewState(ViewState.IDLE);
+  }, []);
+
+  const fetchLocationInfo = useCallback(async () => {
+    setShowInfoModal(true);
+    setInfoModalLoading(true);
+    setInfoModalData(null);
+    try {
+      const params = new URLSearchParams({
+        name: currentLocation.name,
+        lat: String(currentLocation.lat),
+        lng: String(currentLocation.lng),
+      });
+      const res = await fetch(`/api/location-info?${params}`);
+      const data = await res.json();
+      setInfoModalData({ text: data.text, groundingChunks: data.groundingChunks });
+    } catch {
+      setInfoModalData({ text: "Sorry, I couldn't connect to the travel guide at the moment." });
+    } finally {
+      setInfoModalLoading(false);
+    }
+  }, [currentLocation]);
+
+  const displayItems = carouselItems;
+
+  return (
+    <div className="relative h-screen w-full select-none overflow-hidden bg-black font-sans">
+      <StarField />
+
+      <div
+        className={`transition-opacity duration-500 ${
+          viewState === ViewState.INFO ? 'opacity-0' : 'opacity-100'
+        }`}
+      >
+        <InteractiveGlobe center={currentLocation} />
+      </div>
+
+      {viewState === ViewState.INFO && selectedItem && (
+        <MemoryDetail item={selectedItem} onBack={handleBack} />
+      )}
+
+      <div
+        className={`absolute inset-0 z-20 pointer-events-none transition-opacity duration-300 ${
+          viewState === ViewState.INFO ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
+      >
+        <div className="absolute left-6 top-12 z-30 pointer-events-auto md:left-16">
+          <h2 className="mb-3 text-5xl font-bold leading-tight tracking-tight text-[#f5f5f7] drop-shadow-lg md:text-6xl">
+            {currentLocation.name}
+          </h2>
+          <div className="flex items-center">
+            <div className="flex -space-x-3">
+              {AVATAR_SEEDS.map((seed, i) => (
+                <img
+                  key={seed}
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`}
+                  alt="Traveler"
+                  className="h-10 w-10 rounded-full border-2 border-black bg-gray-200"
+                  style={{ zIndex: 10 - i }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="fixed bottom-24 z-30 w-full pointer-events-auto">
+          <Carousel items={displayItems} onItemClick={handleItemClick} />
+        </div>
+
+        <div className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-2">
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-full bg-white px-8 py-3 text-sm font-medium text-black shadow-xl transition-all hover:scale-105 hover:bg-white/90 active:scale-95 md:text-base"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5l7 7-7 7" />
+            </svg>
+            Review Journey
+          </button>
+        </div>
+      </div>
+
+      {showInfoModal && (
+        <InfoModal
+          data={infoModalData}
+          isLoading={infoModalLoading}
+          onClose={() => setShowInfoModal(false)}
+        />
+      )}
+    </div>
+  );
+}
