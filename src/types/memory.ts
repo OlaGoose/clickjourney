@@ -43,7 +43,12 @@ export interface CarouselItem {
   detailTitle?: string;
   category?: string;
   gallery?: string[];
+  /** Short label (e.g. JOURNEY START) or long callout/description for this memory */
   description?: string;
+  /** Optional audio URL for this memory; callout play button uses it when set */
+  audioUrl?: string;
+  /** Avatar seeds for journey participants (e.g. for DiceBear); drives header avatars when set */
+  participants?: string[];
   price?: string;
   rating?: number;
   coordinates?: LocationData;

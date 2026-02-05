@@ -9,13 +9,9 @@ interface CarouselProps {
   onActiveIndexChange?: (index: number) => void;
 }
 
-function getStartIndex(length: number) {
-  return length > 0 ? Math.floor(length / 2) : 0;
-}
-
 export default function Carousel({ items, onItemClick, onActiveIndexChange }: CarouselProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState(() => getStartIndex(items.length));
+  const [activeIndex, setActiveIndex] = useState(0);
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const initAudio = () => {
@@ -51,9 +47,8 @@ export default function Carousel({ items, onItemClick, onActiveIndexChange }: Ca
     const container = scrollContainerRef.current;
     const cardWidth = 280;
     const gap = 16;
-    const startIndex = getStartIndex(items.length);
-    container.scrollTo({ left: startIndex * (cardWidth + gap), behavior: 'instant' as ScrollBehavior });
-    setActiveIndex(startIndex);
+    container.scrollTo({ left: 0, behavior: 'instant' as ScrollBehavior });
+    setActiveIndex(0);
   }, [items.length]);
 
   useEffect(() => {

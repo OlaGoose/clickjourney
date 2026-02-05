@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import StarField from '@/components/StarField';
 import InteractiveGlobe from '@/components/InteractiveGlobe';
 import Carousel from '@/components/Carousel';
@@ -18,7 +18,10 @@ const INITIAL_LOCATION: LocationData = {
   country: 'Space',
 };
 
-const AVATAR_SEEDS = ['Felix', 'Aneka', 'Mark', 'Sora'];
+const DEFAULT_AVATAR_SEEDS = ['Felix', 'Aneka', 'Mark', 'Sora'];
+
+const DEFAULT_CALLOUT_TEXT =
+  'Orbit Journey turns every place you visit into a lasting memory. Track destinations, relive moments, and share your path with fellow travelers—all in one place.';
 
 export default function HomePage() {
   const auth = useOptionalAuth();
@@ -26,12 +29,15 @@ export default function HomePage() {
 
   const [carouselItems, setCarouselItems] = useState<CarouselItem[]>(() => buildCarouselItems([]));
   const [currentLocation, setCurrentLocation] = useState<LocationData>(INITIAL_LOCATION);
+  /** Current memory at carousel active index; single source for header/callout/globe linkage */
+  const [activeItem, setActiveItem] = useState<CarouselItem | null>(null);
   const [selectedItem, setSelectedItem] = useState<CarouselItem | null>(null);
   const [viewState, setViewState] = useState<ViewState>(ViewState.IDLE);
   const [infoModalData, setInfoModalData] = useState<GeminiResponse | null>(null);
   const [infoModalLoading, setInfoModalLoading] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [calloutPlaying, setCalloutPlaying] = useState(false);
+  const calloutAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,15 +69,22 @@ export default function HomePage() {
   }, []);
 
   const handleActiveIndexChange = useCallback((index: number) => {
-    const item = carouselItems[index];
-    if (!item?.coordinates) return;
-    setCurrentLocation({
-      lat: item.coordinates.lat,
-      lng: item.coordinates.lng,
-      name: item.coordinates.name || item.title,
-      region: item.coordinates.region,
-      country: item.coordinates.country,
-    });
+    const item = carouselItems[index] ?? null;
+    setActiveItem(item);
+    if (item?.coordinates) {
+      setCurrentLocation({
+        lat: item.coordinates.lat,
+        lng: item.coordinates.lng,
+        name: item.coordinates.name || item.title,
+        region: item.coordinates.region,
+        country: item.coordinates.country,
+      });
+    }
+    setCalloutPlaying(false);
+    if (calloutAudioRef.current) {
+      calloutAudioRef.current.pause();
+      calloutAudioRef.current = null;
+    }
   }, [carouselItems]);
 
   const fetchLocationInfo = useCallback(async () => {
@@ -95,6 +108,31 @@ export default function HomePage() {
   }, [currentLocation]);
 
   const displayItems = carouselItems;
+  const titleText = activeItem ? (activeItem.coordinates?.name ?? activeItem.title) : currentLocation.name;
+  const avatarSeeds = (activeItem?.participants?.length ? activeItem.participants : DEFAULT_AVATAR_SEEDS) as string[];
+  const calloutText = activeItem?.description ?? DEFAULT_CALLOUT_TEXT;
+
+  const handleCalloutPlayPause = useCallback(() => {
+    if (activeItem?.audioUrl) {
+      if (calloutPlaying) {
+        calloutAudioRef.current?.pause();
+        calloutAudioRef.current = null;
+        setCalloutPlaying(false);
+      } else {
+        if (calloutAudioRef.current) calloutAudioRef.current.pause();
+        const audio = new Audio(activeItem.audioUrl);
+        calloutAudioRef.current = audio;
+        audio.play().catch(() => {});
+        audio.onended = () => {
+          setCalloutPlaying(false);
+          calloutAudioRef.current = null;
+        };
+        setCalloutPlaying(true);
+      }
+    } else {
+      setCalloutPlaying((p) => !p);
+    }
+  }, [activeItem?.audioUrl, calloutPlaying]);
 
   return (
     <div className="relative h-screen w-full select-none overflow-hidden bg-black font-sans">
@@ -119,14 +157,14 @@ export default function HomePage() {
       >
         <div className="absolute left-6 top-12 right-6 z-30 pointer-events-auto md:left-16">
           <h2 className="mb-3 text-5xl font-bold leading-tight tracking-tight text-[#f5f5f7] drop-shadow-lg md:text-6xl">
-            {currentLocation.name}
+            {titleText}
           </h2>
           <div className="flex items-center gap-3">
             <div className="flex -space-x-3">
-              {AVATAR_SEEDS.map((seed, i) => (
+              {avatarSeeds.map((seed, i) => (
                 <img
-                  key={seed}
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`}
+                  key={`${seed}-${i}`}
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`}
                   alt="Traveler"
                   className="h-10 w-10 rounded-full border-2 border-black bg-gray-200"
                   style={{ zIndex: 10 - i }}
@@ -140,12 +178,12 @@ export default function HomePage() {
           <div className="callout mt-4" data-staggered-item="">
             <div className="subsection-copy-block keyline typography-callout-keyline-base">
               <p className="callout-copy">
-                Orbit Journey turns every place you visit into a lasting memory. Track destinations, relive moments, and share your path with fellow travelers—all in one place.
+                {calloutText}
               </p>
               <button
                 type="button"
                 aria-label={calloutPlaying ? 'Pause' : 'Play'}
-                onClick={() => setCalloutPlaying((p) => !p)}
+                onClick={handleCalloutPlayPause}
                 className="callout-player-btn"
               >
                 {calloutPlaying ? (
