@@ -24,6 +24,20 @@ const DEFAULT_AVATAR_SEEDS = ['Felix', 'Aneka', 'Mark', 'Sora'];
 const DEFAULT_CALLOUT_TEXT =
   'Orbit Journey turns every place you visit into a lasting memory. Track destinations, relive moments, and share your path with fellow travelers—all in one place.';
 
+/** Demo 测试：public/audio 下的音频，切换卡片时随机播放 */
+const DEMO_AUDIO_URLS = [
+  '/audio/Skyline_and_dim_sum__Hong_Kong.wav',
+  '/audio/Sunset_on_the_Pacific__palm_tr.wav',
+];
+
+function pickRandomDemoAudio(): string {
+  return DEMO_AUDIO_URLS[Math.floor(Math.random() * DEMO_AUDIO_URLS.length)]!;
+}
+
+function isContentCard(item: CarouselItem | null): boolean {
+  return !!item && item.id !== 'start-card' && item.id !== 'end-card';
+}
+
 export default function HomePage() {
   const auth = useOptionalAuth();
   const userId = auth?.user?.id ?? null;
@@ -38,6 +52,8 @@ export default function HomePage() {
   const [infoModalLoading, setInfoModalLoading] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [calloutPlaying, setCalloutPlaying] = useState(false);
+  /** Demo: 当前卡片对应的随机音频 URL，切换卡片时更新 */
+  const [currentDemoAudioUrl, setCurrentDemoAudioUrl] = useState<string | null>(null);
   const calloutAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -86,6 +102,20 @@ export default function HomePage() {
       calloutAudioRef.current.pause();
       calloutAudioRef.current = null;
     }
+
+    const demoUrl = pickRandomDemoAudio();
+    setCurrentDemoAudioUrl(demoUrl);
+
+    if (isContentCard(item)) {
+      const audio = new Audio(demoUrl);
+      calloutAudioRef.current = audio;
+      audio.play().catch(() => {});
+      audio.onended = () => {
+        setCalloutPlaying(false);
+        calloutAudioRef.current = null;
+      };
+      setCalloutPlaying(true);
+    }
   }, [carouselItems]);
 
   const fetchLocationInfo = useCallback(async () => {
@@ -112,16 +142,17 @@ export default function HomePage() {
   const titleText = activeItem ? (activeItem.coordinates?.name ?? activeItem.title) : currentLocation.name;
   const avatarSeeds = (activeItem?.participants?.length ? activeItem.participants : DEFAULT_AVATAR_SEEDS) as string[];
   const calloutText = activeItem?.description ?? DEFAULT_CALLOUT_TEXT;
+  const effectiveAudioUrl = activeItem?.audioUrl ?? currentDemoAudioUrl;
 
   const handleCalloutPlayPause = useCallback(() => {
-    if (activeItem?.audioUrl) {
+    if (effectiveAudioUrl) {
       if (calloutPlaying) {
         calloutAudioRef.current?.pause();
         calloutAudioRef.current = null;
         setCalloutPlaying(false);
       } else {
         if (calloutAudioRef.current) calloutAudioRef.current.pause();
-        const audio = new Audio(activeItem.audioUrl);
+        const audio = new Audio(effectiveAudioUrl);
         calloutAudioRef.current = audio;
         audio.play().catch(() => {});
         audio.onended = () => {
@@ -133,7 +164,7 @@ export default function HomePage() {
     } else {
       setCalloutPlaying((p) => !p);
     }
-  }, [activeItem?.audioUrl, calloutPlaying]);
+  }, [effectiveAudioUrl, calloutPlaying]);
 
   return (
     <div className="relative h-screen w-full select-none overflow-hidden bg-black font-sans">
@@ -179,7 +210,7 @@ export default function HomePage() {
               Together.
             </span>
           </div>
-          <div className="callout mt-4" data-staggered-item="">
+          <div className="callout" data-staggered-item="">
             <div className="subsection-copy-block keyline typography-callout-keyline-base">
               <p className="callout-copy">
                 {calloutText}
