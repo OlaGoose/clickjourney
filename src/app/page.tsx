@@ -210,7 +210,7 @@ export default function HomePage() {
               Together.
             </span>
           </div>
-          <div className="callout" data-staggered-item="">
+          <div className="callout mt-1" data-staggered-item="">
             <div className="subsection-copy-block keyline typography-callout-keyline-base">
               <p className="callout-copy">
                 {calloutText}
