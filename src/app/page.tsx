@@ -31,6 +31,7 @@ export default function HomePage() {
   const [infoModalData, setInfoModalData] = useState<GeminiResponse | null>(null);
   const [infoModalLoading, setInfoModalLoading] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [calloutPlaying, setCalloutPlaying] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,11 +105,11 @@ export default function HomePage() {
           viewState === ViewState.INFO ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
       >
-        <div className="absolute left-6 top-12 z-30 pointer-events-auto md:left-16">
+        <div className="absolute left-6 top-12 right-6 z-30 pointer-events-auto md:left-16">
           <h2 className="mb-3 text-5xl font-bold leading-tight tracking-tight text-[#f5f5f7] drop-shadow-lg md:text-6xl">
             {currentLocation.name}
           </h2>
-          <div className="flex items-center">
+          <div className="flex items-center gap-3">
             <div className="flex -space-x-3">
               {AVATAR_SEEDS.map((seed, i) => (
                 <img
@@ -119,6 +120,33 @@ export default function HomePage() {
                   style={{ zIndex: 10 - i }}
                 />
               ))}
+            </div>
+            <span className="subhead above-keyline typography-callout-above-keyline-base">
+              Together.
+            </span>
+          </div>
+          <div className="callout mt-4" data-staggered-item="">
+            <div className="subsection-copy-block keyline typography-callout-keyline-base">
+              <p className="callout-copy">
+                Orbit Journey turns every place you visit into a lasting memory. Track destinations, relive moments, and share your path with fellow travelers—all in one place.
+              </p>
+              <button
+                type="button"
+                aria-label={calloutPlaying ? 'Pause' : 'Play'}
+                onClick={() => setCalloutPlaying((p) => !p)}
+                className="callout-player-btn"
+              >
+                {calloutPlaying ? (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden>
+                    <rect x="1" y="0" width="2.5" height="10" rx="0.5" />
+                    <rect x="6.5" y="0" width="2.5" height="10" rx="0.5" />
+                  </svg>
+                ) : (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden>
+                    <path d="M2 1.5v7L8.5 5L2 1.5z" />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
         </div>
