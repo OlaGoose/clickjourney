@@ -6,13 +6,14 @@ import type { CarouselItem } from '@/types';
 interface CarouselProps {
   items: CarouselItem[];
   onItemClick?: (item: CarouselItem) => void;
+  onActiveIndexChange?: (index: number) => void;
 }
 
 function getStartIndex(length: number) {
   return length > 0 ? Math.floor(length / 2) : 0;
 }
 
-export default function Carousel({ items, onItemClick }: CarouselProps) {
+export default function Carousel({ items, onItemClick, onActiveIndexChange }: CarouselProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(() => getStartIndex(items.length));
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -57,11 +58,12 @@ export default function Carousel({ items, onItemClick }: CarouselProps) {
 
   useEffect(() => {
     if (activeIndex >= 0 && activeIndex < items.length) {
+      onActiveIndexChange?.(activeIndex);
       if (audioContextRef.current?.state === 'suspended') audioContextRef.current.resume();
       const item = items[activeIndex];
       if (item?.chord?.length) playChord(item.chord);
     }
-  }, [activeIndex, items]);
+  }, [activeIndex, items, onActiveIndexChange]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;

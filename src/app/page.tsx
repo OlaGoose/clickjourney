@@ -62,6 +62,18 @@ export default function HomePage() {
     setViewState(ViewState.IDLE);
   }, []);
 
+  const handleActiveIndexChange = useCallback((index: number) => {
+    const item = carouselItems[index];
+    if (!item?.coordinates) return;
+    setCurrentLocation({
+      lat: item.coordinates.lat,
+      lng: item.coordinates.lng,
+      name: item.coordinates.name || item.title,
+      region: item.coordinates.region,
+      country: item.coordinates.country,
+    });
+  }, [carouselItems]);
+
   const fetchLocationInfo = useCallback(async () => {
     setShowInfoModal(true);
     setInfoModalLoading(true);
@@ -152,7 +164,11 @@ export default function HomePage() {
         </div>
 
         <div className="fixed bottom-24 z-30 w-full pointer-events-auto">
-          <Carousel items={displayItems} onItemClick={handleItemClick} />
+          <Carousel
+          items={displayItems}
+          onItemClick={handleItemClick}
+          onActiveIndexChange={handleActiveIndexChange}
+        />
         </div>
 
         <div className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-2">

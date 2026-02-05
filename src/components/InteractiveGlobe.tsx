@@ -2,7 +2,7 @@
  * @Author: meta-kk 11097094+teacher-kk@user.noreply.gitee.com
  * @Date: 2026-02-05 00:27:15
  * @LastEditors: meta-kk 11097094+teacher-kk@user.noreply.gitee.com
- * @LastEditTime: 2026-02-05 17:47:09
+ * @LastEditTime: 2026-02-05 18:32:07
  * @FilePath: /orbit-journey-next/src/components/InteractiveGlobe.tsx
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -15,7 +15,7 @@ import type { LocationData } from '@/types';
 const Globe = dynamic(() => import('@/components/GlobeWrapper'), { ssr: false });
 
 /** 初始相机高度（地球半径倍数），越大地球越远 */
-const INITIAL_ALTITUDE = 5.5;
+const INITIAL_ALTITUDE = 4;
 const POV_TRANSITION_MS = 1000;
 
 interface InteractiveGlobeProps {

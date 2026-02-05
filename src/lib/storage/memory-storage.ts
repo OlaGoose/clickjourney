@@ -11,15 +11,28 @@ import type { CarouselItem } from '@/types';
 import { getDemoGallerySlice } from './demo-gallery';
 import { rowToCarouselItem, carouselItemToRow, type TravelMemoryRow } from './types';
 
-/** Original 4 cards for homepage carousel. */
+/** Original 4 cards for homepage carousel (with coordinates so globe highlight updates on card switch). */
 const DEMO_ITEMS_MAIN: CarouselItem[] = [
-  { id: '1', title: 'Severance', subtitle: 'Memory', image: 'https://picsum.photos/id/1015/600/400', color: 'rgb(44, 62, 80)', chord: [220, 261.63, 329.63], gallery: getDemoGallerySlice(4) },
-  { id: '2', title: 'Ted Lasso', subtitle: 'Memory', image: 'https://picsum.photos/id/1016/600/400', color: 'rgb(41, 128, 185)', chord: [261.63, 329.63, 392], gallery: getDemoGallerySlice(4) },
-  { id: '3', title: 'Foundation', subtitle: 'Memory', image: 'https://picsum.photos/id/1018/600/400', color: 'rgb(142, 68, 173)', chord: [196, 246.94, 293.66], gallery: getDemoGallerySlice(4) },
-  { id: '4', title: 'The Morning Show', subtitle: 'Memory', image: 'https://picsum.photos/id/1019/600/400', color: 'rgb(192, 57, 43)', chord: [174.61, 220, 261.63], gallery: getDemoGallerySlice(4) },
+  { id: '1', title: 'Severance', subtitle: 'Memory', image: 'https://picsum.photos/id/1015/600/400', color: 'rgb(44, 62, 80)', chord: [220, 261.63, 329.63], gallery: getDemoGallerySlice(4), coordinates: { lat: 40.7128, lng: -74.006, name: 'New York', country: 'USA' } },
+  { id: '2', title: 'Ted Lasso', subtitle: 'Memory', image: 'https://picsum.photos/id/1016/600/400', color: 'rgb(41, 128, 185)', chord: [261.63, 329.63, 392], gallery: getDemoGallerySlice(4), coordinates: { lat: 51.5074, lng: -0.1278, name: 'London', country: 'UK' } },
+  { id: '3', title: 'Foundation', subtitle: 'Memory', image: 'https://picsum.photos/id/1018/600/400', color: 'rgb(142, 68, 173)', chord: [196, 246.94, 293.66], gallery: getDemoGallerySlice(4), coordinates: { lat: 35.6762, lng: 139.6503, name: 'Tokyo', country: 'Japan' } },
+  { id: '4', title: 'The Morning Show', subtitle: 'Memory', image: 'https://picsum.photos/id/1019/600/400', color: 'rgb(192, 57, 43)', chord: [174.61, 220, 261.63], gallery: getDemoGallerySlice(4), coordinates: { lat: 48.8566, lng: 2.3522, name: 'Paris', country: 'France' } },
 ];
 
 const MOCK_CARD_IMAGES = [1015, 1016, 1018, 1019, 1020, 1021, 1022, 1023, 1024];
+
+/** Demo locations for gallery mock cards so globe highlight updates. */
+const DEMO_COORDS = [
+  { lat: 34.0522, lng: -118.2437, name: 'Los Angeles', country: 'USA' },
+  { lat: -33.8688, lng: 151.2093, name: 'Sydney', country: 'Australia' },
+  { lat: 41.9028, lng: 12.4964, name: 'Rome', country: 'Italy' },
+  { lat: 52.52, lng: 13.405, name: 'Berlin', country: 'Germany' },
+  { lat: 19.4326, lng: -99.1332, name: 'Mexico City', country: 'Mexico' },
+  { lat: 22.3193, lng: 114.1694, name: 'Hong Kong', country: 'China' },
+  { lat: -23.5505, lng: -46.6333, name: 'São Paulo', country: 'Brazil' },
+  { lat: 55.7558, lng: 37.6173, name: 'Moscow', country: 'Russia' },
+  { lat: 28.6139, lng: 77.209, name: 'New Delhi', country: 'India' },
+];
 
 /** 9 cards for checking detail layout: 0–8 images (mock 详情页 0–8 张图). */
 const DEMO_ITEMS_GALLERY_MOCK: CarouselItem[] = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
@@ -30,6 +43,7 @@ const DEMO_ITEMS_GALLERY_MOCK: CarouselItem[] = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(
   color: 'rgb(52, 73, 94)',
   chord: [220, 261.63, 329.63],
   gallery: getDemoGallerySlice(n),
+  coordinates: DEMO_COORDS[n],
 }));
 
 const DEMO_ITEMS: CarouselItem[] = [...DEMO_ITEMS_MAIN, ...DEMO_ITEMS_GALLERY_MOCK];
@@ -43,6 +57,7 @@ const START_CARD: CarouselItem = {
   image: '',
   color: '#09090b',
   chord: [130.81, 196, 261.63],
+  coordinates: { lat: 40.3956, lng: -74.1768, name: 'Orbit View', country: 'Space' },
 };
 
 const END_CARD: CarouselItem = {
@@ -54,6 +69,7 @@ const END_CARD: CarouselItem = {
   image: '',
   color: '#09090b',
   chord: [130.81, 164.81, 196],
+  coordinates: { lat: 40.3956, lng: -74.1768, name: 'Orbit View', country: 'Space' },
 };
 
 /** Build carousel list: start + memories (repeated) + end */
