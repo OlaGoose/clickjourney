@@ -2,6 +2,14 @@
 
 import { createContext, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { SupabaseAuthService } from './supabase-auth';
+import {
+  isLocalDevelopment,
+  isMockTestCredentials,
+  getMockSession,
+  setMockSession,
+  clearMockSession,
+  createMockSession,
+} from './mock-auth';
 import type {
   AuthState,
   LoginCredentials,
@@ -42,6 +50,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
     const init = async () => {
       try {
+        if (isLocalDevelopment() && typeof window !== 'undefined') {
+          const mock = getMockSession();
+          if (mock && mounted) {
+            setUser(mock.user);
+            setProfile(mock.profile);
+            setSession({ user: mock.user } as Session);
+            setIsLoading(false);
+            return;
+          }
+        }
         const { session: s } = await SupabaseAuthService.getSession();
         if (!mounted) return;
         if (s) {
@@ -77,6 +95,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (c: LoginCredentials) => {
     setIsLoading(true);
     try {
+      if (isLocalDevelopment() && isMockTestCredentials(c.email, c.password)) {
+        const mock = createMockSession();
+        setMockSession(mock);
+        setUser(mock.user);
+        setProfile(mock.profile);
+        setSession({ user: mock.user } as Session);
+        return { error: null };
+      }
       const r = await SupabaseAuthService.signIn(c);
       if (!r.error && r.user) await loadUserProfile(r.user.id);
       return { error: r.error };
@@ -103,6 +129,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     setIsLoading(true);
     try {
+      if (isLocalDevelopment() && getMockSession()) {
+        clearMockSession();
+        setUser(null);
+        setProfile(null);
+        setSession(null);
+        return { error: null };
+      }
       const r = await SupabaseAuthService.signOut();
       if (!r.error) {
         setUser(null);

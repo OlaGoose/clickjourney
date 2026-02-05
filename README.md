@@ -55,6 +55,15 @@ SUPABASE_SERVICE_ROLE_KEY=...
 - `travel_memories`：旅行记忆（user_id 可空为 Demo 数据）
 - RLS 已配置：用户仅能读写自己的 profile 与 memories
 
+## 登录 / 测试账号
+
+- **真实 Supabase**：在 `/auth` 使用邮箱注册或登录，或使用 Google/GitHub OAuth（需在 Supabase 控制台配置）。
+- **本地模拟登录（无需 Supabase）**：在 `.env.local` 中设置 `NEXT_PUBLIC_ENABLE_MOCK_AUTH=true`，然后访问 `/auth`，使用以下默认测试账号：
+  - **邮箱**：`test@orbit.local`
+  - **密码**：`test1234`
+
+首页右上角头像：未登录点击跳转登录；已登录点击打开侧边栏（个人资料、设置、登出等）。
+
 ## 开发与构建
 
 ```bash
