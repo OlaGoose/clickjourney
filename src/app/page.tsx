@@ -214,26 +214,50 @@ export default function HomePage() {
         </div>
 
         <div className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-2">
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-full bg-white px-8 py-3 text-sm font-medium text-black shadow-xl transition-all hover:scale-105 hover:bg-white/90 active:scale-95 md:text-base"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {auth?.user ? (
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-full px-8 py-3 text-sm font-medium text-white shadow-xl transition-all hover:scale-105 hover:opacity-90 active:scale-95 md:text-base"
+              style={{ backgroundColor: 'rgb(0, 113, 227)' }}
             >
-              <path d="M5 12h14" />
-              <path d="M12 5l7 7-7 7" />
-            </svg>
-            Review Journey
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 5v14" />
+                <path d="M5 12h14" />
+              </svg>
+              Add Memory
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-full bg-white px-8 py-3 text-sm font-medium text-black shadow-xl transition-all hover:scale-105 hover:bg-white/90 active:scale-95 md:text-base"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M5 12h14" />
+                <path d="M12 5l7 7-7 7" />
+              </svg>
+              Review Journey
+            </button>
+          )}
         </div>
       </div>
 

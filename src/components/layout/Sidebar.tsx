@@ -192,31 +192,58 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               ))}
             </div>
 
+            {/* 底部推广卡片 - 一比一复刻 aha-lang 设计 */}
             <div className="shrink-0 px-4 pb-4">
               <motion.div
-                className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md"
+                className="relative overflow-hidden rounded-2xl border border-gray-200/20 bg-gradient-to-br from-gray-50/95 to-gray-100/95 p-4 shadow-xl backdrop-blur-md dark:border-gray-700/20 dark:from-gray-800/95 dark:to-gray-900/95"
                 whileHover={{ scale: 1.02, y: -2 }}
                 transition={{ duration: 0.2 }}
               >
-                <div className="mb-4 flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/10">
-                    <span className="text-lg font-bold text-white">Orbit</span>
+                {/* 微妙的光泽效果 */}
+                <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-transparent" />
+                {/* 产品信息头部 - 一比一复刻 aha-lang */}
+                <div className="relative z-10 mb-4 flex items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-black shadow-xl">
+                    <span className="text-2xl font-bold text-white">Orbit</span>
                   </div>
                   <div className="flex-1">
-                    <h3 className="mb-1 text-lg font-bold text-[#f5f5f7]">
-                      Your journey, one place.
+                    <h3 className="mb-1 text-lg font-bold text-gray-900 dark:text-white">
+                      Journey memory.
                     </h3>
-                    <p className="text-sm text-[#a1a1a6]">
-                      Memories and places in one app.
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Get the Orbit app for the best experience
                     </p>
                   </div>
                 </div>
+                {/* 功能特色 - 一比一复刻 aha-lang */}
+                <div className="relative z-10 mb-4 grid grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                    <span>Real-time updates</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    <span>Push notifications</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                    <span>Offline reading</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                    <span>Dark mode</span>
+                  </div>
+                </div>
+                {/* 下载按钮 - 一比一复刻 aha-lang */}
                 <motion.button
                   type="button"
-                  className="w-full rounded-xl bg-white py-3 px-4 text-base font-semibold text-black transition-colors hover:bg-white/90"
+                  className="relative z-10 flex w-full items-center justify-center gap-2 rounded-xl bg-black px-6 py-4 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                  </svg>
                   Get the app
                 </motion.button>
               </motion.div>
