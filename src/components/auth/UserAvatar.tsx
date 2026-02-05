@@ -1,0 +1,92 @@
+'use client';
+
+import { useState } from 'react';
+import { UserIcon } from '@heroicons/react/24/outline';
+import { useAuth, useAuthGuard } from '@/lib/auth';
+import { Sidebar } from '@/components/layout/Sidebar';
+
+interface UserAvatarProps {
+  size?: 'sm' | 'md' | 'lg';
+  showDropdown?: boolean;
+  className?: string;
+}
+
+const sizeClasses = {
+  sm: 'h-8 w-8',
+  md: 'h-10 w-10',
+  lg: 'h-12 w-12',
+};
+
+/** Icon is smaller than button for breathing room (Apple-style). */
+const iconSizeClasses = {
+  sm: 'h-[18px] w-[18px]',
+  md: 'h-5 w-5',
+  lg: 'h-6 w-6',
+};
+
+const textSizeClasses = {
+  sm: 'text-xs',
+  md: 'text-sm',
+  lg: 'text-base',
+};
+
+export function UserAvatar({
+  size = 'md',
+  showDropdown = false,
+  className = '',
+}: UserAvatarProps) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { user, profile, isAuthenticated } = useAuth();
+  const { redirectToAuth } = useAuthGuard();
+
+  const handleAvatarClick = () => {
+    if (showDropdown) setIsSidebarOpen(true);
+  };
+
+  if (!isAuthenticated || !user) {
+    return (
+      <button
+        type="button"
+        onClick={() => redirectToAuth()}
+        className={`${sizeClasses[size]} flex items-center justify-center rounded-full bg-white/[0.12] text-white/90 transition-[background-color,transform] duration-200 hover:bg-white/[0.18] hover:scale-[1.02] active:scale-[0.98] ${className}`}
+        title="Sign in"
+        aria-label="Sign in"
+      >
+        <UserIcon className={`${iconSizeClasses[size]} shrink-0 text-white/90`} />
+      </button>
+    );
+  }
+
+  const displayName =
+    profile?.username || user.email?.split('@')[0] || 'User';
+  const avatarUrl = profile?.avatar_url ?? null;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={handleAvatarClick}
+        className={`${sizeClasses[size]} flex items-center justify-center overflow-hidden rounded-full bg-white/[0.12] transition-[background-color,transform] duration-200 hover:bg-white/[0.18] hover:scale-[1.02] active:scale-[0.98] ${className}`}
+        aria-label="Open menu"
+      >
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={displayName}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span
+            className={`${textSizeClasses[size]} font-semibold text-white`}
+          >
+            {displayName.charAt(0).toUpperCase()}
+          </span>
+        )}
+      </button>
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
+    </>
+  );
+}

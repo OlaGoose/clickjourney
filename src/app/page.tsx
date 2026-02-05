@@ -6,6 +6,7 @@ import InteractiveGlobe from '@/components/InteractiveGlobe';
 import Carousel from '@/components/Carousel';
 import MemoryDetail from '@/components/MemoryDetail';
 import InfoModal from '@/components/InfoModal';
+import { UserAvatar } from '@/components/auth/UserAvatar';
 import { useOptionalAuth } from '@/lib/auth';
 import { getCarouselItems, buildCarouselItems } from '@/lib/storage';
 import type { LocationData, CarouselItem, GeminiResponse } from '@/types';
@@ -155,6 +156,9 @@ export default function HomePage() {
           viewState === ViewState.INFO ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
       >
+        <div className="fixed right-5 top-5 z-30 pointer-events-auto">
+          <UserAvatar size="sm" showDropdown className="rounded-full" />
+        </div>
         <div className="absolute left-6 top-12 right-6 z-30 pointer-events-auto md:left-16">
           <h2 className="mb-3 text-5xl font-bold leading-tight tracking-tight text-[#f5f5f7] drop-shadow-lg md:text-6xl">
             {titleText}
