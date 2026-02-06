@@ -60,3 +60,6 @@ export interface CarouselItem {
   rating?: number;
   coordinates?: LocationData;
 }
+
+/** Input for creating a new memory (no id yet). */
+export type NewMemoryInput = Omit<CarouselItem, 'id'>;

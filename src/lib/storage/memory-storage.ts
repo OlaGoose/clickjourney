@@ -7,7 +7,7 @@
  */
 
 import { supabase } from '../supabase/client';
-import type { CarouselItem } from '@/types';
+import type { CarouselItem, NewMemoryInput } from '@/types';
 import { getDemoGallerySlice } from './demo-gallery';
 import { rowToCarouselItem, carouselItemToRow, type TravelMemoryRow } from './types';
 
@@ -124,8 +124,8 @@ export async function getCarouselItems(userId: string | null): Promise<CarouselI
   return buildCarouselItems(memories);
 }
 
-/** Save a memory to Supabase (authenticated only) */
-export async function saveMemory(userId: string, item: CarouselItem): Promise<{ error: string | null }> {
+/** Save a new memory to Supabase (authenticated only). Item may omit id. */
+export async function saveMemory(userId: string, item: NewMemoryInput | CarouselItem): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Supabase not configured' };
   try {
     // Get the max sort_order to append new memory at the end

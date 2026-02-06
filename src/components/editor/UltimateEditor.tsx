@@ -57,7 +57,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
     content,
     editorProps: {
       attributes: {
-        class: 'prose prose-invert max-w-none focus:outline-none min-h-[400px] md:min-h-[500px] px-4 md:px-6 py-6',
+        class: 'prose prose-invert max-w-none focus:outline-none min-h-full overflow-y-auto overflow-x-hidden px-4 md:px-6 py-6',
       },
     },
     onUpdate: ({ editor }) => {
@@ -133,7 +133,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
   }
 
   return (
-    <div className="w-full rounded-xl md:rounded-2xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden flex flex-col max-h-[600px]">
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl md:rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm">
       {/* H5 Toolbar: single row, horizontal scroll */}
       <div className="flex items-center border-b border-white/10 bg-black/30 no-scrollbar editor-toolbar-scroll shrink-0">
         <div className="flex items-center gap-0.5 p-2 flex-nowrap shrink-0">
@@ -354,8 +354,8 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         className="hidden"
       />
 
-      {/* Editor Content — scrollable when content exceeds max height */}
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      {/* Editor Content — ProseMirror fills to bottom, scrolls inside */}
+      <div className="editor-scroll-area min-h-0 flex-1 overflow-hidden flex flex-col [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex [&>div]:flex-col [&_.ProseMirror]:min-h-full">
         <EditorContent editor={editor} />
       </div>
     </div>

@@ -4,10 +4,17 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import StarField from '@/components/StarField';
 import UltimateEditor from '@/components/editor/UltimateEditor';
-import LocationPicker from '@/components/editor/LocationPicker';
 import { useAuth } from '@/lib/auth';
 import { saveMemory } from '@/lib/storage';
-import type { LocationData } from '@/types';
+
+const MEMORY_COLORS = [
+  'rgb(44, 62, 80)',
+  'rgb(41, 128, 185)',
+  'rgb(142, 68, 173)',
+  'rgb(192, 57, 43)',
+  'rgb(39, 174, 96)',
+  'rgb(230, 126, 34)',
+] as const;
 
 export default function NewMemoryPage() {
   const router = useRouter();
@@ -17,9 +24,8 @@ export default function NewMemoryPage() {
   const [images, setImages] = useState<string[]>([]);
   const [audios, setAudios] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
-  const [location, setLocation] = useState<LocationData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [errors, setErrors] = useState<{ title?: string; content?: string; location?: string }>({});
+  const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
 
   const handleMediaChange = (newImages: string[], newAudios: string[], newVideos: string[]) => {
     setImages(newImages);
@@ -34,10 +40,9 @@ export default function NewMemoryPage() {
     }
 
     // Validate fields
-    const newErrors: { title?: string; content?: string; location?: string } = {};
+    const newErrors: { title?: string; content?: string } = {};
     if (!title.trim()) newErrors.title = 'Title is required';
     if (!content.trim() || content === '<p></p>') newErrors.content = 'Story is required';
-    if (!location) newErrors.location = 'Location is required';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -49,15 +54,7 @@ export default function NewMemoryPage() {
 
     try {
       // Generate a random color and cover image
-      const colors = [
-        'rgb(44, 62, 80)',
-        'rgb(41, 128, 185)',
-        'rgb(142, 68, 173)',
-        'rgb(192, 57, 43)',
-        'rgb(39, 174, 96)',
-        'rgb(230, 126, 34)',
-      ];
-      const color = colors[Math.floor(Math.random() * colors.length)];
+      const color = MEMORY_COLORS[Math.floor(Math.random() * MEMORY_COLORS.length)];
       
       // Use first uploaded image as cover, or generate one
       const coverImage = images[0] || `https://picsum.photos/id/${1000 + Math.floor(Math.random() * 100)}/600/400`;
@@ -79,7 +76,6 @@ export default function NewMemoryPage() {
         gallery: images.slice(1), // Rest of images go to gallery
         audioUrls: audios,
         videoUrls: videos,
-        coordinates: location,
       };
 
       const result = await saveMemory(auth.user.id, memory);
@@ -111,38 +107,34 @@ export default function NewMemoryPage() {
     <div className="relative min-h-screen w-full bg-black font-sans">
       <StarField />
 
-      {/* Fixed close: top-right, no layout space */}
-      <button
-        type="button"
-        onClick={handleCancel}
-        className="fixed top-4 right-4 z-30 p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/10"
-        aria-label="Close"
+      {/* Topbar: Apple back + title */}
+      <header
+        role="banner"
+        className="fixed top-0 left-0 right-0 z-30 flex h-11 min-h-[44px] w-full max-w-[100vw] shrink-0 items-center border-b border-white/[0.08] bg-black/70 shadow-[0_1px_0_0_rgba(255,255,255,0.06)] backdrop-blur-md"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 6L6 18" />
-          <path d="M6 6l12 12" />
-        </svg>
-      </button>
+        <div className="flex min-w-0 flex-1 items-center">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="flex h-11 w-11 shrink-0 items-center justify-center text-gray-400 transition-colors hover:bg-white/[0.08] hover:text-white active:bg-white/[0.12]"
+            aria-label="Back"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" className="h-5 w-5 shrink-0" fill="currentColor" aria-hidden>
+              <path fillRule="evenodd" d="M12.79 3.22a.75.75 0 0 1 0 1.06L7.56 9.5l5.23 5.22a.75.75 0 1 1-1.06 1.06l-5.75-5.75a.75.75 0 0 1 0-1.06l5.75-5.75a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <h1 className="min-w-0 flex-1 truncate text-center text-[15px] font-semibold tracking-tight text-[#f5f5f7]">
+            Create Memory
+          </h1>
+          <div className="w-11 shrink-0" aria-hidden />
+        </div>
+      </header>
 
-      <div className="relative z-10 pb-24">
-        <div className="mx-auto max-w-5xl px-4 md:px-6 py-8 md:py-12">
-          {/* Header */}
-          <div className="mb-8 md:mb-12 pr-6">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#f5f5f7] tracking-tight mb-2">
-              Create Memory
-            </h1>
-            <p className="text-gray-400 text-sm md:text-base">
-              Capture your journey with text, photos, audio, and video
-            </p>
-          </div>
-
-          {/* Form */}
-          <div className="space-y-8">
+      <main className="relative z-10 flex h-screen flex-col pt-11 pb-24 overflow-hidden">
+        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 px-4 py-6 md:px-6 md:py-8 overflow-hidden">
+          <div className="flex flex-1 flex-col min-h-0 gap-6">
             {/* Title */}
-            <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-400 mb-3">
-                Title
-              </label>
+            <div className="shrink-0">
               <input
                 type="text"
                 id="title"
@@ -159,31 +151,23 @@ export default function NewMemoryPage() {
               {errors.title && <p className="mt-2 text-sm text-red-400">{errors.title}</p>}
             </div>
 
-            {/* Ultimate Story Editor with All Media Types */}
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-3">
-                Your Story
-                <span className="ml-2 text-xs text-gray-500">
-                  (Use toolbar to add images, audio, and video)
-                </span>
-              </label>
-              <div className={errors.content ? 'ring-2 ring-red-500/50 rounded-xl md:rounded-2xl' : ''}>
-                <UltimateEditor
-                  content={content}
-                  onChange={(newContent) => {
-                    setContent(newContent);
-                    if (errors.content) setErrors({ ...errors, content: undefined });
-                  }}
-                  onMediaChange={handleMediaChange}
-                  placeholder="Start writing your story... Use the toolbar to add images, audio, and videos directly into your story."
-                />
-              </div>
+            {/* Editor: fills space down to above Publish button */}
+            <div className={`min-h-0 flex-1 flex flex-col ${errors.content ? 'ring-2 ring-red-500/50 rounded-xl md:rounded-2xl' : ''}`}>
+              <UltimateEditor
+                content={content}
+                onChange={(newContent) => {
+                  setContent(newContent);
+                  if (errors.content) setErrors({ ...errors, content: undefined });
+                }}
+                onMediaChange={handleMediaChange}
+                placeholder="Start writing your story... Use the toolbar to add images, audio, and videos directly into your story."
+              />
               {errors.content && <p className="mt-2 text-sm text-red-400">{errors.content}</p>}
             </div>
 
             {/* Media Stats */}
             {(images.length > 0 || audios.length > 0 || videos.length > 0) && (
-              <div className="flex flex-wrap items-center gap-4 px-4 py-3 bg-black/40 rounded-xl border border-white/10">
+              <div className="flex flex-wrap items-center gap-4 shrink-0 px-4 py-3 bg-black/40 rounded-xl border border-white/10">
                 <span className="text-sm text-gray-400">Media attached:</span>
                 {images.length > 0 && (
                   <span className="flex items-center gap-2 text-sm text-white">
@@ -216,21 +200,9 @@ export default function NewMemoryPage() {
                 )}
               </div>
             )}
-
-            {/* Location Picker */}
-            <div className={errors.location ? 'ring-2 ring-red-500/50 rounded-xl md:rounded-2xl p-4' : ''}>
-              <LocationPicker
-                value={location}
-                onChange={(newLocation) => {
-                  setLocation(newLocation);
-                  if (errors.location) setErrors({ ...errors, location: undefined });
-                }}
-              />
-              {errors.location && <p className="mt-2 text-sm text-red-400">{errors.location}</p>}
-            </div>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Fixed publish button at bottom — 1:1 with homepage Add Memory */}
       <div className="fixed bottom-8 left-1/2 z-30 -translate-x-1/2 pointer-events-none w-full max-w-[min(100vw,28rem)] px-4">

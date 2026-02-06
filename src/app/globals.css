@@ -90,6 +90,19 @@
   }
 }
 
+/* Editor scroll area: child fills height so ProseMirror can be the scroll container */
+.editor-scroll-area {
+  display: flex;
+  flex-direction: column;
+}
+.editor-scroll-area > * {
+  flex: 1;
+  min-height: 0;
+}
+.editor-scroll-area .ProseMirror {
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Tiptap Editor Styles */
 .ProseMirror {
   min-height: 400px;
