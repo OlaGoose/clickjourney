@@ -148,7 +148,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Bold"
         aria-label="Bold"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8" />
         </svg>
       </button>
@@ -159,7 +159,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Italic"
         aria-label="Italic"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="19" x2="10" y1="4" y2="4" />
           <line x1="14" x2="5" y1="20" y2="20" />
           <line x1="15" x2="9" y1="4" y2="20" />
@@ -173,7 +173,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Heading 1"
         aria-label="Heading 1"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 12h12" />
           <path d="M6 20V4" />
           <path d="M18 20V4" />
@@ -186,7 +186,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Heading 2"
         aria-label="Heading 2"
       >
-        <span className="text-xs font-bold">H2</span>
+        <span className="text-[0.975rem] font-bold">H2</span>
       </button>
       <button
         type="button"
@@ -195,7 +195,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Heading 3"
         aria-label="Heading 3"
       >
-        <span className="text-xs font-bold">H3</span>
+        <span className="text-[0.975rem] font-bold">H3</span>
       </button>
       <div className="editor-toolbar-divider" aria-hidden />
       <button
@@ -205,8 +205,8 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Add Image"
         aria-label="Add Image"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect width="13" height="13" x="3" y="3" rx="2" ry="2" />
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect width="17" height="17" x="3" y="3" rx="2" ry="2" />
           <circle cx="9" cy="9" r="2" />
           <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
         </svg>
@@ -218,7 +218,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Add Audio"
         aria-label="Add Audio"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M9 18V5l12-2v13" />
           <circle cx="6" cy="18" r="3" />
           <circle cx="18" cy="16" r="3" />
@@ -231,7 +231,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Add Video"
         aria-label="Add Video"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polygon points="23 7 16 12 23 17 23 7" />
           <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
         </svg>
@@ -244,7 +244,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Bullet List"
         aria-label="Bullet List"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="8" y1="6" x2="21" y2="6" />
           <line x1="8" y1="12" x2="21" y2="12" />
           <line x1="8" y1="18" x2="21" y2="18" />
@@ -260,7 +260,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Numbered List"
         aria-label="Numbered List"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="10" y1="6" x2="21" y2="6" />
           <line x1="10" y1="12" x2="21" y2="12" />
           <line x1="10" y1="18" x2="21" y2="18" />
@@ -276,7 +276,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Quote"
         aria-label="Quote"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
           <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
         </svg>
@@ -289,7 +289,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Align Left"
         aria-label="Align Left"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="17" y1="10" x2="3" y2="10" />
           <line x1="21" y1="6" x2="3" y2="6" />
           <line x1="21" y1="14" x2="3" y2="14" />
@@ -303,7 +303,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Align Center"
         aria-label="Align Center"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="10" x2="6" y2="10" />
           <line x1="21" y1="6" x2="3" y2="6" />
           <line x1="21" y1="14" x2="3" y2="14" />
@@ -317,7 +317,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         title="Align Right"
         aria-label="Align Right"
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="21" y1="10" x2="7" y2="10" />
           <line x1="21" y1="6" x2="3" y2="6" />
           <line x1="21" y1="14" x2="3" y2="14" />
@@ -328,15 +328,15 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
   );
 
   const toolbarWrapperClass =
-    'editor-toolbar-glass flex items-center gap-0.5 px-1.5 py-1 rounded-[10px] overflow-x-auto no-scrollbar';
+    'flex items-center gap-0.5 px-1.5 py-1 overflow-x-auto no-scrollbar';
 
   if (toolbarFixed) {
     return (
       <>
-        {/* Fixed header: title first, then toolbar (positions swapped) */}
-        <div className="fixed top-14 left-0 right-0 z-20 flex flex-col px-4 bg-gradient-to-b from-black/80 via-black/60 to-transparent pb-2">
+        {/* Fixed header: optional topSlot (e.g. title) then toolbar; or toolbar only */}
+        <div className={`fixed top-14 left-0 right-0 z-20 flex flex-col px-3 bg-gradient-to-b from-black/80 via-black/60 to-transparent ${topSlot ? 'pb-2' : 'pb-1'}`}>
           {topSlot}
-          <div className="flex justify-center mt-2">
+          <div className={topSlot ? 'flex justify-center mt-2' : 'flex justify-center'}>
             <div className={`max-w-md w-full ${toolbarWrapperClass}`}>
               {toolbar}
             </div>
@@ -369,8 +369,8 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
           className="hidden"
         />
 
-        {/* Content: editor only (padding clears title + toolbar) */}
-        <div className="flex h-full min-h-0 w-full flex-col overflow-hidden pt-20">
+        {/* Content: padding clears fixed header (toolbar only or title + toolbar) */}
+        <div className={`flex h-full min-h-0 w-full flex-col overflow-hidden ${topSlot ? 'pt-12' : 'pt-8'}`}>
           <div className="editor-scroll-area min-h-0 flex-1 overflow-hidden flex flex-col [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex [&>div]:flex-col [&_.ProseMirror]:min-h-full">
             <EditorContent editor={editor} />
           </div>

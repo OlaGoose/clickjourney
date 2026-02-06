@@ -71,16 +71,14 @@
   transform: scale(0.96);
 }
 
-/* Apple-inspired editor toolbar: glass, focus, reduced-motion */
+/* Editor toolbar: borderless glass, focus, reduced-motion */
 .editor-toolbar-glass {
   --toolbar-bg: rgba(255, 255, 255, 0.06);
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 4px 20px -4px rgba(0, 0, 0, 0.35);
+  border: none;
+  box-shadow: none;
 }
 .editor-toolbar-divider {
   width: 1px;
@@ -176,12 +174,25 @@
   height: 0;
 }
 
+/* First block as title (H1): placeholder when empty */
+.ProseMirror h1.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #6b7280;
+  pointer-events: none;
+  height: 0;
+}
+
 .ProseMirror h1 {
   font-size: 2rem;
   font-weight: 700;
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
+  margin-top: 0;
+  margin-bottom: 0.75rem;
   line-height: 1.2;
+}
+
+.ProseMirror h1:first-child {
+  margin-top: 0;
 }
 
 .ProseMirror h2 {

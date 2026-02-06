@@ -18,11 +18,19 @@ const MEMORY_COLORS = [
   'rgb(230, 126, 34)',
 ] as const;
 
+/** Extract title from editor HTML: first H1 text (title lives inside editor as H1). */
+function getTitleFromContent(html: string): string {
+  if (!html.trim()) return '';
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  const h1 = div.querySelector('h1');
+  return (h1?.textContent ?? '').trim();
+}
+
 export default function NewMemoryPage() {
   const router = useRouter();
   const auth = useAuth();
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState('<h1></h1><p></p>');
   const [images, setImages] = useState<string[]>([]);
   const [audios, setAudios] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
@@ -80,10 +88,13 @@ export default function NewMemoryPage() {
       return;
     }
 
-    // Validate fields
+    const title = getTitleFromContent(content);
     const newErrors: { title?: string; content?: string } = {};
-    if (!title.trim()) newErrors.title = 'Title is required';
-    if (!content.trim() || content === '<p></p>') newErrors.content = 'Story is required';
+    if (!title) newErrors.title = 'Title is required';
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+    const plainOnly = (tempDiv.textContent || tempDiv.innerText || '').trim();
+    if (!plainOnly) newErrors.content = 'Story is required';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -94,20 +105,12 @@ export default function NewMemoryPage() {
     setIsSaving(true);
 
     try {
-      // Generate a random color and cover image
       const color = MEMORY_COLORS[Math.floor(Math.random() * MEMORY_COLORS.length)];
-      
-      // Use first uploaded image as cover, or generate one
       const coverImage = images[0] || `https://picsum.photos/id/${1000 + Math.floor(Math.random() * 100)}/600/400`;
-      
-      // Extract plain text from HTML for description
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = content;
-      const plainText = tempDiv.textContent || tempDiv.innerText || '';
-      
-      // Create the memory item (include coordinates when user added a location)
+      const plainText = plainOnly;
+
       const memory = {
-        title,
+        title: title || 'Untitled',
         subtitle: 'Memory',
         image: coverImage,
         color: color!,
@@ -135,8 +138,9 @@ export default function NewMemoryPage() {
     }
   };
 
+  const hasContent = content !== '<h1></h1><p></p>' && content.replace(/<[^>]+>/g, '').trim().length > 0;
   const handleCancel = () => {
-    if (title || content || images.length > 0 || audios.length > 0 || videos.length > 0) {
+    if (hasContent || images.length > 0 || audios.length > 0 || videos.length > 0) {
       if (confirm('Discard changes?')) {
         router.push('/');
       }
@@ -197,37 +201,20 @@ export default function NewMemoryPage() {
                 </span>
               </div>
             )}
-            {/* Editor: fixed toolbar + borderless title below + editor without border */}
-            <div className={`min-h-0 flex-1 flex flex-col ${errors.content ? 'ring-2 ring-red-500/50 rounded-xl md:rounded-2xl' : ''}`}>
+            {/* Editor: title is first line (H1) inside editor */}
+            <div className={`min-h-0 flex-1 flex flex-col ${errors.content || errors.title ? 'ring-2 ring-red-500/50 rounded-xl md:rounded-2xl' : ''}`}>
               <UltimateEditor
                 content={content}
                 onChange={(newContent) => {
                   setContent(newContent);
-                  if (errors.content) setErrors({ ...errors, content: undefined });
+                  setErrors((prev) => ({ ...prev, content: undefined, title: undefined }));
                 }}
                 onMediaChange={handleMediaChange}
-                placeholder="Start writing your story... Use the toolbar to add images, audio, and videos directly into your story."
+                placeholder="Untitled"
                 toolbarFixed
-                topSlot={
-                  <>
-                    <div className="shrink-0 px-1 md:px-6">
-                      <input
-                        type="text"
-                        id="title"
-                        value={title}
-                        onChange={(e) => {
-                          setTitle(e.target.value);
-                          if (errors.title) setErrors((prev) => ({ ...prev, title: undefined }));
-                        }}
-                        placeholder="Untitled"
-                        className="w-full text-[1.8rem] font-bold bg-transparent border-none outline-none text-white placeholder-gray-500/50 leading-tight"
-                      />
-                      {errors.title && <p className="mt-2 text-sm text-red-400">{errors.title}</p>}
-                    </div>
-                  </>
-                }
               />
-              {errors.content && <p className="mt-2 text-sm text-red-400">{errors.content}</p>}
+              {errors.title && <p className="mt-2 px-4 text-sm text-red-400">{errors.title}</p>}
+              {errors.content && <p className="mt-2 px-4 text-sm text-red-400">{errors.content}</p>}
             </div>
 
             {/* Media Stats */}
