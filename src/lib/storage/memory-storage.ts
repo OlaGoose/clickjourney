@@ -86,13 +86,12 @@ const END_CARD: CarouselItem = {
 };
 
 /**
- * Build carousel list: start + memories (repeated) + end
+ * Build carousel list: start + memories + end (each memory shown once)
  * Note: Demo fallback is now handled by IndexedDB demo data initialization
  */
 export function buildCarouselItems(memories: CarouselItem[]): CarouselItem[] {
-  // Repeat memories 3 times for carousel effect
   const middle = memories.length > 0 ? memories : [];
-  return [START_CARD, ...middle, ...middle, ...middle, END_CARD];
+  return [START_CARD, ...middle, END_CARD];
 }
 
 /**

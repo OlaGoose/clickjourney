@@ -129,7 +129,7 @@ export default function NewMemoryPage() {
         alert('Failed to save memory: ' + result.error);
         setIsSaving(false);
       } else {
-        window.location.href = '/';
+        router.push('/');
       }
     } catch (error) {
       console.error('Save error:', error);

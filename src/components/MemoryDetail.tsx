@@ -23,11 +23,12 @@ export default function MemoryDetail({ item, onBack }: MemoryDetailProps) {
   const [initialGalleryIndex, setInitialGalleryIndex] = useState(0);
 
   const category = item.category ?? '圣克鲁兹 · 文化之旅';
-  const title = item.detailTitle ?? '圣克鲁斯冲浪漫步之旅';
+  const title = item.detailTitle ?? item.title ?? '圣克鲁斯冲浪漫步之旅';
   const description =
     item.description ??
     '探索大陆冲浪的发源地，在海滨漫步90分钟，前往 Steamer Lane，沿途停留，欣赏风景，导游会分享历史、文化和冲浪的乐趣。';
   const images = getGalleryImages(item);
+  const hasRichContent = !!item.richContent?.replace(/<[^>]+>/g, '').trim();
 
   const handleImageClick = (index: number) => {
     setInitialGalleryIndex(index);
@@ -96,7 +97,18 @@ export default function MemoryDetail({ item, onBack }: MemoryDetailProps) {
           </div>
         </div>
 
-        <div className="no-scrollbar flex-1 overflow-y-auto px-4">
+        <div className="no-scrollbar flex-1 overflow-y-auto px-4 pb-8">
+          <div className="px-0 py-4">
+            <h1 className="text-xl font-semibold text-black">{title}</h1>
+            {hasRichContent ? (
+              <div
+                className="prose prose-sm mt-3 max-w-none text-gray-800 [&_h1]:text-lg [&_h2]:text-base [&_p]:my-2"
+                dangerouslySetInnerHTML={{ __html: item.richContent ?? '' }}
+              />
+            ) : (
+              <p className="mt-3 whitespace-pre-wrap text-gray-800">{description}</p>
+            )}
+          </div>
           {images.length > 0 && (
             <div className="px-4">
               <PhotoGrid
@@ -108,7 +120,6 @@ export default function MemoryDetail({ item, onBack }: MemoryDetailProps) {
               />
             </div>
           )}
-
         </div>
       </div>
 
