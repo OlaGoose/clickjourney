@@ -115,11 +115,14 @@ export function getStorageConfig(): StorageConfig {
   };
 }
 
+let _envLogged = false;
+
 /**
- * Log configuration (useful for debugging)
+ * Log configuration once per session (useful for debugging)
  */
 export function logEnvironmentInfo(): void {
-  if (!isBrowser()) return;
+  if (!isBrowser() || _envLogged) return;
+  _envLogged = true;
 
   console.group('🌍 Orbit Journey Environment');
   console.log('Mode:', isDevelopment() ? 'Development' : 'Production');

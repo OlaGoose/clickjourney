@@ -153,9 +153,9 @@ export async function initializeDemoData(): Promise<void> {
  */
 export async function clearDemoData(): Promise<void> {
   try {
-    // Clear all records with null userId (demo data)
+    // Clear all records with null userId (demo data); IndexedDB keys can't be null, so filter in memory
     const db = getDB();
-    const demoRecords = await db.memories.where('userId').equals(null as never).toArray();
+    const demoRecords = (await db.memories.toArray()).filter((r) => r.userId === null);
     for (const record of demoRecords) {
       await db.memories.delete(record.id);
     }

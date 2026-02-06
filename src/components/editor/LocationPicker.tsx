@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
+import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import type { LocationData } from '@/types';
 
 interface LocationPickerProps {
@@ -19,7 +19,7 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    
+
     if (!apiKey) {
       console.warn('Google Maps API key not found');
       return;
@@ -27,13 +27,9 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
 
     if (!mapRef.current) return;
 
-    const loader = new Loader({
-      apiKey,
-      version: 'weekly',
-      libraries: ['places'],
-    });
+    setOptions({ key: apiKey, v: 'weekly', libraries: ['places'] });
 
-    loader.load().then(() => {
+    Promise.all([importLibrary('maps'), importLibrary('places')]).then(() => {
       if (!mapRef.current) return;
 
       const initialCenter = value || { lat: 40.7128, lng: -74.006, name: 'New York' };

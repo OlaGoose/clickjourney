@@ -130,8 +130,8 @@ export class MemoryRepository {
     
     if (userId !== undefined) {
       if (userId === null) {
-        // Query for null userId (demo data)
-        results = await db.memories.where('userId').equals(null as never).toArray();
+        // IndexedDB keys cannot be null; filter in memory for demo data
+        results = (await db.memories.toArray()).filter((r) => r.userId === null);
       } else {
         // Query for specific user
         results = await db.memories.where('userId').equals(userId).toArray();
@@ -239,23 +239,24 @@ export class MemoryRepository {
   static async count(options: { userId?: string | null; includeDeleted?: boolean } = {}): Promise<number> {
     const db = getDB();
     const { userId, includeDeleted = false } = options;
-    
+
     let results: MemoryRecord[];
-    
+
     if (userId !== undefined) {
+      // IndexedDB/Dexie keys cannot be null; filter in memory for null userId
       if (userId === null) {
-        results = await db.memories.where('userId').equals(null as never).toArray();
+        results = (await db.memories.toArray()).filter((r) => r.userId === null);
       } else {
         results = await db.memories.where('userId').equals(userId).toArray();
       }
     } else {
       results = await db.memories.toArray();
     }
-    
+
     if (!includeDeleted) {
       results = results.filter((r) => !r.isDeleted);
     }
-    
+
     return results.length;
   }
 

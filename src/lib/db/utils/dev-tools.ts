@@ -109,14 +109,20 @@ function createDevTools(): DevTools {
   };
 }
 
+let _devToolsInstalled = false;
+
 /**
- * Install development tools globally
+ * Install development tools globally (once per session)
  * Call this in _app or layout to enable dev tools
  */
 export function installDevTools(): void {
   if (!isDevelopment() || typeof window === 'undefined') {
     return;
   }
+  if (_devToolsInstalled) {
+    return;
+  }
+  _devToolsInstalled = true;
 
   // Attach to window for console access
   const devTools = createDevTools();

@@ -193,8 +193,10 @@ export class SyncEngine {
     let pushedCount = 0;
     
     try {
-      const pending = await MemoryRepository.getPendingSync();
-      
+      // Only push user-owned records; skip demo data (userId null) — RLS only allows user_id = auth.uid()
+      const allPending = await MemoryRepository.getPendingSync();
+      const pending = allPending.filter((r) => r.userId != null);
+
       for (const record of pending) {
         try {
           if (record.isDeleted) {
