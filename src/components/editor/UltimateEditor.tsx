@@ -32,6 +32,8 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
 
   const initialContentSet = useRef(false);
   const [toolbarBottom, setToolbarBottom] = useState(0);
+  const [mediaLightbox, setMediaLightbox] = useState<{ type: 'image' | 'video'; src: string } | null>(null);
+  const editorContentRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -140,6 +142,41 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
       document.removeEventListener('focusout', onFocusOut);
     };
   }, [toolbarFixed]);
+
+  // Click on editor image or video → open Apple-style lightbox
+  useEffect(() => {
+    const el = editorContentRef.current;
+    if (!el) return;
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG' && target.classList.contains('editor-image')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const src = (target as HTMLImageElement).src;
+        if (src) setMediaLightbox({ type: 'image', src });
+        return;
+      }
+      const wrapper = target.closest('.video-wrapper');
+      if (wrapper) {
+        e.preventDefault();
+        e.stopPropagation();
+        const video = wrapper.querySelector('video');
+        const src = video?.currentSrc || (video as HTMLVideoElement | null)?.src;
+        if (src) setMediaLightbox({ type: 'video', src });
+      }
+    };
+    el.addEventListener('click', handleClick, true);
+    return () => el.removeEventListener('click', handleClick, true);
+  }, []);
+
+  useEffect(() => {
+    if (!mediaLightbox) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMediaLightbox(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mediaLightbox]);
 
   useEffect(() => {
     if (onMediaChange) {
@@ -411,7 +448,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         {/* Content: full height with bottom padding so fixed toolbar doesn't cover it */}
         <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
           {topSlot}
-          <div className="editor-scroll-area min-h-0 flex-1 overflow-hidden flex flex-col pb-20 [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex [&>div]:flex-col [&_.ProseMirror]:min-h-full">
+          <div ref={editorContentRef} className="editor-scroll-area min-h-0 flex-1 overflow-hidden flex flex-col pb-20 [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex [&>div]:flex-col [&_.ProseMirror]:min-h-full">
             <EditorContent editor={editor} />
           </div>
         </div>
@@ -453,6 +490,38 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
           onChange={(e) => handleVideoUpload(e.target.files)}
           className="hidden"
         />
+
+        {/* Apple-style media lightbox: click image/video to expand */}
+        {mediaLightbox && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Media preview"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md transition-opacity duration-300 ease-out"
+            onClick={() => setMediaLightbox(null)}
+          >
+            <button
+              type="button"
+              onClick={() => setMediaLightbox(null)}
+              className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+              aria-label="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <div
+              className="max-h-[85vh] max-w-[90vw] overflow-hidden rounded-2xl shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {mediaLightbox.type === 'image' ? (
+                <img src={mediaLightbox.src} alt="" className="max-h-[85vh] max-w-[90vw] object-contain" />
+              ) : (
+                <video src={mediaLightbox.src} controls className="max-h-[85vh] max-w-[90vw]" />
+              )}
+            </div>
+          </div>
+        )}
       </>
     );
   }
@@ -465,9 +534,41 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
       <input ref={imageInputRef} type="file" accept="image/*" multiple onChange={(e) => handleImageUpload(e.target.files)} className="hidden" />
       <input ref={audioInputRef} type="file" accept="audio/*" multiple onChange={(e) => handleAudioUpload(e.target.files)} className="hidden" />
       <input ref={videoInputRef} type="file" accept="video/*" multiple onChange={(e) => handleVideoUpload(e.target.files)} className="hidden" />
-      <div className="editor-scroll-area min-h-0 flex-1 overflow-hidden flex flex-col [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex [&>div]:flex-col [&_.ProseMirror]:min-h-full">
+      <div ref={editorContentRef} className="editor-scroll-area min-h-0 flex-1 overflow-hidden flex flex-col [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex [&>div]:flex-col [&_.ProseMirror]:min-h-full">
         <EditorContent editor={editor} />
       </div>
+
+      {/* Apple-style media lightbox */}
+      {mediaLightbox && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Media preview"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md transition-opacity duration-300 ease-out"
+          onClick={() => setMediaLightbox(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setMediaLightbox(null)}
+            className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+            aria-label="Close"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <div
+            className="max-h-[85vh] max-w-[90vw] overflow-hidden rounded-2xl shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {mediaLightbox.type === 'image' ? (
+              <img src={mediaLightbox.src} alt="" className="max-h-[85vh] max-w-[90vw] object-contain" />
+            ) : (
+              <video src={mediaLightbox.src} controls className="max-h-[85vh] max-w-[90vw]" />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

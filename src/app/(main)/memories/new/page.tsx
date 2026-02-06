@@ -30,7 +30,7 @@ function getTitleFromContent(html: string): string {
 export default function NewMemoryPage() {
   const router = useRouter();
   const auth = useAuth();
-  const [content, setContent] = useState('<h1></h1><p></p>');
+  const [content, setContent] = useState('<h1>Untitled</h1><p></p>');
   const [images, setImages] = useState<string[]>([]);
   const [audios, setAudios] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
@@ -287,42 +287,6 @@ export default function NewMemoryPage() {
               {errors.title && <p className="mt-2 px-4 text-sm text-red-400">{errors.title}</p>}
               {errors.content && <p className="mt-2 px-4 text-sm text-red-400">{errors.content}</p>}
             </div>
-
-            {/* Media Stats */}
-            {(images.length > 0 || audios.length > 0 || videos.length > 0) && (
-              <div className="flex flex-wrap items-center gap-4 shrink-0 px-4 py-3 bg-black/40 rounded-xl">
-                <span className="text-sm text-gray-400">Media:</span>
-                {images.length > 0 && (
-                  <span className="flex items-center gap-2 text-sm text-white">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                      <circle cx="8.5" cy="8.5" r="1.5"/>
-                      <polyline points="21 15 16 10 5 21"/>
-                    </svg>
-                    {images.length} {images.length === 1 ? 'photo' : 'photos'}
-                  </span>
-                )}
-                {audios.length > 0 && (
-                  <span className="flex items-center gap-2 text-sm text-white">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M9 18V5l12-2v13"/>
-                      <circle cx="6" cy="18" r="3"/>
-                      <circle cx="18" cy="16" r="3"/>
-                    </svg>
-                    {audios.length} {audios.length === 1 ? 'audio' : 'audios'}
-                  </span>
-                )}
-                {videos.length > 0 && (
-                  <span className="flex items-center gap-2 text-sm text-white">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polygon points="23 7 16 12 23 17 23 7"/>
-                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                    </svg>
-                    {videos.length} {videos.length === 1 ? 'video' : 'videos'}
-                  </span>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </main>
