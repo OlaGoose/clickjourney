@@ -29,6 +29,8 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
   const audioInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
+  const initialContentSet = useRef(false);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -69,11 +71,12 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
     },
   });
 
+  // Set content only on first mount so typing/inserting images is never overwritten by prop sync
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
-    }
-  }, [content, editor]);
+    if (!editor || initialContentSet.current) return;
+    initialContentSet.current = true;
+    editor.commands.setContent(content);
+  }, [editor, content]);
 
   useEffect(() => {
     if (onMediaChange) {
@@ -81,21 +84,30 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
     }
   }, [images, audios, videos, onMediaChange]);
 
-  const handleImageUpload = async (files: FileList | null) => {
-    if (!files || !editor) return;
+  const readFileAsDataURL = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const src = e.target?.result as string;
-          editor.chain().focus().setImage({ src }).run();
-          setImages((prev) => [...prev, src]);
-        };
-        reader.readAsDataURL(file);
-      }
+  const handleImageUpload = async (files: FileList | null) => {
+    if (!files?.length || !editor) return;
+
+    const fileArray = Array.from(files);
+    const newSrcs: string[] = [];
+
+    for (const file of fileArray) {
+      const src = await readFileAsDataURL(file);
+      newSrcs.push(src);
+      editor
+        .chain()
+        .focus()
+        .insertContent({ type: 'image', attrs: { src } })
+        .run();
     }
+    setImages((prev) => [...prev, ...newSrcs]);
   };
 
   const handleAudioUpload = async (files: FileList | null) => {
