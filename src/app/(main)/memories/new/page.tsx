@@ -37,6 +37,7 @@ export default function NewMemoryPage() {
   const [location, setLocation] = useState<LocationData | null>(null);
   /** When true, bottom button shows "Add map" and map picker sheet is open. Default false so init shows Publish. */
   const [mapDialogOpen, setMapDialogOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   /** Sheet slide-up: false = off-screen, true = visible (for open animation). */
   const [sheetUp, setSheetUp] = useState(false);
   /** When true, sheet is animating out; after 300ms we close. */
@@ -153,36 +154,106 @@ export default function NewMemoryPage() {
     <div className="relative min-h-screen w-full bg-black font-sans">
       <StarField />
 
-      {/* Topbar: Apple back + title */}
+      {/* Notion-style topbar: no left menu icon; title center; Share + More on right */}
       <header
         role="banner"
-        className="fixed top-0 left-0 right-0 z-30 flex h-11 min-h-[44px] w-full max-w-[100vw] shrink-0 items-center border-b border-white/[0.08] bg-black/70 shadow-[0_1px_0_0_rgba(255,255,255,0.06)] backdrop-blur-md"
+        className="notion-topbar-mobile fixed top-0 left-0 right-0 z-30 flex h-[44px] w-full max-w-[100vw] shrink-0 items-center justify-between bg-black"
+        style={{
+          boxShadow: '0 0.3333333333333333px 0 rgba(255,255,255,0.08)',
+          paddingInline: 0,
+        }}
       >
-        <div className="flex min-w-0 flex-1 items-center">
+        <div className="flex min-w-0 flex-1 flex-shrink items-center overflow-hidden" style={{ height: '100%' }}>
           <button
             type="button"
             onClick={handleCancel}
-            className="flex h-11 w-11 shrink-0 items-center justify-center text-gray-400 transition-colors hover:bg-white/[0.08] hover:text-white active:bg-white/[0.12]"
+            className="flex h-full w-9 flex-shrink-0 items-center justify-center text-[#f5f5f7] transition-[background] duration-[20ms] ease-in hover:bg-white/[0.08] active:bg-white/[0.12]"
+            style={{ marginInlineStart: 4 }}
             aria-label="Back"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" className="h-5 w-5 shrink-0" fill="currentColor" aria-hidden>
+            <svg viewBox="0 0 20 20" className="h-5 w-5 shrink-0" fill="currentColor" aria-hidden>
               <path fillRule="evenodd" d="M12.79 3.22a.75.75 0 0 1 0 1.06L7.56 9.5l5.23 5.22a.75.75 0 1 1-1.06 1.06l-5.75-5.75a.75.75 0 0 1 0-1.06l5.75-5.75a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
             </svg>
           </button>
-          <h1 className="min-w-0 flex-1 truncate text-center text-[15px] font-semibold tracking-tight text-[#f5f5f7]">
-            Create Memory
-          </h1>
+          <div
+            className="flex flex-1 items-center overflow-hidden whitespace-nowrap text-ellipsis text-base leading-tight text-[#f5f5f7]"
+            style={{ marginInline: '0 8px', minWidth: 0, maxWidth: '100%', height: '100%' }}
+          >
+            <span className="block truncate">New page</span>
+          </div>
+        </div>
+        <div className="flex flex-shrink-0 flex-grow-0 items-center" style={{ height: '100%', paddingInline: '4px 8px' }}>
           <button
             type="button"
-            onClick={() => setMapDialogOpen(true)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center text-gray-400 transition-colors hover:bg-white/[0.08] hover:text-white active:bg-white/[0.12]"
-            aria-label="Add location"
+            className="flex h-full w-[26px] flex-shrink-0 items-center justify-center rounded-md text-white/70 transition-[background] duration-[20ms] ease-in hover:bg-white/[0.08] active:bg-white/[0.12]"
+            style={{ marginInlineEnd: 14 }}
+            aria-label="Share"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-              <circle cx="12" cy="10" r="3" />
+            <svg viewBox="0 0 20 20" className="h-[26px] w-[26px] shrink-0" fill="currentColor" aria-hidden>
+              <path d="M9.533.62a.625.625 0 0 1 .884 0l2.5 2.5a.625.625 0 1 1-.884.884l-1.408-1.408V11a.625.625 0 1 1-1.25 0V2.546L7.917 4.004a.625.625 0 1 1-.884-.883z" />
+              <path d="M8.125 5.125H5.5A2.125 2.125 0 0 0 3.375 7.25v7.5c0 1.174.951 2.125 2.125 2.125h9a2.125 2.125 0 0 0 2.125-2.125v-7.5A2.125 2.125 0 0 0 14.5 5.125h-2.625v1.25H14.5c.483 0 .875.392.875.875v7.5a.875.875 0 0 1-.875.875h-9a.875.875 0 0 1-.875-.875v-7.5c0-.483.392-.875.875-.875h2.625z" />
             </svg>
           </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMoreMenuOpen((o) => !o)}
+              className="flex h-full min-h-[44px] w-[26px] flex-shrink-0 items-center justify-center rounded-md text-white/70 transition-[background] duration-[20ms] ease-in hover:bg-white/[0.08] active:bg-white/[0.12]"
+              style={{ marginInlineEnd: 14 }}
+              aria-label="Actions"
+              aria-expanded={moreMenuOpen}
+              aria-haspopup="dialog"
+            >
+              <svg viewBox="0 0 20 20" className="h-[26px] w-[26px] shrink-0" fill="currentColor" aria-hidden>
+                <path d="M4 11.375a1.375 1.375 0 1 0 0-2.75 1.375 1.375 0 0 0 0 2.75m6 0a1.375 1.375 0 1 0 0-2.75 1.375 1.375 0 0 0 0 2.75m6 0a1.375 1.375 0 1 0 0-2.75 1.375 1.375 0 0 0 0 2.75" />
+              </svg>
+            </button>
+            {moreMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  aria-hidden
+                  onClick={() => setMoreMenuOpen(false)}
+                />
+                <div
+                  role="dialog"
+                  className="absolute right-0 top-full z-50 mt-1 min-w-[180px] rounded-lg border border-white/10 bg-[#1c1c1e] py-1 shadow-xl"
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setMapDialogOpen(true); setMoreMenuOpen(false); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#f5f5f7] hover:bg-white/[0.08]"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    添加位置
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { handleSave(); setMoreMenuOpen(false); }}
+                    disabled={isSaving}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#f5f5f7] hover:bg-white/[0.08] disabled:opacity-50"
+                  >
+                    {isSaving ? (
+                      <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                        <path d="M22 2L11 13" />
+                        <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                      </svg>
+                    )}
+                    发布
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          <div style={{ width: 4 }} />
         </div>
       </header>
 
@@ -310,44 +381,6 @@ export default function NewMemoryPage() {
         </div>
       )}
 
-      {/* Fixed bottom button: two states — Publish (default) or Add map (when dialog open) */}
-      <div className="fixed bottom-8 left-1/2 z-30 -translate-x-1/2 pointer-events-none w-full max-w-[min(100vw,28rem)] px-4">
-        <div className="pointer-events-auto flex flex-col items-center">
-          <button
-            type="button"
-            onClick={mapDialogOpen ? undefined : handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 rounded-full px-8 py-3 text-sm font-medium text-white shadow-xl transition-all hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 md:text-base"
-            style={{ backgroundColor: 'rgb(0, 113, 227)' }}
-          >
-            {isSaving ? (
-              <>
-                <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Publishing…
-              </>
-            ) : mapDialogOpen ? (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-                Add map
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                  <path d="M22 2L11 13" />
-                  <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-                </svg>
-                Publish
-              </>
-            )}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

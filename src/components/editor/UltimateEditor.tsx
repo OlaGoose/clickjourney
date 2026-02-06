@@ -25,11 +25,13 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
   const [images, setImages] = useState<string[]>([]);
   const [audios, setAudios] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
+  const [, setToolbarTick] = useState(0);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   const initialContentSet = useRef(false);
+  const [toolbarBottom, setToolbarBottom] = useState(0);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -77,6 +79,67 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
     initialContentSet.current = true;
     editor.commands.setContent(content);
   }, [editor, content]);
+
+  // Re-render toolbar when selection or content changes so isActive() stays in sync
+  useEffect(() => {
+    if (!editor) return;
+    const onUpdate = () => setToolbarTick((t) => t + 1);
+    editor.on('selectionUpdate', onUpdate);
+    editor.on('transaction', onUpdate);
+    return () => {
+      editor.off('selectionUpdate', onUpdate);
+      editor.off('transaction', onUpdate);
+    };
+  }, [editor]);
+
+  // When keyboard opens (e.g. mobile), move fixed toolbar up so it stays visible (Visual Viewport API + resize fallback)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !toolbarFixed) return;
+    const update = () => {
+      requestAnimationFrame(() => {
+        const vv = (window as Window & { visualViewport?: VisualViewport }).visualViewport;
+        if (vv) {
+          const bottom = window.innerHeight - (vv.offsetTop + vv.height);
+          setToolbarBottom(Math.max(0, bottom));
+        } else {
+          setToolbarBottom(0);
+        }
+      });
+    };
+    update();
+    const vv = (window as Window & { visualViewport?: VisualViewport }).visualViewport;
+    if (vv) {
+      vv.addEventListener('resize', update);
+      vv.addEventListener('scroll', update);
+    }
+    window.addEventListener('resize', update);
+    const onFocusIn = () => {
+      update();
+      setTimeout(update, 100);
+      setTimeout(update, 350);
+      // Fallback when visualViewport doesn't fire (e.g. some WebViews): assume keyboard ~260px
+      setTimeout(() => {
+        const vv = (window as Window & { visualViewport?: VisualViewport }).visualViewport;
+        if (vv && window.innerHeight - vv.height < 50) setToolbarBottom(0);
+        else if (!vv && window.innerWidth <= 768) setToolbarBottom(260);
+      }, 400);
+    };
+    const onFocusOut = () => {
+      setTimeout(update, 50);
+      setTimeout(update, 200);
+    };
+    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('focusout', onFocusOut);
+    return () => {
+      if (vv) {
+        vv.removeEventListener('resize', update);
+        vv.removeEventListener('scroll', update);
+      }
+      window.removeEventListener('resize', update);
+      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener('focusout', onFocusOut);
+    };
+  }, [toolbarFixed]);
 
   useEffect(() => {
     if (onMediaChange) {
@@ -345,10 +408,20 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
   if (toolbarFixed) {
     return (
       <>
-        {/* Fixed header: optional topSlot (e.g. title) then toolbar; or toolbar only */}
-        <div className={`fixed top-14 left-0 right-0 z-20 flex flex-col px-3 bg-gradient-to-b from-black/80 via-black/60 to-transparent ${topSlot ? 'pb-2' : 'pb-1'}`}>
+        {/* Content: full height with bottom padding so fixed toolbar doesn't cover it */}
+        <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
           {topSlot}
-          <div className={topSlot ? 'flex justify-center mt-2' : 'flex justify-center'}>
+          <div className="editor-scroll-area min-h-0 flex-1 overflow-hidden flex flex-col pb-20 [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex [&>div]:flex-col [&_.ProseMirror]:min-h-full">
+            <EditorContent editor={editor} />
+          </div>
+        </div>
+
+        {/* Fixed toolbar at bottom; bottom offset moves it up when keyboard is open */}
+        <div
+          className="fixed left-0 right-0 z-20 flex flex-col bg-black px-3 pt-2 pb-6 safe-area-pb transition-[bottom] duration-200 ease-out"
+          style={{ bottom: toolbarBottom }}
+        >
+          <div className="flex justify-center">
             <div className={`max-w-md w-full ${toolbarWrapperClass}`}>
               {toolbar}
             </div>
@@ -380,13 +453,6 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
           onChange={(e) => handleVideoUpload(e.target.files)}
           className="hidden"
         />
-
-        {/* Content: padding clears fixed header (toolbar only or title + toolbar) */}
-        <div className={`flex h-full min-h-0 w-full flex-col overflow-hidden ${topSlot ? 'pt-12' : 'pt-8'}`}>
-          <div className="editor-scroll-area min-h-0 flex-1 overflow-hidden flex flex-col [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex [&>div]:flex-col [&_.ProseMirror]:min-h-full">
-            <EditorContent editor={editor} />
-          </div>
-        </div>
       </>
     );
   }

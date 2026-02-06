@@ -4,7 +4,7 @@ import { useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthContext } from './auth-context';
 
-const AUTH_REDIRECT_KEY = 'orbit-auth-redirect';
+export const AUTH_REDIRECT_KEY = 'orbit-auth-redirect';
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
@@ -32,7 +32,7 @@ export function useAuthGuard() {
     router.push('/auth');
   };
 
-  const getRedirectPath = () => sessionStorage.getItem(AUTH_REDIRECT_KEY) || '/';
+  const getRedirectPath = () => (typeof window !== 'undefined' ? sessionStorage.getItem(AUTH_REDIRECT_KEY) : null) || '/';
   const clearRedirectPath = () => sessionStorage.removeItem(AUTH_REDIRECT_KEY);
 
   return {

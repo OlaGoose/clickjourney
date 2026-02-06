@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { UserIcon } from '@heroicons/react/24/outline';
-import { useAuth, useAuthGuard } from '@/lib/auth';
+import { useAuth, useAuthGuard, AUTH_REDIRECT_KEY } from '@/lib/auth';
 import { Sidebar } from '@/components/layout/Sidebar';
 
 interface UserAvatarProps {
@@ -37,23 +38,29 @@ export function UserAvatar({
 }: UserAvatarProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, profile, isAuthenticated } = useAuth();
-  const { redirectToAuth } = useAuthGuard();
 
   const handleAvatarClick = () => {
     if (showDropdown) setIsSidebarOpen(true);
   };
 
+  const setRedirectAndGo = () => {
+    if (typeof window !== 'undefined') {
+      const current = window.location.pathname;
+      if (current !== '/auth') sessionStorage.setItem(AUTH_REDIRECT_KEY, current);
+    }
+  };
+
   if (!isAuthenticated || !user) {
     return (
-      <button
-        type="button"
-        onClick={() => redirectToAuth()}
+      <Link
+        href="/auth"
+        onClick={setRedirectAndGo}
         className={`${sizeClasses[size]} flex items-center justify-center rounded-full bg-white/[0.12] text-white/90 transition-[background-color,transform] duration-200 hover:bg-white/[0.18] hover:scale-[1.02] active:scale-[0.98] ${className}`}
         title="Sign in"
         aria-label="Sign in"
       >
         <UserIcon className={`${iconSizeClasses[size]} shrink-0 text-white/90`} />
-      </button>
+      </Link>
     );
   }
 
