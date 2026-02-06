@@ -9,6 +9,7 @@ export interface LocationData {
   name: string;
   region?: string;
   country?: string;
+  address?: string;
 }
 
 export interface GroundingChunk {
@@ -45,8 +46,14 @@ export interface CarouselItem {
   gallery?: string[];
   /** Short label (e.g. JOURNEY START) or long callout/description for this memory */
   description?: string;
+  /** Rich text HTML content for the full memory story */
+  richContent?: string;
   /** Optional audio URL for this memory; callout play button uses it when set */
   audioUrl?: string;
+  /** Audio files uploaded by user */
+  audioUrls?: string[];
+  /** Video files uploaded by user */
+  videoUrls?: string[];
   /** Avatar seeds for journey participants (e.g. for DiceBear); drives header avatars when set */
   participants?: string[];
   price?: string;

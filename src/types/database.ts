@@ -43,9 +43,13 @@ export interface Database {
           category: string | null;
           gallery_urls: string[];
           description: string | null;
+          rich_content: string | null;
+          audio_urls: string[];
+          video_urls: string[];
           lat: number | null;
           lng: number | null;
           place_name: string | null;
+          place_address: string | null;
           sort_order: number;
           is_journey_start: boolean;
           is_journey_end: boolean;
@@ -64,9 +68,13 @@ export interface Database {
           category?: string | null;
           gallery_urls?: string[] | Json;
           description?: string | null;
+          rich_content?: string | null;
+          audio_urls?: string[] | Json;
+          video_urls?: string[] | Json;
           lat?: number | null;
           lng?: number | null;
           place_name?: string | null;
+          place_address?: string | null;
           sort_order?: number;
           is_journey_start?: boolean;
           is_journey_end?: boolean;

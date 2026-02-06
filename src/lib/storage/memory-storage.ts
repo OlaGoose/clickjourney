@@ -128,7 +128,17 @@ export async function getCarouselItems(userId: string | null): Promise<CarouselI
 export async function saveMemory(userId: string, item: CarouselItem): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Supabase not configured' };
   try {
-    const row = carouselItemToRow(item, userId);
+    // Get the max sort_order to append new memory at the end
+    const { data: maxData } = await supabase
+      .from('travel_memories')
+      .select('sort_order')
+      .eq('user_id', userId)
+      .order('sort_order', { ascending: false })
+      .limit(1);
+    
+    const nextSortOrder = maxData && maxData.length > 0 ? (maxData[0]?.sort_order ?? 0) + 1 : 0;
+    
+    const row = carouselItemToRow(item, userId, { sortOrder: nextSortOrder });
     const { error } = await supabase.from('travel_memories').insert(row as never);
     return { error: error?.message ?? null };
   } catch (e) {

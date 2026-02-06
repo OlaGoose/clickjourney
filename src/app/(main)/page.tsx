@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import StarField from '@/components/StarField';
 import InteractiveGlobe from '@/components/InteractiveGlobe';
 import Carousel from '@/components/Carousel';
@@ -39,10 +40,12 @@ function isContentCard(item: CarouselItem | null): boolean {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const auth = useOptionalAuth();
   const userId = auth?.user?.id ?? null;
 
   const [carouselItems, setCarouselItems] = useState<CarouselItem[]>(() => buildCarouselItems([]));
+  const [isLoadingItems, setIsLoadingItems] = useState(true);
   const [currentLocation, setCurrentLocation] = useState<LocationData>(INITIAL_LOCATION);
   /** Current memory at carousel active index; single source for header/callout/globe linkage */
   const [activeItem, setActiveItem] = useState<CarouselItem | null>(null);
@@ -58,8 +61,12 @@ export default function HomePage() {
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoadingItems(true);
     getCarouselItems(userId).then((items) => {
-      if (!cancelled) setCarouselItems(items);
+      if (!cancelled) {
+        setCarouselItems(items);
+        setIsLoadingItems(false);
+      }
     });
     return () => {
       cancelled = true;
@@ -248,6 +255,7 @@ export default function HomePage() {
           {auth?.user ? (
             <button
               type="button"
+              onClick={() => router.push('/memories/new')}
               className="flex items-center gap-2 rounded-full px-8 py-3 text-sm font-medium text-white shadow-xl transition-all hover:scale-105 hover:opacity-90 active:scale-95 md:text-base"
               style={{ backgroundColor: 'rgb(0, 113, 227)' }}
             >
@@ -270,6 +278,7 @@ export default function HomePage() {
           ) : (
             <button
               type="button"
+              onClick={() => router.push('/auth')}
               className="flex items-center gap-2 rounded-full bg-white px-8 py-3 text-sm font-medium text-black shadow-xl transition-all hover:scale-105 hover:bg-white/90 active:scale-95 md:text-base"
             >
               <svg

@@ -13,9 +13,13 @@ export interface TravelMemoryRow {
   category: string | null;
   gallery_urls: string[];
   description: string | null;
+  rich_content: string | null;
+  audio_urls: string[];
+  video_urls: string[];
   lat: number | null;
   lng: number | null;
   place_name: string | null;
+  place_address: string | null;
   sort_order: number;
   is_journey_start: boolean;
   is_journey_end: boolean;
@@ -26,7 +30,12 @@ export interface TravelMemoryRow {
 export function rowToCarouselItem(row: TravelMemoryRow): CarouselItem {
   const coords: LocationData | undefined =
     row.lat != null && row.lng != null
-      ? { lat: row.lat, lng: row.lng, name: row.place_name ?? '' }
+      ? { 
+          lat: row.lat, 
+          lng: row.lng, 
+          name: row.place_name ?? '',
+          address: row.place_address ?? undefined
+        }
       : undefined;
   return {
     id: row.id,
@@ -39,6 +48,9 @@ export function rowToCarouselItem(row: TravelMemoryRow): CarouselItem {
     category: row.category ?? undefined,
     gallery: Array.isArray(row.gallery_urls) ? row.gallery_urls : [],
     description: row.description ?? undefined,
+    richContent: row.rich_content ?? undefined,
+    audioUrls: Array.isArray(row.audio_urls) ? row.audio_urls : [],
+    videoUrls: Array.isArray(row.video_urls) ? row.video_urls : [],
     coordinates: coords,
   };
 }
@@ -59,9 +71,13 @@ export function carouselItemToRow(
     category: item.category ?? null,
     gallery_urls: Array.isArray(item.gallery) ? item.gallery : [],
     description: item.description ?? null,
+    rich_content: item.richContent ?? null,
+    audio_urls: Array.isArray(item.audioUrls) ? item.audioUrls : [],
+    video_urls: Array.isArray(item.videoUrls) ? item.videoUrls : [],
     lat: item.coordinates?.lat ?? null,
     lng: item.coordinates?.lng ?? null,
     place_name: item.coordinates?.name ?? null,
+    place_address: item.coordinates?.address ?? null,
     sort_order: opts.sortOrder ?? 0,
     is_journey_start: opts.isJourneyStart ?? false,
     is_journey_end: opts.isJourneyEnd ?? false,
