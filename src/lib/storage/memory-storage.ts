@@ -1,15 +1,16 @@
 'use client';
 
 /**
- * Memory storage: local-first with Supabase sync.
- * - Default/demo data when not logged in
- * - IndexedDB cache + Supabase when authenticated
+ * Memory storage: local-first with IndexedDB + Supabase sync.
+ * - IndexedDB as primary storage (offline-first)
+ * - Background sync to Supabase when authenticated
+ * - Demo data for non-authenticated users
  */
 
-import { supabase } from '../supabase/client';
+import { MemoryService } from '../db/services/memory-service';
+import { initializeDemoData, hasDemoData } from '../db/utils/demo-data';
 import type { CarouselItem, NewMemoryInput } from '@/types';
 import { getDemoGallerySlice } from './demo-gallery';
-import { rowToCarouselItem, carouselItemToRow, type TravelMemoryRow } from './types';
 
 /** Original 4 cards for homepage carousel (with coordinates + description + participants for full linkage). */
 const DEMO_ITEMS_MAIN: CarouselItem[] = [
@@ -84,63 +85,65 @@ const END_CARD: CarouselItem = {
   coordinates: { lat: 40.3956, lng: -74.1768, name: 'Orbit View', country: 'Space' },
 };
 
-/** Build carousel list: start + memories (repeated) + end */
+/**
+ * Build carousel list: start + memories (repeated) + end
+ * Note: Demo fallback is now handled by IndexedDB demo data initialization
+ */
 export function buildCarouselItems(memories: CarouselItem[]): CarouselItem[] {
-  const middle = memories.length ? memories : DEMO_ITEMS;
+  // Repeat memories 3 times for carousel effect
+  const middle = memories.length > 0 ? memories : [];
   return [START_CARD, ...middle, ...middle, ...middle, END_CARD];
 }
 
-/** Fetch memories for user from Supabase; returns [] if not configured or error */
+/**
+ * Fetch memories for user from IndexedDB
+ * Local-first: reads from IndexedDB, syncs with Supabase in background
+ */
 export async function fetchMemoriesForUser(userId: string | null): Promise<CarouselItem[]> {
-  if (!supabase) return [];
+  if (typeof window === 'undefined') return [];
+  
   try {
-    const query = userId
-      ? supabase
-          .from('travel_memories')
-          .select('*')
-          .or(`user_id.eq.${userId},user_id.is.null`)
-          .order('sort_order', { ascending: true })
-      : supabase
-          .from('travel_memories')
-          .select('*')
-          .is('user_id', null)
-          .order('sort_order', { ascending: true });
-    const { data, error } = await query;
-    if (error) {
-      console.warn('fetchMemoriesForUser', error);
-      return [];
+    // Initialize demo data for non-authenticated users if needed
+    if (!userId) {
+      const hasDemo = await hasDemoData();
+      if (!hasDemo) {
+        await initializeDemoData();
+      }
     }
-    const rows = (data ?? []) as TravelMemoryRow[];
-    return rows.filter((r) => !r.is_journey_start && !r.is_journey_end).map(rowToCarouselItem);
+    
+    // Fetch from IndexedDB (local-first)
+    const memories = await MemoryService.listMemories(userId);
+    return memories;
   } catch (e) {
-    console.warn('fetchMemoriesForUser', e);
+    console.warn('fetchMemoriesForUser error:', e);
     return [];
   }
 }
 
-/** Get carousel items: for authenticated user from DB (with demo fallback), else demo */
+/**
+ * Get carousel items from IndexedDB
+ * Note: Database initialization should be done via DatabaseProvider in layout
+ */
 export async function getCarouselItems(userId: string | null): Promise<CarouselItem[]> {
+  if (typeof window === 'undefined') return buildCarouselItems([]);
+  
+  // Fetch memories (demo data will be auto-initialized if needed)
   const memories = await fetchMemoriesForUser(userId);
   return buildCarouselItems(memories);
 }
 
-/** Save a new memory to Supabase (authenticated only). Item may omit id. */
+/**
+ * Save a new memory to IndexedDB (local-first)
+ * Automatically syncs to Supabase in background if authenticated
+ */
 export async function saveMemory(userId: string, item: NewMemoryInput | CarouselItem): Promise<{ error: string | null }> {
-  if (!supabase) return { error: 'Supabase not configured' };
+  if (typeof window === 'undefined') {
+    return { error: 'Storage not available on server' };
+  }
+  
   try {
-    // Get the max sort_order to append new memory at the end
-    const { data: maxData } = await supabase
-      .from('travel_memories')
-      .select('sort_order')
-      .eq('user_id', userId)
-      .order('sort_order', { ascending: false })
-      .limit(1);
-    
-    const nextSortOrder = maxData && maxData.length > 0 ? (maxData[0]?.sort_order ?? 0) + 1 : 0;
-    
-    const row = carouselItemToRow(item, userId, { sortOrder: nextSortOrder });
-    const { error } = await supabase.from('travel_memories').insert(row as never);
-    return { error: error?.message ?? null };
+    const result = await MemoryService.createMemory(userId, item);
+    return { error: result.error };
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Unknown error' };
   }

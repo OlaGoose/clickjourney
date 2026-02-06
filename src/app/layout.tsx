@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth';
+import { DatabaseProvider } from '@/lib/db/init';
 
 export const metadata: Metadata = {
   title: 'Orbit Journey – Travel Memory',
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <DatabaseProvider>{children}</DatabaseProvider>
+        </AuthProvider>
       </body>
     </html>
   );
