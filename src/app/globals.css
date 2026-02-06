@@ -125,7 +125,7 @@
 
 /* Bottom safe area for fixed toolbar (e.g. notched devices) */
 .safe-area-pb {
-  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
 }
 
 @keyframes spin {

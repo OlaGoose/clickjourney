@@ -257,7 +257,7 @@ export default function NewMemoryPage() {
         </div>
       </header>
 
-      <main className="relative z-10 flex h-screen flex-col pt-11 pb-24 overflow-hidden">
+      <main className="relative z-10 flex h-screen flex-col pt-11 pb-20 overflow-hidden">
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 py-6 md:px-6 md:py-8 overflow-hidden">
           <div className="flex flex-1 flex-col min-h-0 gap-6">
             {/* Location line (Apple-style, above title) — only when user has selected a place */}

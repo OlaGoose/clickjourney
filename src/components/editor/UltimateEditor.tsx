@@ -32,8 +32,13 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
 
   const initialContentSet = useRef(false);
   const [toolbarBottom, setToolbarBottom] = useState(0);
+  /** When keyboard is open, limit content height so it sits above keyboard (best practice: resize scroll area). */
+  const [contentAreaMaxHeight, setContentAreaMaxHeight] = useState<number | null>(null);
   const [mediaLightbox, setMediaLightbox] = useState<{ type: 'image' | 'video'; src: string } | null>(null);
   const editorContentRef = useRef<HTMLDivElement>(null);
+
+  const HEADER_HEIGHT_PX = 44;
+  const TOOLBAR_HEIGHT_PX = 56;
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -103,8 +108,11 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         if (vv) {
           const bottom = window.innerHeight - (vv.offsetTop + vv.height);
           setToolbarBottom(Math.max(0, bottom));
+          const aboveKeyboard = vv.height - HEADER_HEIGHT_PX - TOOLBAR_HEIGHT_PX;
+          setContentAreaMaxHeight(aboveKeyboard > 120 ? aboveKeyboard : null);
         } else {
           setToolbarBottom(0);
+          setContentAreaMaxHeight(null);
         }
       });
     };
@@ -122,8 +130,13 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
       // Fallback when visualViewport doesn't fire (e.g. some WebViews): assume keyboard ~260px
       setTimeout(() => {
         const vv = (window as Window & { visualViewport?: VisualViewport }).visualViewport;
-        if (vv && window.innerHeight - vv.height < 50) setToolbarBottom(0);
-        else if (!vv && window.innerWidth <= 768) setToolbarBottom(260);
+        if (vv && window.innerHeight - vv.height < 50) {
+          setToolbarBottom(0);
+          setContentAreaMaxHeight(null);
+        } else if (!vv && window.innerWidth <= 768) {
+          setToolbarBottom(260);
+          setContentAreaMaxHeight(window.innerHeight - HEADER_HEIGHT_PX - TOOLBAR_HEIGHT_PX - 260);
+        }
       }, 400);
     };
     const onFocusOut = () => {
@@ -277,7 +290,6 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
           <line x1="15" x2="9" y1="4" y2="20" />
         </svg>
       </button>
-      <div className="editor-toolbar-divider" aria-hidden />
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -309,7 +321,6 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
       >
         <span className="text-[0.975rem] font-bold">H3</span>
       </button>
-      <div className="editor-toolbar-divider" aria-hidden />
       <button
         type="button"
         onClick={() => imageInputRef.current?.click()}
@@ -348,7 +359,6 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
           <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
         </svg>
       </button>
-      <div className="editor-toolbar-divider" aria-hidden />
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -393,7 +403,6 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
           <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
         </svg>
       </button>
-      <div className="editor-toolbar-divider" aria-hidden />
       <button
         type="button"
         onClick={() => editor.chain().focus().setTextAlign('left').run()}
@@ -440,7 +449,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
   );
 
   const toolbarWrapperClass =
-    'flex items-center gap-0.5 px-1.5 py-1 overflow-x-auto no-scrollbar';
+    'flex items-center gap-0.5 overflow-x-auto no-scrollbar';
 
   if (toolbarFixed) {
     return (
@@ -448,14 +457,18 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         {/* Content: full height with bottom padding so fixed toolbar doesn't cover it */}
         <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
           {topSlot}
-          <div ref={editorContentRef} className="editor-scroll-area min-h-0 flex-1 overflow-hidden flex flex-col pb-20 [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex [&>div]:flex-col [&_.ProseMirror]:min-h-full">
+          <div
+            ref={editorContentRef}
+            className="editor-scroll-area min-h-0 flex-1 overflow-hidden flex flex-col pb-6 transition-[max-height] duration-200 ease-out [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex [&>div]:flex-col [&_.ProseMirror]:min-h-full"
+            style={contentAreaMaxHeight != null ? { maxHeight: contentAreaMaxHeight } : undefined}
+          >
             <EditorContent editor={editor} />
           </div>
         </div>
 
         {/* Fixed toolbar at bottom; bottom offset moves it up when keyboard is open */}
         <div
-          className="fixed left-0 right-0 z-20 flex flex-col bg-black px-3 pt-2 pb-6 safe-area-pb transition-[bottom] duration-200 ease-out"
+          className="fixed left-0 right-0 z-20 flex flex-col bg-black px-2 pt-2 pb-2 safe-area-pb transition-[bottom] duration-200 ease-out"
           style={{ bottom: toolbarBottom }}
         >
           <div className="flex justify-center">
