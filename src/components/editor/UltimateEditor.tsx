@@ -133,9 +133,9 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
   }
 
   return (
-    <div className="w-full rounded-xl md:rounded-2xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden">
+    <div className="w-full rounded-xl md:rounded-2xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden flex flex-col max-h-[600px]">
       {/* H5 Toolbar: single row, horizontal scroll */}
-      <div className="flex items-center border-b border-white/10 bg-black/30 no-scrollbar editor-toolbar-scroll">
+      <div className="flex items-center border-b border-white/10 bg-black/30 no-scrollbar editor-toolbar-scroll shrink-0">
         <div className="flex items-center gap-0.5 p-2 flex-nowrap shrink-0">
           <button
             type="button"
@@ -354,8 +354,10 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
         className="hidden"
       />
 
-      {/* Editor Content */}
-      <EditorContent editor={editor} />
+      {/* Editor Content — scrollable when content exceeds max height */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <EditorContent editor={editor} />
+      </div>
     </div>
   );
 }
