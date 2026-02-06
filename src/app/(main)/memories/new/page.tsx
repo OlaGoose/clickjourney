@@ -183,7 +183,7 @@ export default function NewMemoryPage() {
       </header>
 
       <main className="relative z-10 flex h-screen flex-col pt-11 pb-24 overflow-hidden">
-        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 px-4 py-6 md:px-6 md:py-8 overflow-hidden">
+        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 py-6 md:px-6 md:py-8 overflow-hidden">
           <div className="flex flex-1 flex-col min-h-0 gap-6">
             {/* Location line (Apple-style, above title) — only when user has selected a place */}
             {location && (
@@ -197,25 +197,7 @@ export default function NewMemoryPage() {
                 </span>
               </div>
             )}
-            {/* Title */}
-            <div className="shrink-0">
-              <input
-                type="text"
-                id="title"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  if (errors.title) setErrors({ ...errors, title: undefined });
-                }}
-                placeholder="A memorable journey..."
-                className={`w-full px-4 md:px-6 py-3 md:py-4 bg-black/40 backdrop-blur-sm border rounded-xl md:rounded-2xl text-white placeholder-gray-500 focus:outline-none transition-colors text-base md:text-lg ${
-                  errors.title ? 'border-red-500/50' : 'border-white/10 focus:border-white/30'
-                }`}
-              />
-              {errors.title && <p className="mt-2 text-sm text-red-400">{errors.title}</p>}
-            </div>
-
-            {/* Editor: fills space down to above Publish button */}
+            {/* Editor: fixed toolbar + borderless title below + editor without border */}
             <div className={`min-h-0 flex-1 flex flex-col ${errors.content ? 'ring-2 ring-red-500/50 rounded-xl md:rounded-2xl' : ''}`}>
               <UltimateEditor
                 content={content}
@@ -225,14 +207,33 @@ export default function NewMemoryPage() {
                 }}
                 onMediaChange={handleMediaChange}
                 placeholder="Start writing your story... Use the toolbar to add images, audio, and videos directly into your story."
+                toolbarFixed
+                topSlot={
+                  <>
+                    <div className="shrink-0 px-1 md:px-6">
+                      <input
+                        type="text"
+                        id="title"
+                        value={title}
+                        onChange={(e) => {
+                          setTitle(e.target.value);
+                          if (errors.title) setErrors((prev) => ({ ...prev, title: undefined }));
+                        }}
+                        placeholder="Untitled"
+                        className="w-full text-[1.8rem] font-bold bg-transparent border-none outline-none text-white placeholder-gray-500/50 leading-tight"
+                      />
+                      {errors.title && <p className="mt-2 text-sm text-red-400">{errors.title}</p>}
+                    </div>
+                  </>
+                }
               />
               {errors.content && <p className="mt-2 text-sm text-red-400">{errors.content}</p>}
             </div>
 
             {/* Media Stats */}
             {(images.length > 0 || audios.length > 0 || videos.length > 0) && (
-              <div className="flex flex-wrap items-center gap-4 shrink-0 px-4 py-3 bg-black/40 rounded-xl border border-white/10">
-                <span className="text-sm text-gray-400">Media attached:</span>
+              <div className="flex flex-wrap items-center gap-4 shrink-0 px-4 py-3 bg-black/40 rounded-xl">
+                <span className="text-sm text-gray-400">Media:</span>
                 {images.length > 0 && (
                   <span className="flex items-center gap-2 text-sm text-white">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

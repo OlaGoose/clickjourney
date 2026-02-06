@@ -109,22 +109,6 @@ export default function MemoryDetail({ item, onBack }: MemoryDetailProps) {
             </div>
           )}
 
-          <div className="px-4 py-6">
-            <h1 className="mb-4 text-2xl font-bold leading-tight text-[#222222]">{title}</h1>
-            {item.richContent ? (
-              <div 
-                className="prose prose-sm max-w-none text-justify text-[15px] font-light leading-relaxed text-[#222222] [&>h1]:text-[#222222] [&>h2]:text-[#222222] [&>h3]:text-[#222222] [&>p]:text-[#222222] [&>p]:opacity-80 [&_.audio-wrapper]:bg-gray-100 [&_.audio-wrapper]:border-gray-200 [&_.video-wrapper]:bg-gray-100 [&_.video-wrapper]:border-gray-200"
-                dangerouslySetInnerHTML={{ __html: item.richContent }}
-              />
-            ) : (
-              <div className="text-justify text-[15px] font-light leading-relaxed text-[#222222] opacity-80">
-                {description}
-                <span className="mt-2 block">
-                  {description} {description}
-                </span>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
