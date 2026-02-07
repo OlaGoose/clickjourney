@@ -394,6 +394,7 @@ export default function MemoryUploadPage() {
       <CinematicGenerationLoader
         isGenerating={isGenerating}
         progress={generationProgress}
+        imageUrls={images.map((img) => img.url)}
       />
 
       {/* Error Display */}
