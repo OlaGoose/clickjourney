@@ -151,7 +151,7 @@ NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
 当前的 `/api/transcribe` 路由正确实现了音频转写功能：
 
 - ✅ 使用 `@google/genai` 库
-- ✅ 调用 `gemini-2.0-flash-exp` 模型
+- ✅ 调用 `gemini-2.5-flash` 模型
 - ✅ 支持 base64 音频输入
 - ✅ 中文转写提示词优化
 - ✅ 错误处理完善

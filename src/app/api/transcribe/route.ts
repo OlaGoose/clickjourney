@@ -2,7 +2,7 @@
  * @Author: meta-kk 11097094+teacher-kk@user.noreply.gitee.com
  * @Date: 2026-02-07 15:33:45
  * @LastEditors: meta-kk 11097094+teacher-kk@user.noreply.gitee.com
- * @LastEditTime: 2026-02-07 16:43:00
+ * @LastEditTime: 2026-02-07 21:07:59
  * @FilePath: /orbit-journey-next/src/app/api/transcribe/route.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -35,10 +35,11 @@ export async function POST(request: Request) {
     );
   }
 
+  const model = process.env.NEXT_PUBLIC_GEMINI_MODEL_STT || 'gemini-2.5-flash';
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model,
       contents: {
         parts: [
           {

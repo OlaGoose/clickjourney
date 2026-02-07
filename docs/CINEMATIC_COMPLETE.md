@@ -147,7 +147,7 @@ src/
 
 ```typescript
 {
-  model: 'gemini-2.0-flash-exp',
+  model: 'gemini-2.5-flash',
   temperature: 0.9,        // High creativity
   topP: 0.95,              // Diverse outputs
   maxOutputTokens: 2048    // Sufficient for 9 captions

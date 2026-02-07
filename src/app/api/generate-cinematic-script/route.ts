@@ -133,8 +133,9 @@ Now analyze the ${images.length} images and create magic.`;
 
     console.log(`[AI Director] Analyzing ${images.length} images with transcript...`);
 
+    const model = process.env.NEXT_PUBLIC_GEMINI_MODEL_CINEMATIC || 'gemini-3-flash-preview';
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model,
       contents: {
         parts: contentParts,
       },

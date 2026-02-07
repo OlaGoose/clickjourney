@@ -47,9 +47,10 @@ export const generateImage = async (
 ): Promise<string> => {
   const ai = getAI();
   
+  const model = process.env.NEXT_PUBLIC_GEMINI_MODEL_IMAGE || 'gemini-3-pro-image-preview';
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
+      model,
       contents: {
         parts: [{ text: prompt }],
       },
@@ -84,9 +85,10 @@ export const editImage = async (
   // Strip prefix if present
   const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
 
+  const model = process.env.NEXT_PUBLIC_GEMINI_MODEL_IMAGE_EDIT || 'gemini-2.5-flash-image';
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model,
       contents: {
         parts: [
           {
@@ -119,9 +121,10 @@ export const analyzeImage = async (base64Image: string): Promise<string> => {
   const ai = getAI();
   const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
 
+  const model = process.env.NEXT_PUBLIC_GEMINI_MODEL_IMAGE_ANALYZE || 'gemini-3-pro-preview';
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model,
       contents: {
         parts: [
           {
@@ -151,9 +154,10 @@ export const generateSpeech = async (
 ): Promise<AudioBuffer> => {
   const ai = getAI();
   
+  const model = process.env.NEXT_PUBLIC_GEMINI_MODEL_TTS || 'gemini-2.5-flash-preview-tts';
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-preview-tts',
+      model,
       contents: [{ parts: [{ text }] }],
       config: {
         responseModalities: [Modality.AUDIO],
