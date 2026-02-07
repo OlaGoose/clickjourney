@@ -185,7 +185,7 @@ export default function NewMemoryPage() {
         <div className="flex flex-shrink-0 flex-grow-0 items-center" style={{ height: '100%', paddingInline: '4px 8px' }}>
           <button
             type="button"
-            className="flex h-full w-[26px] flex-shrink-0 items-center justify-center rounded-md text-white/70 transition-[background] duration-[20ms] ease-in hover:bg-white/[0.08] active:bg-white/[0.12]"
+            className="flex p-1 flex-shrink-0 items-center justify-center rounded-md text-white/70 transition-[background] duration-[20ms] ease-in hover:bg-white/[0.08] active:bg-white/[0.12]"
             style={{ marginInlineEnd: 14 }}
             aria-label="Share"
           >
@@ -198,7 +198,7 @@ export default function NewMemoryPage() {
             <button
               type="button"
               onClick={() => setMoreMenuOpen((o) => !o)}
-              className="flex h-full min-h-[44px] w-[26px] flex-shrink-0 items-center justify-center rounded-md text-white/70 transition-[background] duration-[20ms] ease-in hover:bg-white/[0.08] active:bg-white/[0.12]"
+              className="flex p-1 flex-shrink-0 items-center justify-center rounded-md text-white/70 transition-[background] duration-[20ms] ease-in hover:bg-white/[0.08] active:bg-white/[0.12]"
               style={{ marginInlineEnd: 14 }}
               aria-label="Actions"
               aria-expanded={moreMenuOpen}
