@@ -207,16 +207,12 @@ export default function MemoryUploadPage() {
 
   const goToNextStep = useCallback(() => {
     if (currentStep === 0) {
-      // Step 0 -> 1: Start analyzing images in background (non-blocking)
-      if (!isDefault && imageAnalyses.length === 0 && !isAnalyzingImages) {
-        analyzeImages(); // Fire and forget - don't await
-      }
-      setCurrentStep(1); // Move to next step immediately
+      setCurrentStep(1);
     } else if (currentStep === 1) {
       // Step 1 -> Generate: Create cinematic memory
       generateCinematicMemory();
     }
-  }, [currentStep, isDefault, imageAnalyses.length, isAnalyzingImages, analyzeImages, generateCinematicMemory]);
+  }, [currentStep, isDefault, generateCinematicMemory]);
 
   const handleStartClick = useCallback(() => {
     setReplaceTargetId(null);
