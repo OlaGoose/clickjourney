@@ -1,70 +1,45 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { motion, useScroll } from 'framer-motion';
-import { MapPin, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MapPin, Calendar, Edit2, ArrowLeft, Share2, Download } from 'lucide-react';
+import Link from 'next/link';
 import { DirectorScript, StoryBlock } from '@/types/cinematic';
-import { GlobeIndicator } from '@/components/cinematic/GlobeIndicator';
-import { FullBleedLayout } from '@/components/cinematic/FullBleedLayout';
-import { SideBySideLayout } from '@/components/cinematic/SideBySideLayout';
-import { ImmersiveFocusLayout } from '@/components/cinematic/ImmersiveFocusLayout';
-import { HeroSplitLayout } from '@/components/cinematic/HeroSplitLayout';
-import { MagazineSpreadLayout } from '@/components/cinematic/MagazineSpreadLayout';
-import { MinimalCaptionLayout } from '@/components/cinematic/MinimalCaptionLayout';
-import { PortraitFeatureLayout } from '@/components/cinematic/PortraitFeatureLayout';
-import { TextOverlayLayout } from '@/components/cinematic/TextOverlayLayout';
-import { ReflectionEndLayout } from '@/components/cinematic/ReflectionEndLayout';
-import { AIDirectorPanel } from '@/components/cinematic/AIDirectorPanel';
-
-// --- Default Data ---
+import { StaticBlockRenderer } from '@/components/cinematic/StaticBlockRenderer';
+import './cinematic.css';
 
 const DEFAULT_SCRIPT: DirectorScript = {
-  title: "Santa Cruz: Edge of the World",
-  location: "California, USA",
+  title: "未命名的旅程",
+  location: "未知目的地",
   blocks: [
     {
       id: '1',
       layout: "full_bleed",
-      image: "https://picsum.photos/id/1015/1600/1200",
-      text: "We arrived at the edge of the continent, where the sky meets the sea in an endless embrace.",
-      animation: "slow_zoom"
-    },
-    {
-      id: '2',
-      layout: "side_by_side",
-      image: "https://picsum.photos/id/1016/1200/800",
-      text: "The ocean air felt different here. It wasn't just salt; it was history, ancient and unforgiving.",
-      animation: "parallax_drift"
-    },
-    {
-      id: '3',
-      layout: "immersive_focus",
-      image: "https://picsum.photos/id/1036/1200/1200",
-      text: "Every texture told a story. The rough bark of the redwoods, the smooth glass of the tide pools.",
-      animation: "slow_zoom"
+      image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&h=1200&fit=crop",
+      text: "每一段旅程，都从一个决定开始",
+      animation: "fade_in",
+      textPosition: "center",
+      textSize: "large",
+      imageFilter: "none",
+      mood: "contemplative"
     }
   ]
 };
 
 export default function CinematicMemoryPage() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ container: containerRef });
-  
   const [script, setScript] = useState<DirectorScript>(DEFAULT_SCRIPT);
-  const [showTools, setShowTools] = useState(false);
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [activeChapter, setActiveChapter] = useState<string | null>(null);
 
-  // Load script from sessionStorage (generated from upload page)
+  // Load script from sessionStorage
   useEffect(() => {
     const loadScript = () => {
       try {
         const storedScript = sessionStorage.getItem('cinematicScript');
         if (storedScript) {
           const parsedScript = JSON.parse(storedScript);
-          console.log('[Cinematic] Loaded script from storage:', parsedScript);
+          console.log('[Cinematic] Loaded script:', parsedScript);
           setScript(parsedScript);
-          // Clear after loading to prevent stale data
           sessionStorage.removeItem('cinematicScript');
         }
       } catch (error) {
@@ -74,8 +49,7 @@ export default function CinematicMemoryPage() {
       }
     };
 
-    // Small delay for dramatic effect
-    setTimeout(loadScript, 800);
+    setTimeout(loadScript, 500);
   }, []);
 
   const handleUpdateBlock = (id: string, updates: Partial<StoryBlock>) => {
@@ -85,144 +59,192 @@ export default function CinematicMemoryPage() {
     }));
   };
 
-  const handleAddNewBlock = (image?: string, text?: string) => {
-    const newBlock: StoryBlock = {
-      id: Date.now().toString(),
-      layout: 'side_by_side',
-      image: image || "https://picsum.photos/1200/800",
-      text: text || "A new chapter...",
-      animation: "fade_in"
-    };
-    setScript(prev => ({ ...prev, blocks: [...prev.blocks, newBlock] }));
-    setSelectedBlockId(newBlock.id);
-    setShowTools(true);
-    
-    // Auto scroll to bottom
-    setTimeout(() => {
-      containerRef.current?.scrollTo({ 
-        top: containerRef.current.scrollHeight, 
-        behavior: 'smooth' 
-      });
-    }, 100);
+  const getCurrentDate = () => {
+    return new Date().toLocaleDateString('zh-CN', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
   };
 
-  const getSelectedBlock = () => {
-    if (!selectedBlockId) return null;
-    return script.blocks.find(b => b.id === selectedBlockId);
-  };
-
-  // Loading state with Apple-style fade-in
   if (isLoading) {
     return (
-      <div className="bg-[#050505] min-h-screen text-white flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            className="w-12 h-12 mx-auto mb-4 border-2 border-white/20 border-t-white rounded-full"
-          />
-          <p className="text-white/50 text-sm font-light tracking-wide">
-            Preparing your memory...
-          </p>
-        </motion.div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-2 border-black/20 border-t-black rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-black/40 tracking-wide">加载中...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 1 }}
-      className="bg-[#050505] min-h-screen text-white relative"
-    >
-      <GlobeIndicator scrollYProgress={scrollYProgress} />
-
-      {/* Hero Title Overlay - Editable */}
-      <motion.div 
-        className="fixed top-8 left-8 z-40 mix-blend-difference"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1, duration: 1 }}
-      >
-        <input
-          value={script.title}
-          onChange={(e) => setScript(s => ({...s, title: e.target.value}))}
-          className="font-serif text-2xl text-white/90 bg-transparent outline-none w-full placeholder-white/30"
-          placeholder="Trip Title"
-        />
-        <div className="flex items-center gap-2 text-white/60 text-sm mt-1">
-          <MapPin size={14} />
-          <input
-            value={script.location}
-            onChange={(e) => setScript(s => ({...s, location: e.target.value}))}
-            className="font-sans uppercase tracking-widest bg-transparent outline-none w-full placeholder-white/30"
-            placeholder="LOCATION"
-          />
-        </div>
-      </motion.div>
-
-      {/* Scrollable Content */}
-      <main ref={containerRef} className="relative z-10 h-screen overflow-y-auto cinematic-scroll">
-        {script.blocks.map((block) => {
-          return (
-            <div 
-              key={block.id} 
-              onClick={() => { setSelectedBlockId(block.id); }}
-              className={`relative transition-all duration-500 ${selectedBlockId === block.id ? 'z-20 ring-2 ring-white/20' : ''}`}
-            >
-              {block.layout === 'full_bleed' && <FullBleedLayout block={block} onUpdate={handleUpdateBlock} />}
-              {block.layout === 'hero_split' && <HeroSplitLayout block={block} onUpdate={handleUpdateBlock} />}
-              {block.layout === 'side_by_side' && <SideBySideLayout block={block} onUpdate={handleUpdateBlock} />}
-              {block.layout === 'immersive_focus' && <ImmersiveFocusLayout block={block} onUpdate={handleUpdateBlock} />}
-              {block.layout === 'magazine_spread' && <MagazineSpreadLayout block={block} onUpdate={handleUpdateBlock} />}
-              {block.layout === 'minimal_caption' && <MinimalCaptionLayout block={block} onUpdate={handleUpdateBlock} />}
-              {block.layout === 'portrait_feature' && <PortraitFeatureLayout block={block} onUpdate={handleUpdateBlock} />}
-              {block.layout === 'text_overlay' && <TextOverlayLayout block={block} onUpdate={handleUpdateBlock} />}
-            </div>
-          );
-        })}
-        <ReflectionEndLayout onReplay={() => containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
-        
-        {/* Add Block Trigger - Subtle */}
-        <div className="h-[20vh] flex items-center justify-center bg-transparent">
-          <button 
-            onClick={() => handleAddNewBlock()} 
-            className="group flex items-center gap-2 text-white/20 hover:text-white/80 transition-all duration-300"
+    <div className="min-h-screen bg-white">
+      {/* Fixed Header - Airbnb Style */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-black/5">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 py-4 flex items-center justify-between">
+          <Link 
+            href="/memories/upload"
+            className="flex items-center gap-2 text-black/70 hover:text-black transition-colors group"
           >
-            <Sparkles size={16} /> 
-            <span className="font-light tracking-wide text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-              Continue Story
-            </span>
-          </button>
+            <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-medium">返回</span>
+          </Link>
+          
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                isEditMode 
+                  ? 'bg-black text-white' 
+                  : 'bg-black/5 text-black hover:bg-black/10'
+              }`}
+            >
+              <Edit2 size={16} />
+              {isEditMode ? '完成编辑' : '编辑'}
+            </button>
+            
+            <button className="p-2 hover:bg-black/5 rounded-full transition-colors">
+              <Share2 size={20} className="text-black/70" />
+            </button>
+            
+            <button className="p-2 hover:bg-black/5 rounded-full transition-colors">
+              <Download size={20} className="text-black/70" />
+            </button>
+          </div>
         </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="pt-20">
+        {/* Hero Title Section - Magazine Style */}
+        <section className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-24">
+          <div className="space-y-8">
+            {/* Date & Location */}
+            <div className="flex flex-wrap items-center gap-6 text-sm text-black/50">
+              <div className="flex items-center gap-2">
+                <Calendar size={16} />
+                <span>{getCurrentDate()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin size={16} />
+                <input
+                  type="text"
+                  value={script.location}
+                  onChange={(e) => setScript(s => ({...s, location: e.target.value}))}
+                  disabled={!isEditMode}
+                  className="bg-transparent border-none outline-none uppercase tracking-wider disabled:cursor-default"
+                  placeholder="添加地点"
+                />
+              </div>
+            </div>
+
+            {/* Title */}
+            <div>
+              <input
+                type="text"
+                value={script.title}
+                onChange={(e) => setScript(s => ({...s, title: e.target.value}))}
+                disabled={!isEditMode}
+                className="w-full bg-transparent border-none outline-none font-serif text-5xl md:text-7xl text-black leading-[1.1] tracking-tight disabled:cursor-default"
+                placeholder="为你的旅程命名"
+              />
+            </div>
+
+            {/* Subtitle / Intro */}
+            <p className="text-xl md:text-2xl text-black/60 leading-relaxed max-w-3xl font-light">
+              {script.blocks.length} 个瞬间，一个故事
+            </p>
+
+            {/* Divider */}
+            <div className="w-24 h-px bg-black/20" />
+          </div>
+        </section>
+
+        {/* Story Blocks - Static Grid Layout */}
+        <section className="max-w-7xl mx-auto px-6 md:px-12 space-y-24 md:space-y-32 pb-32">
+          {script.blocks.map((block, index) => (
+            <article 
+              key={block.id}
+              id={`chapter-${index + 1}`}
+              className={`relative ${activeChapter === block.id ? 'ring-2 ring-black/10 rounded-lg p-4' : ''}`}
+              onClick={() => isEditMode && setActiveChapter(block.id)}
+            >
+              {/* Chapter Number */}
+              <div className="flex items-baseline gap-6 mb-8">
+                <span className="text-7xl md:text-8xl font-serif text-black/5 select-none">
+                  {(index + 1).toString().padStart(2, '0')}
+                </span>
+                {block.mood && (
+                  <span className="text-xs tracking-[0.2em] uppercase text-black/30">
+                    {block.mood}
+                  </span>
+                )}
+              </div>
+
+              {/* Block Content */}
+              <StaticBlockRenderer
+                block={block}
+                index={index}
+                isEditMode={isEditMode}
+                onUpdate={handleUpdateBlock}
+              />
+            </article>
+          ))}
+        </section>
+
+        {/* Ending Section */}
+        <section className="max-w-5xl mx-auto px-6 md:px-12 py-24 md:py-32 border-t border-black/10">
+          <div className="text-center space-y-8">
+            <div className="inline-block">
+              <div className="w-16 h-px bg-black/20 mx-auto mb-8" />
+              <p className="text-6xl md:text-7xl font-serif text-black tracking-wider">
+                —
+              </p>
+              <div className="w-16 h-px bg-black/20 mx-auto mt-8" />
+            </div>
+            
+            <p className="text-lg md:text-xl text-black/40 font-light italic">
+              旅行的意义，不在于抵达，而在于沿途的风景
+            </p>
+            
+            <div className="pt-12">
+              <Link 
+                href="/memories/upload"
+                className="inline-flex items-center gap-2 text-black hover:text-black/60 transition-colors group"
+              >
+                <span className="text-sm tracking-wider uppercase">创建新旅程</span>
+                <ArrowLeft size={16} className="rotate-180 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="border-t border-black/5 py-12">
+          <div className="max-w-7xl mx-auto px-6 md:px-12 text-center">
+            <p className="text-xs text-black/30 tracking-wide">
+              Created with Orbit Journey · {getCurrentDate()}
+            </p>
+          </div>
+        </footer>
       </main>
 
-      {/* Tools Toggle */}
-      {!showTools && (
-        <motion.button
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          onClick={() => setShowTools(true)}
-          className="fixed bottom-8 right-8 z-50 bg-white/5 hover:bg-white/10 backdrop-blur-xl p-3 rounded-full border border-white/5 shadow-2xl transition-all"
-        >
-          <Sparkles className="text-white/80 w-5 h-5" />
-        </motion.button>
+      {/* Chapter Navigation - Side TOC */}
+      {script.blocks.length > 3 && (
+        <nav className="hidden lg:block fixed right-8 top-1/2 -translate-y-1/2 space-y-3">
+          {script.blocks.map((block, index) => (
+            <button
+              key={block.id}
+              onClick={() => {
+                document.getElementById(`chapter-${index + 1}`)?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="block w-1 h-1 rounded-full bg-black/20 hover:bg-black/60 hover:w-2 hover:h-2 transition-all"
+              title={`第 ${index + 1} 章`}
+            />
+          ))}
+        </nav>
       )}
-
-      {/* AI Director Tools Panel */}
-      <AIDirectorPanel
-        showTools={showTools}
-        onClose={() => setShowTools(false)}
-        selectedBlockId={selectedBlockId}
-        selectedBlock={getSelectedBlock()}
-        onUpdateBlock={handleUpdateBlock}
-        onAddNewBlock={handleAddNewBlock}
-      />
-    </motion.div>
+    </div>
   );
 }

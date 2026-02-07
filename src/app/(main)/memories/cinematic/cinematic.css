@@ -1,0 +1,120 @@
+/* Cinematic Page - Magazine Quality Styles */
+
+/* Print Styles for Perfect PDF Export */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white;
+  }
+  
+  article {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  img {
+    max-width: 100%;
+    page-break-inside: avoid;
+  }
+}
+
+/* Typography - Perfect Hierarchy */
+.magazine-title {
+  font-family: 'EB Garamond', 'Georgia', serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.magazine-body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  line-height: 1.7;
+}
+
+.magazine-caption {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection Colors */
+::selection {
+  background-color: rgba(0, 0, 0, 0.1);
+  color: inherit;
+}
+
+/* Image Hover States */
+.image-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.image-container img {
+  transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.image-container:hover img {
+  transform: scale(1.02);
+}
+
+/* Text Area Styling */
+textarea {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+textarea::-webkit-scrollbar {
+  display: none;
+}
+
+/* Focus States */
+textarea:focus {
+  outline: 2px solid rgba(0, 0, 0, 0.1);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* Chapter Navigation Dots */
+.chapter-nav-dot {
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.chapter-nav-dot:hover {
+  transform: scale(1.5);
+}
+
+/* Loading Skeleton */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Responsive Images */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Dark Mode Support (Optional) */
+@media (prefers-color-scheme: dark) {
+  /* Keep light mode for magazine aesthetic */
+}
