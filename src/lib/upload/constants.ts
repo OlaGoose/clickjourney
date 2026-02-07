@@ -3,18 +3,18 @@ import type { UploadedImage } from '@/types/upload';
 /** Number of steps in the upload flow (for top story-style progress bar). Step 0 = images, 1 = audio, 2+ reserved. */
 export const UPLOAD_STEP_COUNT = 2;
 
-/** Default placeholder images for the upload gallery (warm, reference-style). */
+/** Default placeholder images for the upload gallery — 3 landscape/scenery photos. */
 export const DEFAULT_UPLOAD_IMAGES: UploadedImage[] = [
   {
     id: 'default-1',
-    url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=1000&auto=format&fit=crop',
+    url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=1000&auto=format&fit=crop',
   },
   {
     id: 'default-2',
-    url: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=1000&auto=format&fit=crop',
+    url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1000&auto=format&fit=crop',
   },
   {
     id: 'default-3',
-    url: 'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?q=80&w=1000&auto=format&fit=crop',
+    url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=1000&auto=format&fit=crop',
   },
 ];

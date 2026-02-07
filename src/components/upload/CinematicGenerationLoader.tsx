@@ -250,18 +250,18 @@ export function CinematicGenerationLoader({
             }}
           />
 
-          {/* Text overlay — same content, Apple-style typography */}
-          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-50 text-center pointer-events-none">
+          {/* Text overlay — centered, Apple-style typography, font size +20% */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-center pointer-events-none">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.8 }}
               style={{ opacity: 1, transform: 'none' }}
             >
-              <h1 className="text-white/90 text-sm font-medium tracking-[0.2em] uppercase mb-2 drop-shadow-lg">
+              <h1 className="text-white/90 font-medium tracking-[0.2em] uppercase mb-2 drop-shadow-lg text-[1.05rem]">
                 {titleText}
               </h1>
-              <p className="text-white/50 text-[10px] mt-1 font-light tracking-wider uppercase">
+              <p className="text-white/50 mt-1 font-light tracking-wider uppercase text-[12px]">
                 {subtitleText} • <span className="text-white/30">Curated by Orbit Journey</span>
               </p>
             </motion.div>
