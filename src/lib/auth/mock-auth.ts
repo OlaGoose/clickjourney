@@ -19,11 +19,19 @@ export interface MockSession {
   profile: UserProfile;
 }
 
+/**
+ * Whether mock auth is active (mock login/session allowed).
+ * By default only in development or Vercel preview; set NEXT_PUBLIC_ALLOW_MOCK_IN_PRODUCTION=true
+ * to allow mock auth in production (e.g. for demo sites). Use with caution.
+ */
 export function isLocalDevelopment(): boolean {
+  const isMockEnabled = process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH === 'true';
+  if (!isMockEnabled) return false;
+  const allowInProduction = process.env.NEXT_PUBLIC_ALLOW_MOCK_IN_PRODUCTION === 'true';
+  if (allowInProduction) return true;
   const isDev = process.env.NODE_ENV === 'development';
   const isPreview = process.env.VERCEL_ENV === 'preview';
-  const isMockEnabled = process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH === 'true';
-  return (isDev || isPreview) && isMockEnabled;
+  return isDev || isPreview;
 }
 
 export function isMockTestCredentials(email: string, password: string): boolean {
