@@ -32,10 +32,10 @@ export function ErrorDisplay({ error, onRetry, onDismiss }: ErrorDisplayProps) {
             {onDismiss && (
               <button
                 onClick={onDismiss}
-                className="absolute top-3 right-3 p-1 hover:bg-white/10 rounded-full transition-colors"
+                className="absolute top-3 right-3 p-1.5 hover:bg-white/10 rounded-full transition-colors"
                 aria-label="Dismiss"
               >
-                <X size={16} className="text-white" />
+                <X size={14} className="text-white" />
               </button>
             )}
 
@@ -54,9 +54,9 @@ export function ErrorDisplay({ error, onRetry, onDismiss }: ErrorDisplayProps) {
                 {onRetry && (
                   <button
                     onClick={onRetry}
-                    className="mt-3 flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white text-xs font-medium"
+                    className="mt-3 flex items-center gap-1.5 px-3.5 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white text-[13px] font-medium"
                   >
-                    <RefreshCw size={14} />
+                    <RefreshCw size={12} />
                     Try Again
                   </button>
                 )}

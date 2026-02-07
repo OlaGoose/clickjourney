@@ -382,10 +382,10 @@ export default function MemoryUploadPage() {
                   <button
                     type="button"
                     onClick={() => setShowTranscript(false)}
-                    className="p-1 hover:bg-black/5 rounded-full text-gray-500 transition-colors"
+                    className="p-1.5 hover:bg-black/5 rounded-full text-gray-500 transition-colors"
                     aria-label="关闭"
                   >
-                    <X size={16} />
+                    <X size={14} />
                   </button>
                 </div>
                 {isTranscribing ? (
@@ -413,28 +413,28 @@ export default function MemoryUploadPage() {
                   type="button"
                   onClick={handleStartClick}
                   disabled={!isDefault && images.length >= 9}
-                  className={`group flex items-center gap-2 px-6 py-3.5 rounded-full transition-all active:scale-95 ${
+                  className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full transition-all active:scale-95 ${
                     !isDefault && images.length >= 9
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl'
                   }`}
                 >
-                  <ImagePlus size={18} strokeWidth={2.5} className="text-white" />
-                  <span className="font-semibold text-sm">Upload</span>
+                  <ImagePlus size={16} strokeWidth={2.5} className="text-white" />
+                  <span className="font-semibold text-[13px]">Upload</span>
                 </button>
-                <div className="w-px h-6 bg-black/10 mx-1" />
+                <div className="w-px h-5 bg-black/10 mx-1" />
                 <button
                   type="button"
                   onClick={goToNextStep}
                   disabled={isDefault}
-                  className={`group flex items-center gap-2 px-6 py-3.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 ${
+                  className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 ${
                     isDefault
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-black hover:bg-gray-800 text-white'
                   }`}
                 >
-                  <ChevronRight size={18} strokeWidth={2.5} />
-                  <span className="font-semibold text-sm">Next</span>
+                  <ChevronRight size={16} strokeWidth={2.5} />
+                  <span className="font-semibold text-[13px]">Next</span>
                 </button>
               </>
             ) : (
@@ -442,20 +442,20 @@ export default function MemoryUploadPage() {
                 <div className="flex items-center">
                   {isRecording ? (
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-2 px-4 py-3.5 rounded-full bg-red-500 text-white font-medium shadow-lg animate-pulse">
-                        <span className="relative flex h-2 w-2">
+                      <div className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-red-500 text-white font-medium shadow-lg animate-pulse">
+                        <span className="relative flex h-1.5 w-1.5">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
                         </span>
-                        <span className="text-sm tabular-nums">{formatTime(recordingTime)}</span>
+                        <span className="text-[13px] tabular-nums">{formatTime(recordingTime)}</span>
                       </div>
                       <button
                         type="button"
                         onClick={stopRecording}
-                        className="flex items-center justify-center w-12 h-12 rounded-full bg-black text-white hover:bg-gray-800 shadow-lg transition-all active:scale-95"
+                        className="flex items-center justify-center w-10 h-10 rounded-full bg-black text-white hover:bg-gray-800 shadow-lg transition-all active:scale-95"
                         aria-label="停止录音"
                       >
-                        <Square size={16} fill="currentColor" />
+                        <Square size={14} fill="currentColor" />
                       </button>
                     </div>
                   ) : audioUrl ? (
@@ -463,40 +463,40 @@ export default function MemoryUploadPage() {
                       <button
                         type="button"
                         onClick={togglePlayback}
-                        className={`flex items-center gap-2 px-6 py-3.5 rounded-full text-sm font-semibold transition-all active:scale-95 shadow-lg ${
+                        className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-semibold transition-all active:scale-95 shadow-lg ${
                           showTranscript ? 'bg-gray-800 text-white ring-2 ring-black/10' : 'bg-black hover:bg-gray-800 text-white'
                         }`}
                       >
-                        {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
+                        {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
                         <span>Preview</span>
                       </button>
                       <button
                         type="button"
                         onClick={deleteAudio}
-                        className="w-12 h-12 flex items-center justify-center rounded-full hover:bg-black/5 text-gray-500 hover:text-red-500 transition-colors"
+                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 text-gray-500 hover:text-red-500 transition-colors"
                         title="Delete"
                         aria-label="删除录音"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   ) : (
                     <button
                       type="button"
                       onClick={startRecording}
-                      className="group flex items-center gap-2 px-6 py-3.5 rounded-full bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl transition-all active:scale-95"
+                      className="group flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl transition-all active:scale-95"
                     >
-                      <Mic size={18} strokeWidth={2.5} className="text-white" />
-                      <span className="font-semibold text-sm">Record</span>
+                      <Mic size={16} strokeWidth={2.5} className="text-white" />
+                      <span className="font-semibold text-[13px]">Record</span>
                     </button>
                   )}
                 </div>
-                <div className="w-px h-6 bg-black/10 mx-1" />
+                <div className="w-px h-5 bg-black/10 mx-1" />
                 <button
                   type="button"
                   onClick={goToNextStep}
                   disabled={isDefault}
-                  className={`group relative flex items-center gap-2 px-6 py-3.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 overflow-hidden ${
+                  className={`group relative flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 overflow-hidden ${
                     isDefault
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-gradient-to-r from-black via-gray-900 to-black hover:from-gray-900 hover:to-gray-900 text-white'
@@ -505,8 +505,8 @@ export default function MemoryUploadPage() {
                   {!isDefault && (
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
                   )}
-                  <Sparkles size={18} strokeWidth={2.5} className={isDefault ? '' : 'animate-pulse'} />
-                  <span className="font-semibold text-sm relative z-10">Generate</span>
+                  <Sparkles size={16} strokeWidth={2.5} className={isDefault ? '' : 'animate-pulse'} />
+                  <span className="font-semibold text-[13px] relative z-10">Generate</span>
                 </button>
               </>
             )}

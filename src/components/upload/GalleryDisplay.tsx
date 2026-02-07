@@ -187,21 +187,21 @@ export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
                 <button
                   type="button"
                   onClick={() => onReplace(img.id)}
-                  className="p-3 rounded-full hover:bg-black/5 text-gray-700 hover:text-black transition-colors"
+                  className="p-2.5 rounded-full hover:bg-black/5 text-gray-700 hover:text-black transition-colors"
                   title="Replace"
                   aria-label="Replace photo"
                 >
-                  <RefreshCw size={18} strokeWidth={2.5} />
+                  <RefreshCw size={16} strokeWidth={2.5} />
                 </button>
-                <div className="w-px h-5 bg-black/10 mx-1" />
+                <div className="w-px h-4 bg-black/10 mx-1" />
                 <button
                   type="button"
                   onClick={() => onDelete(img.id)}
-                  className="p-3 rounded-full hover:bg-red-50 text-red-500 transition-colors"
+                  className="p-2.5 rounded-full hover:bg-red-50 text-red-500 transition-colors"
                   title="Delete"
                   aria-label="Delete photo"
                 >
-                  <Trash2 size={18} strokeWidth={2.5} />
+                  <Trash2 size={16} strokeWidth={2.5} />
                 </button>
               </div>
             )}
