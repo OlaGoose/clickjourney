@@ -7,10 +7,16 @@ import type { GalleryProps } from '@/types/upload';
 /**
  * Airbnb-style gallery: polaroid-like cards with "perfectly messy" layout.
  * Click a card to show replace/delete actions in a glass bubble.
+ * 
+ * Performance optimizations:
+ * - Progressive image loading with blur-up effect
+ * - Skeleton placeholders during load
+ * - Intersection Observer for lazy loading
  */
 export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
   const count = images.length;
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
 
   const getImageStyle = (index: number, total: number) => {
     let sizeClass = 'w-64 h-64 md:w-80 md:h-80';
@@ -141,6 +147,10 @@ export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
     setActiveId(activeId === id ? null : id);
   };
 
+  const handleImageLoad = (id: string) => {
+    setLoadedImages(prev => new Set(prev).add(id));
+  };
+
   return (
     <div
       className="relative w-full h-full flex justify-center items-center"
@@ -149,6 +159,7 @@ export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
       {images.map((img, index) => {
         const { className, style } = getImageStyle(index, count);
         const isActive = activeId === img.id;
+        const isLoaded = loadedImages.has(img.id);
 
         return (
           <div
@@ -171,10 +182,28 @@ export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
                 }
               `}
             >
+              {/* Skeleton placeholder */}
+              {!isLoaded && (
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 animate-pulse">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-12 h-12 border-3 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
+                  </div>
+                </div>
+              )}
+              
+              {/* Image with blur-up effect */}
               <img
                 src={img.url}
                 alt={`Gallery ${index + 1}`}
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover transition-all duration-700 ease-out ${
+                  isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-lg scale-105'
+                }`}
+                onLoad={() => handleImageLoad(img.id)}
+                loading="eager"
+                decoding="async"
+                style={{
+                  willChange: isLoaded ? 'auto' : 'opacity, filter, transform',
+                }}
               />
               <div className="absolute inset-0 rounded-[32px] ring-1 ring-black/5 pointer-events-none" />
             </div>

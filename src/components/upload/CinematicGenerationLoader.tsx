@@ -42,34 +42,49 @@ const GENERATION_STEPS = [
   { icon: Wand2, label: 'Perfecting the story', duration: 3000 },
 ];
 
-// --- Ambient glow (1:1 from reference) ---
+// --- Ambient glow (optimized for performance) ---
 const AmbientGlow = () => (
   <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
     <motion.div
-      animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-      transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+      animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.45, 0.3] }}
+      transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
       className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] rounded-full blur-[100px]"
       style={{
         background: `radial-gradient(circle, ${COLORS.glow1} 0%, transparent 70%)`,
         mixBlendMode: 'screen',
+        // GPU acceleration
+        transform: 'translate3d(-50%, -50%, 0)',
+        willChange: 'transform, opacity',
       }}
     />
     <motion.div
-      animate={{ rotate: 360, x: [0, 50, -50, 0], y: [0, -50, 50, 0] }}
-      transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+      animate={{ rotate: 360 }}
+      transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
       className="absolute top-1/3 left-1/3 w-[40vw] h-[40vw] rounded-full blur-[80px]"
-      style={{ background: COLORS.glow2, mixBlendMode: 'screen', opacity: 0.4 }}
+      style={{ 
+        background: COLORS.glow2, 
+        mixBlendMode: 'screen', 
+        opacity: 0.35,
+        transform: 'translate3d(0, 0, 0)',
+        willChange: 'transform',
+      }}
     />
     <motion.div
-      animate={{ rotate: -360, x: [0, -30, 30, 0], y: [0, 30, -30, 0] }}
-      transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+      animate={{ rotate: -360 }}
+      transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
       className="absolute bottom-1/3 right-1/3 w-[50vw] h-[50vw] rounded-full blur-[90px]"
-      style={{ background: COLORS.glow3, mixBlendMode: 'screen', opacity: 0.3 }}
+      style={{ 
+        background: COLORS.glow3, 
+        mixBlendMode: 'screen', 
+        opacity: 0.25,
+        transform: 'translate3d(0, 0, 0)',
+        willChange: 'transform',
+      }}
     />
   </div>
 );
 
-// --- Photo card with focus-based blur/scale (1:1 from reference, using user images) ---
+// --- Photo card with focus-based blur/scale (optimized for performance) ---
 function PhotoCard({
   config,
   focusX,
@@ -81,16 +96,18 @@ function PhotoCard({
   focusY: MotionValue<number>;
   imgSrc: string;
 }) {
+  // Optimized: Calculate distance once and reuse
   const distance = useTransform([focusX, focusY], ([fx, fy]) => {
     const dx = (fx as number) - config.x;
     const dy = (fy as number) - config.y;
     return Math.sqrt(dx * dx + dy * dy);
   });
 
-  const blur = useTransform(distance, [0, 0.6], [0, 12]);
-  const scale = useTransform(distance, [0, 0.8], [config.baseScale * 1.15, config.baseScale * 0.9]);
-  const opacity = useTransform(distance, [0, 1], [1, 0.5]);
-  const brightness = useTransform(distance, [0, 1], [1, 0.6]);
+  // Optimized: Reduced blur range from [0, 12] to [0, 4] - much less GPU intensive
+  const blur = useTransform(distance, [0, 0.6], [0, 4]);
+  const scale = useTransform(distance, [0, 0.8], [config.baseScale * 1.12, config.baseScale * 0.92]);
+  const opacity = useTransform(distance, [0, 1], [1, 0.6]);
+  // Removed brightness transform to reduce calculations
 
   return (
     <motion.div
@@ -100,23 +117,28 @@ function PhotoCard({
         left: `${50 + config.x * 35}%`,
         zIndex: config.zIndex,
         scale,
+        // GPU acceleration hint
+        willChange: 'transform',
       }}
       className={`absolute -translate-x-1/2 -translate-y-1/2 ${config.width}`}
     >
       <motion.div
         style={{
           opacity,
-          filter: useTransform(brightness, (b) => `brightness(${b})`),
+          // Removed brightness transform for better performance
         }}
         className="relative group"
       >
         <motion.div
-          className="relative overflow-hidden rounded-2xl shadow-2xl transition-all duration-75 ease-linear"
+          className="relative overflow-hidden rounded-2xl shadow-2xl"
           style={{
             aspectRatio: config.aspectRatio,
             filter: useTransform(blur, (b) => `blur(${b}px)`),
             boxShadow:
               '0 20px 50px -10px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1) inset',
+            // GPU acceleration - force compositing layer
+            transform: 'translateZ(0)',
+            willChange: 'filter',
           }}
         >
           <img
@@ -124,6 +146,12 @@ function PhotoCard({
             alt=""
             className="w-full h-full object-cover block"
             draggable={false}
+            loading="eager"
+            decoding="async"
+            style={{
+              // Hardware acceleration
+              transform: 'translate3d(0, 0, 0)',
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-40 pointer-events-none" />
         </motion.div>
@@ -157,25 +185,32 @@ export function CinematicGenerationLoader({
   const [stepIndex, setStepIndex] = useState(0);
   const [displayProgress, setDisplayProgress] = useState(0);
 
-  // Drive focus point over time (same as Apple reference)
+  // Drive focus point over time (optimized: 40ms interval instead of 16ms for better performance)
   const focusX = useMotionValue(0);
   const focusY = useMotionValue(0);
   useEffect(() => {
     if (!isGenerating) return;
     let t = 0;
+    let lastUpdate = 0;
     let raf = 0;
-    const tick = () => {
-      t += 16;
-      focusX.set(Math.sin(t * 0.0004) * 0.6);
-      focusY.set(Math.cos(t * 0.0003) * 0.5);
+    const UPDATE_INTERVAL = 40; // ~25fps instead of 60fps for better performance
+    
+    const tick = (timestamp: number) => {
+      if (timestamp - lastUpdate >= UPDATE_INTERVAL) {
+        t += UPDATE_INTERVAL;
+        focusX.set(Math.sin(t * 0.0004) * 0.6);
+        focusY.set(Math.cos(t * 0.0003) * 0.5);
+        lastUpdate = timestamp;
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [isGenerating, focusX, focusY]);
 
-  const containerX = useTransform(focusX, (x) => x * -50);
-  const containerY = useTransform(focusY, (y) => y * -30);
+  // Optimized: Reduce parallax movement for smoother performance
+  const containerX = useTransform(focusX, (x) => x * -30);
+  const containerY = useTransform(focusY, (y) => y * -20);
 
   // Fill 9 slots: use uploaded images, repeat if needed
   const imageSources = useMemo(() => {
@@ -231,9 +266,14 @@ export function CinematicGenerationLoader({
         >
           {isDark && <AmbientGlow />}
 
-          {/* Photo grid (user images, repeated if needed) */}
+          {/* Photo grid (user images, repeated if needed) - optimized with GPU acceleration */}
           <motion.div
-            style={{ x: containerX, y: containerY }}
+            style={{ 
+              x: containerX, 
+              y: containerY,
+              // Force GPU acceleration and hint browser for optimization
+              willChange: 'transform',
+            }}
             className="relative w-full h-full max-w-7xl max-h-[90vh] mx-auto z-10 perspective-1000"
           >
             {IMAGE_LAYOUT.map((config, i) => {
