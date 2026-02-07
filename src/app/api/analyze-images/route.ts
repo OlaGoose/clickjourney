@@ -8,13 +8,24 @@ interface ImageAnalysisRequest {
 export interface ImageAnalysis {
   index: number;
   description: string;
+  storyPotential: string; // What story this image could tell
+  emotionalTone: string; // Deep emotional resonance
   visualFeatures: {
-    mood: string; // calm, energetic, melancholic, joyful, etc.
-    composition: string; // landscape, portrait, close-up, wide-angle, etc.
-    colorPalette: string; // warm, cool, vibrant, muted, etc.
-    subject: string; // nature, people, architecture, food, etc.
-    timeOfDay: string; // morning, noon, afternoon, evening, night, golden-hour, etc.
+    mood: string; // calm, energetic, melancholic, joyful, nostalgic, adventurous, peaceful, dramatic
+    composition: string; // landscape, portrait, close-up, wide-angle, symmetrical, rule-of-thirds, leading-lines, frame-in-frame
+    colorPalette: string; // warm, cool, vibrant, muted, monochrome, golden, pastel, contrasting, earthy, oceanic
+    colorDominance: string; // The dominant colors in the image
+    subject: string; // nature, people, architecture, food, street, water, sky, urban, wildlife, culture, abstract
+    timeOfDay: string; // morning, noon, afternoon, evening, night, golden-hour, blue-hour, twilight, dawn, dusk
+    lighting: string; // natural, dramatic, soft, harsh, backlit, golden, silhouette, diffused
+    depth: string; // shallow, deep, layered, flat, atmospheric
+    movement: string; // static, dynamic, flowing, energetic, calm, frozen
+    texture: string; // smooth, rough, organic, geometric, weathered, pristine
+    perspective: string; // eye-level, bird-eye, worm-eye, tilted, straight
+    focus: string; // sharp, soft, selective, bokeh, dreamy
   };
+  layoutSuggestion: string; // Suggested layout based on analysis
+  textPlacement: string; // Where text should go: center, bottom, side, overlay, minimal
 }
 
 /**
@@ -57,9 +68,10 @@ export async function POST(request: Request) {
 
   try {
     const ai = new GoogleGenAI({ apiKey });
-    const model = process.env.NEXT_PUBLIC_GEMINI_MODEL_IMAGE_ANALYZE || 'gemini-3-pro-preview';
+    // Force use Gemini 3 Pro for superior analysis
+    const model = 'gemini-3-pro-preview';
     
-    console.log(`[Image Analyzer] Processing ${images.length} images...`);
+    console.log(`[Image Analyzer] Processing ${images.length} images with Gemini 3 Pro...`);
     
     const analyses: ImageAnalysis[] = [];
     
@@ -69,19 +81,39 @@ export async function POST(request: Request) {
         .replace(/^data:image\/\w+;base64,/, '')
         .replace(/\s+/g, '');
       
-      const analysisPrompt = `Analyze this travel photo with the precision of a National Geographic photographer and a Kinfolk magazine art director.
+      const analysisPrompt = `You are the world's greatest visual storyteller—combining the eye of Sebastião Salgado, the narrative craft of a New York Times photo editor, and the aesthetic precision of an Airbnb Experience curator.
 
-Provide your analysis in this exact JSON format (no markdown, just JSON):
+MISSION: Analyze this travel photograph with extreme depth to unlock its full cinematic potential.
+
+Provide your analysis in this exact JSON format (no markdown, just pure JSON):
 {
-  "description": "A rich, cinematic description (2-3 sentences, in Chinese, capturing the essence and story potential of this image)",
-  "mood": "one word: calm/energetic/melancholic/joyful/contemplative/dramatic/serene/vibrant",
-  "composition": "one word: landscape/portrait/close-up/wide-angle/symmetrical/rule-of-thirds/leading-lines/frame-in-frame",
-  "colorPalette": "one word: warm/cool/vibrant/muted/monochrome/golden/pastel/contrasting",
-  "subject": "one word: nature/people/architecture/food/street/water/sky/urban/wildlife/culture",
-  "timeOfDay": "one word: morning/noon/afternoon/evening/night/golden-hour/blue-hour/twilight"
+  "description": "A deeply evocative description (2-3 sentences, in Chinese) that captures not just what's in the frame, but the FEELING, the MOMENT, the STORY waiting to be told. Make it poetic yet specific.",
+  "storyPotential": "What narrative arc does this image suggest? (1 sentence, Chinese) e.g., '一个关于告别与重逢的故事' or '寻找内心平静的旅程'",
+  "emotionalTone": "The deepest emotional resonance (1-2 words, Chinese) e.g., '怀旧而温暖' '孤独中的自由' '宁静的力量'",
+  "mood": "Primary mood (one word): calm/energetic/melancholic/joyful/nostalgic/adventurous/peaceful/dramatic/contemplative/serene/vibrant/mysterious/playful",
+  "composition": "Compositional structure (one word): landscape/portrait/close-up/wide-angle/symmetrical/rule-of-thirds/leading-lines/frame-in-frame/diagonal/centered/off-center",
+  "colorPalette": "Color mood (one word): warm/cool/vibrant/muted/monochrome/golden/pastel/contrasting/earthy/oceanic/sunset/ethereal",
+  "colorDominance": "Dominant color family (2-3 words): e.g., 'deep blues and oranges' 'soft pastels' 'earthy browns and greens'",
+  "subject": "Primary subject (one word): nature/people/architecture/food/street/water/sky/urban/wildlife/culture/abstract/landscape/portrait/object",
+  "timeOfDay": "Time indicator (one word): morning/noon/afternoon/evening/night/golden-hour/blue-hour/twilight/dawn/dusk/midday",
+  "lighting": "Lighting quality (one word): natural/dramatic/soft/harsh/backlit/golden/silhouette/diffused/moody/bright/shadowy",
+  "depth": "Depth perception (one word): shallow/deep/layered/flat/atmospheric/infinite",
+  "movement": "Sense of motion (one word): static/dynamic/flowing/energetic/calm/frozen/suspended/rushing",
+  "texture": "Tactile quality (one word): smooth/rough/organic/geometric/weathered/pristine/delicate/rugged",
+  "perspective": "Viewpoint (one word): eye-level/bird-eye/worm-eye/tilted/straight/dramatic/intimate",
+  "focus": "Focus style (one word): sharp/soft/selective/bokeh/dreamy/crisp/hazy",
+  "layoutSuggestion": "Best layout for this image (one word): full_bleed/side_by_side/immersive_focus/hero_split/magazine_spread/portrait_feature",
+  "textPlacement": "Optimal text position (one word): center/bottom/top/side/overlay/minimal/corner/floating"
 }
 
-Focus on visual storytelling potential. What emotion does this image evoke? What story does it want to tell?`;
+ANALYSIS GUIDELINES:
+- Look beyond the obvious: What's the SUBTEXT?
+- Consider the viewer's emotional journey: What do they FEEL first?
+- Think about narrative: Where does this fit in a story arc?
+- Assess compositional power: What makes this image UNFORGETTABLE?
+- Identify unique visual signatures: What makes this image DIFFERENT?
+
+Analyze now with maximum depth and insight.`;
 
       try {
         const response = await ai.models.generateContent({
@@ -114,13 +146,24 @@ Focus on visual storytelling potential. What emotion does this image evoke? What
         analyses.push({
           index: i,
           description: parsed.description,
+          storyPotential: parsed.storyPotential,
+          emotionalTone: parsed.emotionalTone,
           visualFeatures: {
             mood: parsed.mood,
             composition: parsed.composition,
             colorPalette: parsed.colorPalette,
+            colorDominance: parsed.colorDominance,
             subject: parsed.subject,
             timeOfDay: parsed.timeOfDay,
+            lighting: parsed.lighting,
+            depth: parsed.depth,
+            movement: parsed.movement,
+            texture: parsed.texture,
+            perspective: parsed.perspective,
+            focus: parsed.focus,
           },
+          layoutSuggestion: parsed.layoutSuggestion,
+          textPlacement: parsed.textPlacement,
         });
         
         console.log(`[Image Analyzer] Image ${i + 1} analyzed successfully`);
@@ -129,14 +172,25 @@ Focus on visual storytelling potential. What emotion does this image evoke? What
         // Provide fallback analysis
         analyses.push({
           index: i,
-          description: '一张值得记录的旅行瞬间',
+          description: '一张值得记录的旅行瞬间，捕捉了时光中的永恒',
+          storyPotential: '一段未完的旅程',
+          emotionalTone: '平静而深远',
           visualFeatures: {
             mood: 'calm',
             composition: 'landscape',
             colorPalette: 'warm',
+            colorDominance: 'soft naturals',
             subject: 'nature',
             timeOfDay: 'afternoon',
+            lighting: 'natural',
+            depth: 'deep',
+            movement: 'calm',
+            texture: 'organic',
+            perspective: 'eye-level',
+            focus: 'sharp',
           },
+          layoutSuggestion: 'full_bleed',
+          textPlacement: 'bottom',
         });
       }
     }

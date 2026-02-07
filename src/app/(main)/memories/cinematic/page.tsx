@@ -8,6 +8,11 @@ import { GlobeIndicator } from '@/components/cinematic/GlobeIndicator';
 import { FullBleedLayout } from '@/components/cinematic/FullBleedLayout';
 import { SideBySideLayout } from '@/components/cinematic/SideBySideLayout';
 import { ImmersiveFocusLayout } from '@/components/cinematic/ImmersiveFocusLayout';
+import { HeroSplitLayout } from '@/components/cinematic/HeroSplitLayout';
+import { MagazineSpreadLayout } from '@/components/cinematic/MagazineSpreadLayout';
+import { MinimalCaptionLayout } from '@/components/cinematic/MinimalCaptionLayout';
+import { PortraitFeatureLayout } from '@/components/cinematic/PortraitFeatureLayout';
+import { TextOverlayLayout } from '@/components/cinematic/TextOverlayLayout';
 import { ReflectionEndLayout } from '@/components/cinematic/ReflectionEndLayout';
 import { AIDirectorPanel } from '@/components/cinematic/AIDirectorPanel';
 
@@ -171,8 +176,13 @@ export default function CinematicMemoryPage() {
               className={`relative transition-all duration-500 ${selectedBlockId === block.id ? 'z-20 ring-2 ring-white/20' : ''}`}
             >
               {block.layout === 'full_bleed' && <FullBleedLayout block={block} onUpdate={handleUpdateBlock} />}
+              {block.layout === 'hero_split' && <HeroSplitLayout block={block} onUpdate={handleUpdateBlock} />}
               {block.layout === 'side_by_side' && <SideBySideLayout block={block} onUpdate={handleUpdateBlock} />}
               {block.layout === 'immersive_focus' && <ImmersiveFocusLayout block={block} onUpdate={handleUpdateBlock} />}
+              {block.layout === 'magazine_spread' && <MagazineSpreadLayout block={block} onUpdate={handleUpdateBlock} />}
+              {block.layout === 'minimal_caption' && <MinimalCaptionLayout block={block} onUpdate={handleUpdateBlock} />}
+              {block.layout === 'portrait_feature' && <PortraitFeatureLayout block={block} onUpdate={handleUpdateBlock} />}
+              {block.layout === 'text_overlay' && <TextOverlayLayout block={block} onUpdate={handleUpdateBlock} />}
             </div>
           );
         })}

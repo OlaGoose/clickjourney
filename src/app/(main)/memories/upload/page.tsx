@@ -59,16 +59,28 @@ export default function MemoryUploadPage() {
   interface ImageAnalysis {
     index: number;
     description: string;
+    storyPotential: string;
+    emotionalTone: string;
     visualFeatures: {
       mood: string;
       composition: string;
       colorPalette: string;
+      colorDominance: string;
       subject: string;
       timeOfDay: string;
+      lighting: string;
+      depth: string;
+      movement: string;
+      texture: string;
+      perspective: string;
+      focus: string;
     };
+    layoutSuggestion: string;
+    textPlacement: string;
   }
   const [imageAnalyses, setImageAnalyses] = useState<ImageAnalysis[]>([]);
   const [isAnalyzingImages, setIsAnalyzingImages] = useState(false);
+  const [analysisError, setAnalysisError] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -87,10 +99,14 @@ export default function MemoryUploadPage() {
     if (isDefault) return;
 
     setIsAnalyzingImages(true);
+    setAnalysisError(false);
+    
     try {
       const imageUrls = images.map((img) => img.url);
       const base64Images = await compressMultipleImages(imageUrls);
 
+      console.log('[Upload] Starting deep image analysis with Gemini 3 Pro...');
+      
       const response = await fetch('/api/analyze-images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,14 +114,19 @@ export default function MemoryUploadPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Image analysis failed');
+        const errorData = await response.json();
+        console.error('[Upload] Analysis API error:', errorData);
+        throw new Error(errorData.error || 'Image analysis failed');
       }
 
       const data = await response.json();
       setImageAnalyses(data.analyses);
-      console.log('[Upload] Image analyses:', data.analyses);
+      console.log('[Upload] ✓ Deep analysis complete:', data.analyses.length, 'images analyzed');
+      console.log('[Upload] Sample analysis:', data.analyses[0]);
     } catch (error) {
-      console.error('Failed to analyze images:', error);
+      console.error('[Upload] ✗ Image analysis failed:', error);
+      setAnalysisError(true);
+      // Don't block the flow - user can still generate without analysis
     } finally {
       setIsAnalyzingImages(false);
     }
@@ -184,18 +205,18 @@ export default function MemoryUploadPage() {
     }
   }, [images, isDefault, transcript, imageAnalyses, router]);
 
-  const goToNextStep = useCallback(async () => {
+  const goToNextStep = useCallback(() => {
     if (currentStep === 0) {
-      // Step 0 -> 1: Analyze images before moving to audio step
-      if (!isDefault && imageAnalyses.length === 0) {
-        await analyzeImages();
+      // Step 0 -> 1: Start analyzing images in background (non-blocking)
+      if (!isDefault && imageAnalyses.length === 0 && !isAnalyzingImages) {
+        analyzeImages(); // Fire and forget - don't await
       }
-      setCurrentStep(1);
+      setCurrentStep(1); // Move to next step immediately
     } else if (currentStep === 1) {
       // Step 1 -> Generate: Create cinematic memory
       generateCinematicMemory();
     }
-  }, [currentStep, isDefault, imageAnalyses, analyzeImages, generateCinematicMemory]);
+  }, [currentStep, isDefault, imageAnalyses.length, isAnalyzingImages, analyzeImages, generateCinematicMemory]);
 
   const handleStartClick = useCallback(() => {
     setReplaceTargetId(null);
@@ -360,6 +381,7 @@ export default function MemoryUploadPage() {
     setShowTranscript(false);
     setCurrentStep(0);
     setImageAnalyses([]);
+    setAnalysisError(false);
   }, []);
 
   const formatTime = (seconds: number) => {
@@ -484,24 +506,15 @@ export default function MemoryUploadPage() {
                 <button
                   type="button"
                   onClick={goToNextStep}
-                  disabled={isDefault || isAnalyzingImages}
+                  disabled={isDefault}
                   className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 ${
-                    isDefault || isAnalyzingImages
+                    isDefault
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-black hover:bg-gray-800 text-white'
                   }`}
                 >
-                  {isAnalyzingImages ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span className="font-semibold text-[13px]">Analyzing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ChevronRight size={16} strokeWidth={2.5} />
-                      <span className="font-semibold text-[13px]">Next</span>
-                    </>
-                  )}
+                  <ChevronRight size={16} strokeWidth={2.5} />
+                  <span className="font-semibold text-[13px]">Next</span>
                 </button>
               </>
             ) : (

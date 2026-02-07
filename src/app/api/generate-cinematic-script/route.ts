@@ -5,13 +5,24 @@ import type { DirectorScript, LayoutType } from '@/types/cinematic';
 interface ImageAnalysis {
   index: number;
   description: string;
+  storyPotential: string;
+  emotionalTone: string;
   visualFeatures: {
     mood: string;
     composition: string;
     colorPalette: string;
+    colorDominance: string;
     subject: string;
     timeOfDay: string;
+    lighting: string;
+    depth: string;
+    movement: string;
+    texture: string;
+    perspective: string;
+    focus: string;
   };
+  layoutSuggestion: string;
+  textPlacement: string;
 }
 
 interface GenerateScriptRequest {
@@ -25,6 +36,10 @@ interface GeminiBlock {
   layout: LayoutType;
   text: string;
   animation: string;
+  textPosition?: 'top' | 'bottom' | 'center' | 'left' | 'right' | 'overlay';
+  textSize?: 'small' | 'medium' | 'large' | 'huge';
+  imageFilter?: 'none' | 'grayscale' | 'warm' | 'cool' | 'vibrant' | 'muted';
+  mood?: string;
 }
 
 interface GeminiResponse {
@@ -80,83 +95,137 @@ export async function POST(request: Request) {
 
     // Construct the ultimate prompt with enhanced editorial standards
     const systemPrompt = useAnalysisFlow 
-      ? `You are the creative genius behind National Geographic, Kinfolk, and Apple's best Stories features—a master of visual storytelling who transforms moments into cinematic masterpieces.
+      ? `You are Airbnb's Chief Experience Designer meets Apple's Chief Creative Officer meets The New Yorker's Photo Editor—a visionary who creates travel stories that people remember forever.
 
-MISSION: Create a film-grade story script from pre-analyzed travel images.
+MISSION: Transform analyzed travel photographs into an immersive, breathtaking visual narrative that rivals the best travel magazines and Apple keynote presentations.
 
-EDITORIAL PHILOSOPHY (World-Class Standard):
-- Write like Hemingway: Every word earns its place. Be profound, not verbose.
-- Think like a film director: Consider pacing, emotional arc, visual rhythm.
-- Design like a Swiss typographer: Balance, negative space, hierarchy.
-- Feel like a poet: Seek beauty in the ordinary. Avoid tourism clichés.
-- Maximum 20 characters per caption (Chinese).
+EDITORIAL PHILOSOPHY (Airbnb + Apple Standard):
+- EMOTION FIRST: Every image, every word must evoke feeling
+- MINIMALISM: Elegant restraint. Say more with less.
+- AUTHENTICITY: Real moments, real emotions. No tourism clichés.
+- RHYTHM: Like a symphony—build tension, release, surprise, resolution
+- BEAUTY: Make every frame worthy of being printed and framed
 
 AUDIO CONTEXT:
-${transcript || 'No audio transcript provided. Let visuals lead the narrative.'}
+${transcript || 'No audio transcript. Pure visual poetry.'}
 
 ${userContext ? `USER NOTES:\n${userContext}\n` : ''}
 
-IMAGE ANALYSES (Pre-processed visual data):
+DEEP IMAGE ANALYSES (Gemini 3 Pro Insights):
 ${imageAnalyses!.map((analysis, i) => `
-[Image ${i + 1}]
-- Description: ${analysis.description}
-- Mood: ${analysis.visualFeatures.mood}
-- Composition: ${analysis.visualFeatures.composition}
-- Color Palette: ${analysis.visualFeatures.colorPalette}
-- Subject: ${analysis.visualFeatures.subject}
-- Time of Day: ${analysis.visualFeatures.timeOfDay}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMAGE ${i + 1} ANALYSIS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📸 Description: ${analysis.description}
+🎬 Story Potential: ${analysis.storyPotential}
+💫 Emotional Tone: ${analysis.emotionalTone}
+
+VISUAL DNA:
+• Mood: ${analysis.visualFeatures.mood}
+• Composition: ${analysis.visualFeatures.composition}
+• Color Palette: ${analysis.visualFeatures.colorPalette} (${analysis.visualFeatures.colorDominance})
+• Lighting: ${analysis.visualFeatures.lighting}
+• Depth: ${analysis.visualFeatures.depth}
+• Movement: ${analysis.visualFeatures.movement}
+• Texture: ${analysis.visualFeatures.texture}
+• Perspective: ${analysis.visualFeatures.perspective}
+• Focus: ${analysis.visualFeatures.focus}
+• Subject: ${analysis.visualFeatures.subject}
+• Time: ${analysis.visualFeatures.timeOfDay}
+
+RECOMMENDED:
+• Layout: ${analysis.layoutSuggestion}
+• Text Position: ${analysis.textPlacement}
 `).join('\n')}
 
-LAYOUT ASSIGNMENT RULES (Magazine-Grade):
-1. "full_bleed" - Epic openers, sweeping vistas, establishing mood
-   - Use for landscapes, dramatic skies, architectural grandeur
-   - Best for the opening image to set the tone
-   - Creates immersion through scale
-   
-2. "side_by_side" - Editorial storytelling, context + narrative
-   - Combine visual + rich narrative text
-   - Use for moments that need explanation or reflection
-   - Creates intimacy through juxtaposition
-   
-3. "immersive_focus" - Emotional peaks, portraits, sensory details
-   - Close-ups that reveal character or emotion
-   - Moments of stillness or intensity
-   - Creates impact through simplicity
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ANIMATION SUGGESTIONS (Cinematic Motion):
-- "slow_zoom" - For full_bleed (Ken Burns effect, gradual reveal)
-- "parallax_drift" - For side_by_side (editorial depth, layered storytelling)
-- "fade_in" - For immersive_focus (gentle emergence, emotional build)
+LAYOUT PALETTE (Choose wisely for each image):
+
+1. "full_bleed" - EPIC OPENER
+   → Sweeping landscapes, grand vistas, opening statements
+   → Text: bottom center, large, white on dark gradient
+   → When: First image, dramatic landscapes, hero moments
+
+2. "hero_split" - ASYMMETRIC POWER
+   → Large image (70%) + impactful text (30%)
+   → Text: side panel, huge typography, high contrast
+   → When: Strong vertical compositions, architectural shots, portraits with space
+
+3. "immersive_focus" - EMOTIONAL CLIMAX
+   → Full bleed with centered text overlay
+   → Text: center, huge, layered with image
+   → When: Peak emotional moments, intimate portraits, decisive moments
+
+4. "magazine_spread" - EDITORIAL STORYTELLING
+   → Split screen with generous negative space
+   → Text: opposite side, medium, thoughtful placement
+   → When: Need to show AND tell, architectural details, before/after feelings
+
+5. "minimal_caption" - PURE VISUAL
+   → 90% image, 10% text
+   → Text: corner or edge, small, subtle
+   → When: Image speaks for itself, atmospheric shots, texture closeups
+
+6. "portrait_feature" - HUMAN CONNECTION
+   → Vertical emphasis, subject-focused
+   → Text: bottom or top band, medium, name-like
+   → When: People, vertical compositions, intimate moments
+
+7. "text_overlay" - BOLD STATEMENT
+   → Text directly on image, integrated
+   → Text: anywhere, huge, part of composition
+   → When: Simple compositions, strong colors, graphic moments
+
+8. "side_by_side" - BALANCED NARRATIVE
+   → Classic 50/50 editorial split
+   → Text: dedicated panel, multiple sizes, hierarchy
+   → When: Thoughtful moments, need more context, quiet reflections
 
 OUTPUT FORMAT (Strict JSON):
 {
-  "title": "Evocative title (5-8 characters in Chinese, poetic and memorable)",
+  "title": "Poetic title (4-6 Chinese characters, unforgettable)",
   "location": "City/Region, Country",
   "blocks": [
     {
-      "layout": "full_bleed" | "side_by_side" | "immersive_focus",
-      "text": "One powerful sentence. Cinematic. Emotional. (Chinese, max 40 chars)",
-      "animation": "slow_zoom" | "parallax_drift" | "fade_in"
+      "layout": "full_bleed" | "hero_split" | "immersive_focus" | "magazine_spread" | "minimal_caption" | "portrait_feature" | "text_overlay" | "side_by_side",
+      "text": "One powerful line. Cinematic. Emotional. (Chinese, 15-40 chars)",
+      "animation": "slow_zoom" | "parallax_drift" | "fade_in" | "scale_in" | "slide_up",
+      "textPosition": "top" | "bottom" | "center" | "left" | "right" | "overlay",
+      "textSize": "small" | "medium" | "large" | "huge",
+      "imageFilter": "none" | "grayscale" | "warm" | "cool" | "vibrant" | "muted",
+      "mood": "Use the analyzed mood"
     }
   ]
 }
 
-CRITICAL RULES:
-- Generate exactly ${imageCount} blocks (one per image, in order)
-- Text must be in Chinese
-- Each text: 1 sentence, max 40 characters
-- Create a three-act structure: Setup (25%) → Conflict/Journey (50%) → Resolution (25%)
-- First block MUST be "full_bleed" to establish the world
-- Last block should offer reflection, closure, or a lingering emotion
-- Vary layouts naturally (avoid 3+ consecutive repeats)
-- Use visual features to inform layout choice:
-  * "landscape" + "golden-hour" + "calm" → likely full_bleed
-  * "portrait" + "dramatic" + "close-up" → likely immersive_focus
-  * "architecture" + "muted" + "symmetrical" → could be side_by_side
-- Match text mood to visual mood (don't force joy onto melancholy)
-- Honor the time-of-day: morning = beginnings, evening = reflection
+GOLDEN RULES:
+✓ ${imageCount} blocks total (one per image, in sequence)
+✓ Text in Chinese, authentic and poetic
+✓ First image: ALWAYS full_bleed or hero_split (establish the world)
+✓ Last image: reflective or climactic (leave an impression)
+✓ Variety: No more than 2 consecutive identical layouts
+✓ Use AI analysis suggestions BUT apply editorial judgment
+✓ Match layout to composition:
+  → Landscape/wide-angle → full_bleed, hero_split
+  → Portrait/close-up → portrait_feature, immersive_focus
+  → Symmetric/architectural → magazine_spread, side_by_side
+  → Atmospheric/texture → minimal_caption, text_overlay
+✓ Text size proportional to layout impact:
+  → full_bleed, immersive_focus → large or huge
+  → minimal_caption → small
+  → others → medium or large
+✓ Image filter based on color analysis:
+  → Warm/golden palette → warm filter
+  → Cool/blue palette → cool filter
+  → Vibrant colors → vibrant filter
+  → Muted tones → muted or grayscale filter
+✓ Create NARRATIVE ARC:
+  → Act 1 (0-30%): Arrival, discovery, wonder
+  → Act 2 (30-70%): Journey, experience, transformation
+  → Act 3 (70-100%): Reflection, meaning, lasting impression
 
-Now craft a story that feels like a limited-edition photo book.`
+Now create an experience so beautiful it makes people want to travel.`
       : `You are Apple's Chief Creative Director for Memories, tasked with transforming travel photos into cinematic masterpieces.
 
 MISSION: Create a film-grade story script from the user's journey.
@@ -294,7 +363,7 @@ Now analyze the ${imageCount} images and create magic.`;
         console.warn(`[AI Director] Block count mismatch: expected ${imageCount}, got ${parsed.blocks.length}`);
       }
 
-      // Build the final DirectorScript with actual image data
+      // Build the final DirectorScript with actual image data and enhanced metadata
       const directorScript: DirectorScript = {
         title: parsed.title,
         location: parsed.location,
@@ -304,6 +373,10 @@ Now analyze the ${imageCount} images and create magic.`;
           image: `data:image/jpeg;base64,${images[index].replace(/^data:image\/\w+;base64,/, '')}`,
           text: block.text,
           animation: block.animation || 'fade_in',
+          textPosition: block.textPosition,
+          textSize: block.textSize,
+          imageFilter: block.imageFilter,
+          mood: block.mood,
         })),
       };
 

@@ -1,4 +1,13 @@
-export type LayoutType = 'full_bleed' | 'side_by_side' | 'immersive_focus' | 'reflection_end';
+export type LayoutType = 
+  | 'full_bleed'           // Full screen epic opener
+  | 'side_by_side'         // Editorial split layout
+  | 'immersive_focus'      // Centered dramatic moment
+  | 'hero_split'           // Asymmetric split with large text
+  | 'magazine_spread'      // Two-page magazine style
+  | 'portrait_feature'     // Vertical portrait emphasis
+  | 'minimal_caption'      // Large image, minimal text
+  | 'text_overlay'         // Text directly on image
+  | 'reflection_end';      // Ending screen
 
 export interface StoryBlock {
   id: string;
@@ -6,6 +15,11 @@ export interface StoryBlock {
   image?: string; // URL or Base64
   text: string;
   animation?: string;
+  // Enhanced metadata for better rendering
+  textPosition?: 'top' | 'bottom' | 'center' | 'left' | 'right' | 'overlay';
+  textSize?: 'small' | 'medium' | 'large' | 'huge';
+  imageFilter?: 'none' | 'grayscale' | 'warm' | 'cool' | 'vibrant' | 'muted';
+  mood?: string; // For contextual styling
 }
 
 export interface DirectorScript {
