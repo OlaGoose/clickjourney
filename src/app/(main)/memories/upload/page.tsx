@@ -55,6 +55,21 @@ export default function MemoryUploadPage() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
 
+  // Image analysis state
+  interface ImageAnalysis {
+    index: number;
+    description: string;
+    visualFeatures: {
+      mood: string;
+      composition: string;
+      colorPalette: string;
+      subject: string;
+      timeOfDay: string;
+    };
+  }
+  const [imageAnalyses, setImageAnalyses] = useState<ImageAnalysis[]>([]);
+  const [isAnalyzingImages, setIsAnalyzingImages] = useState(false);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
@@ -68,6 +83,34 @@ export default function MemoryUploadPage() {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
+  const analyzeImages = useCallback(async () => {
+    if (isDefault) return;
+
+    setIsAnalyzingImages(true);
+    try {
+      const imageUrls = images.map((img) => img.url);
+      const base64Images = await compressMultipleImages(imageUrls);
+
+      const response = await fetch('/api/analyze-images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: base64Images }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Image analysis failed');
+      }
+
+      const data = await response.json();
+      setImageAnalyses(data.analyses);
+      console.log('[Upload] Image analyses:', data.analyses);
+    } catch (error) {
+      console.error('Failed to analyze images:', error);
+    } finally {
+      setIsAnalyzingImages(false);
+    }
+  }, [images, isDefault]);
+
   const generateCinematicMemory = useCallback(async () => {
     if (isDefault) {
       alert('请先上传至少一张照片');
@@ -79,7 +122,7 @@ export default function MemoryUploadPage() {
     setGenerationError(null);
 
     try {
-      // Step 1: Compress images (20% progress)
+      // Step 1: Compress images (20% progress) - always needed for final output
       setGenerationProgress(10);
       const imageUrls = images.map((img) => img.url);
       const base64Images = await compressMultipleImages(
@@ -91,15 +134,25 @@ export default function MemoryUploadPage() {
       );
 
       // Step 2: Call AI generation API (30% -> 90%)
+      // Use imageAnalyses if available (preferred), otherwise fall back to sending images
       setGenerationProgress(30);
+      const requestBody = imageAnalyses.length > 0
+        ? {
+            images: base64Images, // Still need images for final DirectorScript
+            imageAnalyses: imageAnalyses,
+            transcript: transcript || '',
+            userContext: '',
+          }
+        : {
+            images: base64Images,
+            transcript: transcript || '',
+            userContext: '',
+          };
+
       const response = await fetch('/api/generate-cinematic-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          images: base64Images,
-          transcript: transcript || '',
-          userContext: '', // Can be extended for user notes
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       setGenerationProgress(90);
@@ -129,16 +182,20 @@ export default function MemoryUploadPage() {
       );
       setIsGenerating(false);
     }
-  }, [images, isDefault, transcript, router]);
+  }, [images, isDefault, transcript, imageAnalyses, router]);
 
-  const goToNextStep = useCallback(() => {
+  const goToNextStep = useCallback(async () => {
     if (currentStep === 0) {
+      // Step 0 -> 1: Analyze images before moving to audio step
+      if (!isDefault && imageAnalyses.length === 0) {
+        await analyzeImages();
+      }
       setCurrentStep(1);
     } else if (currentStep === 1) {
-      // Generate cinematic memory
+      // Step 1 -> Generate: Create cinematic memory
       generateCinematicMemory();
     }
-  }, [currentStep, generateCinematicMemory]);
+  }, [currentStep, isDefault, imageAnalyses, analyzeImages, generateCinematicMemory]);
 
   const handleStartClick = useCallback(() => {
     setReplaceTargetId(null);
@@ -302,6 +359,7 @@ export default function MemoryUploadPage() {
     setTranscript('');
     setShowTranscript(false);
     setCurrentStep(0);
+    setImageAnalyses([]);
   }, []);
 
   const formatTime = (seconds: number) => {
@@ -426,15 +484,24 @@ export default function MemoryUploadPage() {
                 <button
                   type="button"
                   onClick={goToNextStep}
-                  disabled={isDefault}
+                  disabled={isDefault || isAnalyzingImages}
                   className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 ${
-                    isDefault
+                    isDefault || isAnalyzingImages
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-black hover:bg-gray-800 text-white'
                   }`}
                 >
-                  <ChevronRight size={16} strokeWidth={2.5} />
-                  <span className="font-semibold text-[13px]">Next</span>
+                  {isAnalyzingImages ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span className="font-semibold text-[13px]">Analyzing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronRight size={16} strokeWidth={2.5} />
+                      <span className="font-semibold text-[13px]">Next</span>
+                    </>
+                  )}
                 </button>
               </>
             ) : (

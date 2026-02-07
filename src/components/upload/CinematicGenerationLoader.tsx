@@ -11,11 +11,11 @@ interface CinematicGenerationLoaderProps {
 }
 
 const GENERATION_STEPS = [
-  { icon: ImageIcon, label: 'Analyzing images', duration: 3000 },
-  { icon: Palette, label: 'Understanding composition', duration: 2500 },
-  { icon: Type, label: 'Crafting narrative', duration: 3500 },
-  { icon: Film, label: 'Orchestrating layouts', duration: 2000 },
-  { icon: Wand2, label: 'Applying cinematic magic', duration: 3000 },
+  { icon: ImageIcon, label: 'Reading your journey', duration: 3000 },
+  { icon: Palette, label: 'Sensing the mood', duration: 2500 },
+  { icon: Type, label: 'Weaving the narrative', duration: 3500 },
+  { icon: Film, label: 'Choreographing the rhythm', duration: 2000 },
+  { icon: Wand2, label: 'Perfecting the story', duration: 3000 },
 ];
 
 export function CinematicGenerationLoader({
@@ -143,11 +143,11 @@ export function CinematicGenerationLoader({
                 transition={{ duration: 0.3 }}
                 className="text-center"
               >
-                <h3 className="text-xl font-light text-white mb-2">
+                <h3 className="text-xl font-light text-white mb-2 tracking-wide">
                   {currentStep || currentStepData?.label || 'Processing...'}
                 </h3>
-                <p className="text-sm text-white/50">
-                  Creating your cinematic masterpiece
+                <p className="text-sm text-white/40 font-light tracking-wider">
+                  Crafting your visual story
                 </p>
               </motion.div>
             </AnimatePresence>
@@ -194,9 +194,9 @@ export function CinematicGenerationLoader({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 2 }}
-              className="text-xs text-white/30 text-center max-w-xs"
+              className="text-xs text-white/25 text-center max-w-xs font-light tracking-wide italic"
             >
-              We're analyzing every detail to create a story worth remembering
+              Every moment deserves to be told beautifully
             </motion.p>
           </div>
         </motion.div>

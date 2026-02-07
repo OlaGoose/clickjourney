@@ -36,6 +36,14 @@ export async function POST(request: Request) {
   }
 
   const model = process.env.NEXT_PUBLIC_GEMINI_MODEL_STT || 'gemini-2.5-flash';
+  
+  console.log(`[Transcribe] Using model: ${model}`);
+  console.log(`[Transcribe] Audio data length: ${base64.length} characters`);
+  console.log(`[Transcribe] MIME type: ${mimeType}`);
+  
+  // Clean base64 data: remove any whitespace/newlines that might cause validation errors
+  const cleanBase64 = base64.replace(/\s+/g, '');
+  
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
@@ -45,7 +53,7 @@ export async function POST(request: Request) {
           {
             inlineData: {
               mimeType,
-              data: base64,
+              data: cleanBase64,
             },
           },
           {
@@ -56,11 +64,33 @@ export async function POST(request: Request) {
     });
 
     const text = response.text ?? '';
+    console.log(`[Transcribe] Success: ${text.substring(0, 50)}...`);
     return NextResponse.json({ text });
-  } catch (err) {
-    console.error('Transcription error:', err);
+  } catch (err: any) {
+    console.error('[Transcribe] Error details:', {
+      message: err.message,
+      status: err.status,
+      name: err.name,
+      stack: err.stack,
+      toString: err.toString(),
+    });
+    
+    // Provide more specific error messages
+    let errorMessage = 'Transcription failed';
+    if (err.message?.includes('not found') || err.message?.includes('404')) {
+      errorMessage = `模型 ${model} 不可用，请检查模型名称配置`;
+    } else if (err.message?.includes('pattern') || err.message?.includes('match')) {
+      errorMessage = `模型名称格式错误: ${model}`;
+    } else if (err.message?.includes('API key')) {
+      errorMessage = 'API 密钥无效';
+    }
+    
     return NextResponse.json(
-      { error: 'Transcription failed' },
+      { 
+        error: errorMessage,
+        details: err.message,
+        model: model,
+      },
       { status: 500 }
     );
   }

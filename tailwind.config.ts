@@ -14,6 +14,11 @@ const config: Config = {
         'orbit-yellow': '#fbbf24',
         'orbit-zinc': '#18181b',
       },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-radial-at-t': 'radial-gradient(ellipse at top, var(--tw-gradient-stops))',
+        'gradient-radial-at-b': 'radial-gradient(ellipse at bottom, var(--tw-gradient-stops))',
+      },
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },
