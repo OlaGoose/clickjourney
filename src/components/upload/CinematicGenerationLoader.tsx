@@ -142,6 +142,8 @@ interface CinematicGenerationLoaderProps {
   currentStep?: string;
   /** Uploaded image URLs (blob URLs). If fewer than 9, images are repeated to fill the layout. */
   imageUrls?: string[];
+  /** Light = upload page gradient + dark text; dark = Apple TV black + white text. */
+  theme?: 'light' | 'dark';
 }
 
 export function CinematicGenerationLoader({
@@ -149,7 +151,9 @@ export function CinematicGenerationLoader({
   progress = 0,
   currentStep,
   imageUrls = [],
+  theme = 'dark',
 }: CinematicGenerationLoaderProps) {
+  const isDark = theme === 'dark';
   const [stepIndex, setStepIndex] = useState(0);
   const [displayProgress, setDisplayProgress] = useState(0);
 
@@ -218,9 +222,14 @@ export function CinematicGenerationLoader({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050505] overflow-hidden"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden transition-colors duration-300"
+          style={{
+            background: isDark
+              ? 'linear-gradient(to bottom, rgb(0, 113, 227), #050505)'
+              : 'linear-gradient(to bottom, #CBE8FA 0%, #FCFDFD 100%)',
+          }}
         >
-          <AmbientGlow />
+          {isDark && <AmbientGlow />}
 
           {/* Photo grid (user images, repeated if needed) */}
           <motion.div
@@ -250,7 +259,7 @@ export function CinematicGenerationLoader({
             }}
           />
 
-          {/* Text overlay — centered, Apple-style typography, font size +20% */}
+          {/* Text overlay — centered, Apple-style typography, font size +20%; theme-aware colors */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-center pointer-events-none">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -258,26 +267,40 @@ export function CinematicGenerationLoader({
               transition={{ delay: 0.5, duration: 0.8 }}
               style={{ opacity: 1, transform: 'none' }}
             >
-              <h1 className="text-white/90 font-medium tracking-[0.2em] uppercase mb-2 drop-shadow-lg text-[1.05rem]">
+              <h1
+                className={`font-medium tracking-[0.2em] uppercase mb-2 drop-shadow-lg text-[1.05rem] ${
+                  isDark ? 'text-white/90' : 'text-black/90'
+                }`}
+              >
                 {titleText}
               </h1>
-              <p className="text-white/50 mt-1 font-light tracking-wider uppercase text-[12px]">
-                {subtitleText} • <span className="text-white/30">Curated by Orbit Journey</span>
+              <p
+                className={`mt-1 font-light tracking-wider uppercase text-[12px] ${
+                  isDark ? 'text-white/50' : 'text-black/50'
+                }`}
+              >
+                {subtitleText} • <span className={isDark ? 'text-white/30' : 'text-black/30'}>Curated by Orbit Journey</span>
               </p>
             </motion.div>
           </div>
 
           {/* Minimal progress (bottom, under text) */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-xs px-4">
-            <div className="h-0.5 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className={`h-0.5 rounded-full overflow-hidden ${isDark ? 'bg-white/10' : 'bg-black/10'}`}
+            >
               <motion.div
-                className="h-full bg-white/60 rounded-full"
+                className={`h-full rounded-full ${isDark ? 'bg-white/60' : 'bg-black/40'}`}
                 initial={{ width: '0%' }}
                 animate={{ width: `${displayProgress}%` }}
                 transition={{ duration: 0.3, ease: 'easeOut' }}
               />
             </div>
-            <p className="text-center mt-1.5 text-white/30 text-[10px] font-light tracking-wider uppercase">
+            <p
+              className={`text-center mt-1.5 text-[10px] font-light tracking-wider uppercase ${
+                isDark ? 'text-white/30' : 'text-black/40'
+              }`}
+            >
               {Math.round(displayProgress)}%
             </p>
           </div>

@@ -23,6 +23,7 @@ import { CinematicGenerationLoader } from '@/components/upload/CinematicGenerati
 import { ErrorDisplay } from '@/components/upload/ErrorDisplay';
 import { DEFAULT_UPLOAD_IMAGES, UPLOAD_STEP_COUNT } from '@/lib/upload/constants';
 import { compressMultipleImages } from '@/lib/utils/imageUtils';
+import { useDayNightTheme } from '@/hooks/useDayNightTheme';
 import type { UploadedImage } from '@/types/upload';
 import type { DirectorScript } from '@/types/cinematic';
 
@@ -386,15 +387,31 @@ export default function MemoryUploadPage() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans selection:bg-black selection:text-white">
-      <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#CBE8FA] to-[#FCFDFD]" />
+  const isDark = useDayNightTheme() === 'dark';
 
-      {/* Cinematic Generation Loader */}
+  return (
+    <div
+      className={`min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans transition-colors duration-300 ${
+        isDark
+          ? 'selection:bg-white selection:text-black'
+          : 'selection:bg-black selection:text-white'
+      }`}
+    >
+      <div
+        className="fixed inset-0 pointer-events-none z-0 transition-colors duration-300"
+        style={{
+          background: isDark
+            ? 'linear-gradient(to bottom, rgb(0, 113, 227), #050505)'
+            : 'linear-gradient(to bottom, #CBE8FA 0%, #FCFDFD 100%)',
+        }}
+      />
+
+      {/* Cinematic Generation Loader — same gradient as upload in day, Apple TV black in night */}
       <CinematicGenerationLoader
         isGenerating={isGenerating}
         progress={generationProgress}
         imageUrls={images.map((img) => img.url)}
+        theme={isDark ? 'dark' : 'light'}
       />
 
       {/* Error Display */}
@@ -415,6 +432,7 @@ export default function MemoryUploadPage() {
             currentStep={currentStep}
             progress={1}
             className="w-full"
+            variant={isDark ? 'dark' : 'light'}
           />
         </div>
       </header>
@@ -450,29 +468,45 @@ export default function MemoryUploadPage() {
         <div className="w-full max-w-4xl flex flex-col items-center px-4 pointer-events-auto">
           {currentStep === 1 && showTranscript && audioUrl && (
             <div className="w-full max-w-sm mb-4">
-              <div className="bg-white/60 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/40 p-5 relative">
+              <div
+                className={`backdrop-blur-2xl rounded-3xl shadow-2xl p-5 relative transition-colors duration-300 ${
+                  isDark
+                    ? 'bg-white/10 border border-white/20'
+                    : 'bg-white/60 border border-white/40'
+                }`}
+              >
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                    <Pencil size={14} className="text-gray-500" />
+                  <h3
+                    className={`text-sm font-semibold flex items-center gap-2 ${
+                      isDark ? 'text-white/90' : 'text-gray-800'
+                    }`}
+                  >
+                    <Pencil size={14} className={isDark ? 'text-white/50' : 'text-gray-500'} />
                     Transcript
                   </h3>
                   <button
                     type="button"
                     onClick={() => setShowTranscript(false)}
-                    className="p-1.5 hover:bg-black/5 rounded-full text-gray-500 transition-colors"
+                    className={`p-1.5 rounded-full transition-colors ${isDark ? 'hover:bg-white/10 text-white/50' : 'hover:bg-black/5 text-gray-500'}`}
                     aria-label="关闭"
                   >
                     <X size={14} />
                   </button>
                 </div>
                 {isTranscribing ? (
-                  <div className="flex flex-col items-center justify-center py-6 text-gray-500 gap-2">
-                    <Loader2 size={24} className="animate-spin text-black" />
+                  <div
+                    className={`flex flex-col items-center justify-center py-6 gap-2 ${isDark ? 'text-white/50' : 'text-gray-500'}`}
+                  >
+                    <Loader2 size={24} className={isDark ? 'animate-spin text-white' : 'animate-spin text-black'} />
                     <p className="text-xs font-medium">Generating text...</p>
                   </div>
                 ) : (
                   <textarea
-                    className="w-full text-sm text-gray-800 leading-relaxed bg-transparent resize-none outline-none focus:bg-white/40 rounded-xl p-2 -ml-2 transition-colors placeholder:text-gray-400"
+                    className={`w-full text-sm leading-relaxed bg-transparent resize-none outline-none rounded-xl p-2 -ml-2 transition-colors ${
+                      isDark
+                        ? 'text-white/90 placeholder:text-white/40 focus:bg-white/5'
+                        : 'text-gray-800 placeholder:text-gray-400 focus:bg-white/40'
+                    }`}
                     rows={4}
                     value={transcript}
                     onChange={(e) => setTranscript(e.target.value)}
@@ -483,7 +517,13 @@ export default function MemoryUploadPage() {
             </div>
           )}
 
-          <div className="bg-white/30 backdrop-blur-2xl border border-white/40 shadow-[0_20px_40px_rgba(0,0,0,0.1)] rounded-full p-2 flex items-center gap-2 transition-all duration-300">
+          <div
+            className={`backdrop-blur-2xl rounded-full p-2 flex items-center gap-2 transition-all duration-300 ${
+              isDark
+                ? 'bg-white/10 border border-white/20 shadow-[0_20px_40px_rgba(0,0,0,0.3)]'
+                : 'bg-white/30 border border-white/40 shadow-[0_20px_40px_rgba(0,0,0,0.1)]'
+            }`}
+          >
             {currentStep === 0 ? (
               <>
                 <button
@@ -492,21 +532,25 @@ export default function MemoryUploadPage() {
                   disabled={!isDefault && images.length >= 9}
                   className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full transition-all active:scale-95 ${
                     !isDefault && images.length >= 9
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      ? isDark
+                        ? 'bg-white/10 text-white/30 cursor-not-allowed'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl'
                   }`}
                 >
                   <ImagePlus size={16} strokeWidth={2.5} className="text-white" />
                   <span className="font-semibold text-[13px]">Upload</span>
                 </button>
-                <div className="w-px h-5 bg-black/10 mx-1" />
+                <div className={`w-px h-5 mx-1 ${isDark ? 'bg-white/20' : 'bg-black/10'}`} />
                 <button
                   type="button"
                   onClick={goToNextStep}
                   disabled={isDefault}
                   className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 ${
                     isDefault
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      ? isDark
+                        ? 'bg-white/10 text-white/30 cursor-not-allowed'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-black hover:bg-gray-800 text-white'
                   }`}
                 >
@@ -541,7 +585,11 @@ export default function MemoryUploadPage() {
                         type="button"
                         onClick={togglePlayback}
                         className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-semibold transition-all active:scale-95 shadow-lg ${
-                          showTranscript ? 'bg-gray-800 text-white ring-2 ring-black/10' : 'bg-black hover:bg-gray-800 text-white'
+                          showTranscript
+                            ? isDark
+                              ? 'bg-white/20 text-white ring-2 ring-white/20'
+                              : 'bg-gray-800 text-white ring-2 ring-black/10'
+                            : 'bg-black hover:bg-gray-800 text-white'
                         }`}
                       >
                         {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
@@ -550,7 +598,11 @@ export default function MemoryUploadPage() {
                       <button
                         type="button"
                         onClick={deleteAudio}
-                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 text-gray-500 hover:text-red-500 transition-colors"
+                        className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
+                          isDark
+                            ? 'hover:bg-white/10 text-white/50 hover:text-red-400'
+                            : 'hover:bg-black/5 text-gray-500 hover:text-red-500'
+                        }`}
                         title="Delete"
                         aria-label="删除录音"
                       >
@@ -568,14 +620,16 @@ export default function MemoryUploadPage() {
                     </button>
                   )}
                 </div>
-                <div className="w-px h-5 bg-black/10 mx-1" />
+                <div className={`w-px h-5 mx-1 ${isDark ? 'bg-white/20' : 'bg-black/10'}`} />
                 <button
                   type="button"
                   onClick={goToNextStep}
                   disabled={isDefault}
                   className={`group relative flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 overflow-hidden ${
                     isDefault
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      ? isDark
+                        ? 'bg-white/10 text-white/30 cursor-not-allowed'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-gradient-to-r from-black via-gray-900 to-black hover:from-gray-900 hover:to-gray-900 text-white'
                   }`}
                 >

@@ -9,6 +9,8 @@ export interface StoryStepBarProps {
   progress?: number;
   /** Optional className for the container (e.g. for safe area). */
   className?: string;
+  /** Light = white track/fill (on dark bg use dark variant). */
+  variant?: 'light' | 'dark';
 }
 
 /**
@@ -21,9 +23,12 @@ export function StoryStepBar({
   currentStep = 0,
   progress = 1,
   className = '',
+  variant = 'light',
 }: StoryStepBarProps) {
   const safeStep = Math.max(0, Math.min(currentStep, steps - 1));
   const safeProgress = Math.max(0, Math.min(progress, 1));
+  const trackClass = variant === 'dark' ? 'bg-white/30' : 'bg-white';
+  const fillClass = variant === 'dark' ? 'bg-white/80' : 'bg-white';
 
   return (
     <div
@@ -44,14 +49,12 @@ export function StoryStepBar({
             key={i}
             className="relative flex-1 min-w-0 h-[3px] overflow-hidden rounded-full"
           >
-            {/* Track: unfilled segment (Instagram-style, user-specified style) */}
             <div
-              className="h-full bg-white w-full opacity-50 transition-all duration-500 rounded-full"
+              className={`h-full w-full opacity-50 transition-all duration-500 rounded-full ${trackClass}`}
               aria-hidden
             />
-            {/* Fill: overlays track, left-to-right progress */}
             <div
-              className="absolute inset-y-0 left-0 rounded-full bg-white transition-all duration-500 ease-linear pointer-events-none"
+              className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-linear pointer-events-none ${fillClass}`}
               style={{ width: `${fillPercent}%` }}
               aria-hidden
             />

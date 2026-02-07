@@ -375,12 +375,12 @@
     scroll-behavior: smooth;
   }
   
-  /* Cinematic styles */
+  /* Cinematic styles - Apple SF Pro */
   .font-serif {
-    font-family: 'Playfair Display', serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
   .font-sans {
-    font-family: 'Inter', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
   
   /* Hide scrollbar for cinematic experience */
