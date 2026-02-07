@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ImagePlus,
@@ -14,11 +15,16 @@ import {
   Loader2,
   Pencil,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 import { GalleryDisplay } from '@/components/upload/GalleryDisplay';
 import { StoryStepBar } from '@/components/upload/StoryStepBar';
+import { CinematicGenerationLoader } from '@/components/upload/CinematicGenerationLoader';
+import { ErrorDisplay } from '@/components/upload/ErrorDisplay';
 import { DEFAULT_UPLOAD_IMAGES, UPLOAD_STEP_COUNT } from '@/lib/upload/constants';
+import { compressMultipleImages } from '@/lib/utils/imageUtils';
 import type { UploadedImage } from '@/types/upload';
+import type { DirectorScript } from '@/types/cinematic';
 
 const blobToBase64 = (blob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -34,6 +40,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
 };
 
 export default function MemoryUploadPage() {
+  const router = useRouter();
   const [images, setImages] = useState<UploadedImage[]>(DEFAULT_UPLOAD_IMAGES);
   const [isDefault, setIsDefault] = useState(true);
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
@@ -56,12 +63,82 @@ export default function MemoryUploadPage() {
   /** Step index: 0 = image upload, 1 = audio upload. Drives top story bar and bottom toolbar. */
   const [currentStep, setCurrentStep] = useState(0);
 
-  const goToNextStep = useCallback(() => {
-    if (currentStep === 0) setCurrentStep(1);
-    else if (currentStep === 1) {
-      // Next chapter (待开发)
+  // AI Generation state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+
+  const generateCinematicMemory = useCallback(async () => {
+    if (isDefault) {
+      alert('请先上传至少一张照片');
+      return;
     }
-  }, [currentStep]);
+
+    setIsGenerating(true);
+    setGenerationProgress(0);
+    setGenerationError(null);
+
+    try {
+      // Step 1: Compress images (20% progress)
+      setGenerationProgress(10);
+      const imageUrls = images.map((img) => img.url);
+      const base64Images = await compressMultipleImages(
+        imageUrls,
+        (current, total) => {
+          const progressPercent = 10 + (current / total) * 20;
+          setGenerationProgress(progressPercent);
+        }
+      );
+
+      // Step 2: Call AI generation API (30% -> 90%)
+      setGenerationProgress(30);
+      const response = await fetch('/api/generate-cinematic-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          images: base64Images,
+          transcript: transcript || '',
+          userContext: '', // Can be extended for user notes
+        }),
+      });
+
+      setGenerationProgress(90);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Generation failed');
+      }
+
+      const directorScript: DirectorScript = await response.json();
+
+      // Step 3: Navigate to cinematic page (100%)
+      setGenerationProgress(100);
+      
+      // Store in sessionStorage for immediate access
+      sessionStorage.setItem('cinematicScript', JSON.stringify(directorScript));
+      
+      // Navigate after brief delay for visual feedback
+      setTimeout(() => {
+        router.push('/memories/cinematic');
+      }, 500);
+
+    } catch (error) {
+      console.error('Failed to generate cinematic memory:', error);
+      setGenerationError(
+        error instanceof Error ? error.message : 'Unknown error occurred'
+      );
+      setIsGenerating(false);
+    }
+  }, [images, isDefault, transcript, router]);
+
+  const goToNextStep = useCallback(() => {
+    if (currentStep === 0) {
+      setCurrentStep(1);
+    } else if (currentStep === 1) {
+      // Generate cinematic memory
+      generateCinematicMemory();
+    }
+  }, [currentStep, generateCinematicMemory]);
 
   const handleStartClick = useCallback(() => {
     setReplaceTargetId(null);
@@ -237,6 +314,19 @@ export default function MemoryUploadPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans selection:bg-black selection:text-white">
       <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#CBE8FA] to-[#FCFDFD]" />
 
+      {/* Cinematic Generation Loader */}
+      <CinematicGenerationLoader
+        isGenerating={isGenerating}
+        progress={generationProgress}
+      />
+
+      {/* Error Display */}
+      <ErrorDisplay
+        error={generationError}
+        onRetry={generateCinematicMemory}
+        onDismiss={() => setGenerationError(null)}
+      />
+
       {/* Top: Instagram-style step bar + back/reset row */}
       <header
         className="fixed top-0 left-0 right-0 z-50 flex flex-col"
@@ -336,7 +426,12 @@ export default function MemoryUploadPage() {
                 <button
                   type="button"
                   onClick={goToNextStep}
-                  className="group flex items-center gap-2 px-6 py-3.5 rounded-full bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl transition-all active:scale-95"
+                  disabled={isDefault}
+                  className={`group flex items-center gap-2 px-6 py-3.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 ${
+                    isDefault
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-black hover:bg-gray-800 text-white'
+                  }`}
                 >
                   <ChevronRight size={18} strokeWidth={2.5} />
                   <span className="font-semibold text-sm">Next</span>
@@ -400,10 +495,18 @@ export default function MemoryUploadPage() {
                 <button
                   type="button"
                   onClick={goToNextStep}
-                  className="group flex items-center gap-2 px-6 py-3.5 rounded-full bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl transition-all active:scale-95"
+                  disabled={isDefault}
+                  className={`group relative flex items-center gap-2 px-6 py-3.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 overflow-hidden ${
+                    isDefault
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-black via-gray-900 to-black hover:from-gray-900 hover:to-gray-900 text-white'
+                  }`}
                 >
-                  <ChevronRight size={18} strokeWidth={2.5} />
-                  <span className="font-semibold text-sm">Next</span>
+                  {!isDefault && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+                  )}
+                  <Sparkles size={18} strokeWidth={2.5} className={isDefault ? '' : 'animate-pulse'} />
+                  <span className="font-semibold text-sm relative z-10">Generate</span>
                 </button>
               </>
             )}

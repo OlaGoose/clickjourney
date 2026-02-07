@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom animations for Cinematic Memory */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 @layer base {
   body {
     @apply bg-black text-white antialiased;
@@ -363,5 +373,23 @@
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
+  }
+  
+  /* Cinematic styles */
+  .font-serif {
+    font-family: 'Playfair Display', serif;
+  }
+  .font-sans {
+    font-family: 'Inter', sans-serif;
+  }
+  
+  /* Hide scrollbar for cinematic experience */
+  .cinematic-scroll::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+  }
+  .cinematic-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 }
