@@ -178,7 +178,7 @@ export default function CinematicMemoryPage() {
               onClick={() => isEditMode && setActiveChapter(block.id)}
             >
               <div className="flex items-baseline gap-6 mb-8">
-                <span className={`text-7xl md:text-8xl font-serif font-bold select-none ${isDark ? 'text-white/5' : 'text-black/5'}`}>
+                <span className="text-7xl md:text-8xl font-serif font-bold select-none chapter-number-silver">
                   {(index + 1).toString().padStart(2, '0')}
                 </span>
                 {block.mood && (
@@ -202,18 +202,9 @@ export default function CinematicMemoryPage() {
         {/* Ending Section */}
         <section className={`max-w-5xl mx-auto px-6 md:px-12 py-24 md:py-32 border-t ${isDark ? 'border-white/10' : 'border-black/10'}`}>
           <div className="text-center space-y-8">
-            <div className="inline-block">
-              <div className={`w-16 h-px mx-auto mb-8 ${isDark ? 'bg-white/20' : 'bg-black/20'}`} />
-              <p className={`text-6xl md:text-7xl font-serif tracking-wider ${isDark ? 'text-white' : 'text-black'}`}>
-                —
-              </p>
-              <div className={`w-16 h-px mx-auto mt-8 ${isDark ? 'bg-white/20' : 'bg-black/20'}`} />
-            </div>
-
             <p className={`text-lg md:text-xl font-light italic ${isDark ? 'text-white/40' : 'text-black/40'}`}>
               旅行的意义，不在于抵达，而在于沿途的风景
             </p>
-
             <div className="pt-12">
               <Link
                 href="/memories/upload"

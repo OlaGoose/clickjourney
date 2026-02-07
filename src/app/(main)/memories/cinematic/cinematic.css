@@ -84,6 +84,21 @@ textarea:focus {
   border-radius: 2px;
 }
 
+/* Chapter number - gradient bright silver (渐变亮银) */
+.chapter-number-silver {
+  background: linear-gradient(135deg, #a8b0b8 0%, #d4dce4 35%, #e8eef4 70%, #f2f6fa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.dark .chapter-number-silver {
+  background: linear-gradient(135deg, #6b7280 0%, #9ca3af 35%, #d1d5db 70%, #e5e7eb 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 /* Chapter Navigation Dots */
 .chapter-nav-dot {
   transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
