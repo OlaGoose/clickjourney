@@ -14,18 +14,23 @@ const config: Config = {
         'orbit-yellow': '#fbbf24',
         'orbit-zinc': '#18181b',
       },
-      animation: {
-        fadeIn: 'fadeIn 0.3s ease-out',
-        ping: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
-      },
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        fadeInUp: {
+          '0%': { opacity: '0', transform: 'translateY(12px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
         ping: {
           '75%, 100%': { transform: 'scale(2)', opacity: '0' },
         },
+      },
+      animation: {
+        fadeIn: 'fadeIn 0.3s ease-out',
+        fadeInUp: 'fadeInUp 0.4s ease-out',
+        ping: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
       },
     },
   },

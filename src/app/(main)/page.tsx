@@ -255,7 +255,7 @@ export default function HomePage() {
           {auth?.user ? (
             <button
               type="button"
-              onClick={() => router.push('/memories/new')}
+              onClick={() => router.push('/memories/upload')}
               className="flex items-center gap-2 rounded-full px-8 py-3 text-sm font-medium text-white shadow-xl transition-all hover:scale-105 hover:opacity-90 active:scale-95 md:text-base"
               style={{ backgroundColor: 'rgb(0, 113, 227)' }}
             >
