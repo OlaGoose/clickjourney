@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, MotionValue } from 'framer-motion';
 import { Film, Wand2, Image as ImageIcon, Type, Palette } from 'lucide-react';
 
-// --- Layout config (1:1 from Apple Intelligence Memories UI) ---
+// --- Layout config: spread +20% distance, positions pulled toward center ---
 interface ImageConfig {
   id: number;
   x: number;
@@ -14,6 +14,11 @@ interface ImageConfig {
   zIndex: number;
   baseScale: number;
 }
+
+/** Base spread (%). Increased by 20% for more spacing between images. */
+const SPREAD_MULTIPLIER = 35 * 1.2; // 42
+/** Pull positions toward center so photos are less concentrated at edges. */
+const CENTER_PULL = 0.8;
 
 const IMAGE_LAYOUT: ImageConfig[] = [
   { id: 1, x: 0, y: 0, width: 'w-64 md:w-80', aspectRatio: 0.75, zIndex: 50, baseScale: 1.0 },
@@ -41,6 +46,23 @@ const GENERATION_STEPS = [
   { icon: Film, label: 'Choreographing the rhythm', duration: 2000 },
   { icon: Wand2, label: 'Perfecting the story', duration: 3000 },
 ];
+
+// Typography: base sizes × 1.3 for +30% font size
+const TYPO = {
+  titleRem: 1.05 * 1.3,      // ~1.365rem
+  subtitlePx: 12 * 1.3,       // 15.6px
+  progressPx: 10 * 1.3,       // 13px
+} as const;
+
+// Text color opacity: deepen by ~30% (e.g. 90% → 100%, 50% → 65%)
+const TEXT_OPACITY = {
+  title: { dark: 'text-white', light: 'text-black' },
+  subtitle: { dark: 'text-white/80', light: 'text-black/80' },
+  muted: { dark: 'text-white/60', light: 'text-black/60' },
+  progressBar: { dark: 'bg-white/15', light: 'bg-black/15' },
+  progressFill: { dark: 'bg-white/80', light: 'bg-black/55' },
+  progressText: { dark: 'text-white/50', light: 'text-black/55' },
+} as const;
 
 // --- Ambient glow (optimized for performance) ---
 const AmbientGlow = () => (
@@ -109,15 +131,17 @@ function PhotoCard({
   const opacity = useTransform(distance, [0, 1], [1, 0.6]);
   // Removed brightness transform to reduce calculations
 
+  const offsetX = config.x * SPREAD_MULTIPLIER * CENTER_PULL;
+  const offsetY = config.y * SPREAD_MULTIPLIER * CENTER_PULL;
+
   return (
     <motion.div
       style={{
         position: 'absolute',
-        top: `${50 + config.y * 35}%`,
-        left: `${50 + config.x * 35}%`,
+        top: `${50 + offsetY}%`,
+        left: `${50 + offsetX}%`,
         zIndex: config.zIndex,
         scale,
-        // GPU acceleration hint
         willChange: 'transform',
       }}
       className={`absolute -translate-x-1/2 -translate-y-1/2 ${config.width}`}
@@ -299,7 +323,7 @@ export function CinematicGenerationLoader({
             }}
           />
 
-          {/* Text overlay — centered, Apple-style typography, font size +20%; theme-aware colors */}
+          {/* Text overlay — +30% font size, deepened colors */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-center pointer-events-none">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -308,38 +332,35 @@ export function CinematicGenerationLoader({
               style={{ opacity: 1, transform: 'none' }}
             >
               <h1
-                className={`font-medium tracking-[0.2em] uppercase mb-2 drop-shadow-lg text-[1.05rem] ${
-                  isDark ? 'text-white/90' : 'text-black/90'
-                }`}
+                className={`font-medium tracking-[0.2em] uppercase mb-2 drop-shadow-lg ${isDark ? TEXT_OPACITY.title.dark : TEXT_OPACITY.title.light}`}
+                style={{ fontSize: `${TYPO.titleRem}rem` }}
               >
                 {titleText}
               </h1>
               <p
-                className={`mt-1 font-light tracking-wider uppercase text-[12px] ${
-                  isDark ? 'text-white/50' : 'text-black/50'
-                }`}
+                className={`mt-1 font-light tracking-wider uppercase ${isDark ? TEXT_OPACITY.subtitle.dark : TEXT_OPACITY.subtitle.light}`}
+                style={{ fontSize: `${TYPO.subtitlePx}px` }}
               >
-                {subtitleText} • <span className={isDark ? 'text-white/30' : 'text-black/30'}>Curated by Orbit Journey</span>
+                {subtitleText} • <span className={isDark ? TEXT_OPACITY.muted.dark : TEXT_OPACITY.muted.light}>Curated by Orbit Journey</span>
               </p>
             </motion.div>
           </div>
 
-          {/* Minimal progress (bottom, under text) */}
+          {/* Minimal progress — +30% size and deepened colors */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-xs px-4">
             <div
-              className={`h-0.5 rounded-full overflow-hidden ${isDark ? 'bg-white/10' : 'bg-black/10'}`}
+              className={`h-0.5 rounded-full overflow-hidden ${isDark ? TEXT_OPACITY.progressBar.dark : TEXT_OPACITY.progressBar.light}`}
             >
               <motion.div
-                className={`h-full rounded-full ${isDark ? 'bg-white/60' : 'bg-black/40'}`}
+                className={`h-full rounded-full ${isDark ? TEXT_OPACITY.progressFill.dark : TEXT_OPACITY.progressFill.light}`}
                 initial={{ width: '0%' }}
                 animate={{ width: `${displayProgress}%` }}
                 transition={{ duration: 0.3, ease: 'easeOut' }}
               />
             </div>
             <p
-              className={`text-center mt-1.5 text-[10px] font-light tracking-wider uppercase ${
-                isDark ? 'text-white/30' : 'text-black/40'
-              }`}
+              className={`text-center mt-1.5 font-light tracking-wider uppercase ${isDark ? TEXT_OPACITY.progressText.dark : TEXT_OPACITY.progressText.light}`}
+              style={{ fontSize: `${TYPO.progressPx}px` }}
             >
               {Math.round(displayProgress)}%
             </p>

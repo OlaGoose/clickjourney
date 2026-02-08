@@ -5,13 +5,11 @@ import { useRouter } from 'next/navigation';
 import StarField from '@/components/StarField';
 import InteractiveGlobe from '@/components/InteractiveGlobe';
 import Carousel from '@/components/Carousel';
-import MemoryDetail from '@/components/MemoryDetail';
 import InfoModal from '@/components/InfoModal';
 import { UserAvatar } from '@/components/auth/UserAvatar';
 import { useOptionalAuth } from '@/lib/auth';
 import { getCarouselItems, buildCarouselItems } from '@/lib/storage';
 import type { LocationData, CarouselItem, GeminiResponse } from '@/types';
-import { ViewState } from '@/types';
 
 const INITIAL_LOCATION: LocationData = {
   lat: 40.3956,
@@ -49,8 +47,6 @@ export default function HomePage() {
   const [currentLocation, setCurrentLocation] = useState<LocationData>(INITIAL_LOCATION);
   /** Current memory at carousel active index; single source for header/callout/globe linkage */
   const [activeItem, setActiveItem] = useState<CarouselItem | null>(null);
-  const [selectedItem, setSelectedItem] = useState<CarouselItem | null>(null);
-  const [viewState, setViewState] = useState<ViewState>(ViewState.IDLE);
   const [infoModalData, setInfoModalData] = useState<GeminiResponse | null>(null);
   const [infoModalLoading, setInfoModalLoading] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -73,36 +69,46 @@ export default function HomePage() {
     };
   }, [userId]);
 
-  const handleItemClick = useCallback((item: CarouselItem) => {
-    setSelectedItem(item);
-    setViewState(ViewState.INFO);
-    if (item.coordinates) {
-      setCurrentLocation({
-        lat: item.coordinates.lat,
-        lng: item.coordinates.lng,
-        name: item.coordinates.name || item.title,
-        region: item.coordinates.region,
-        country: item.coordinates.country,
-      });
-    }
-  }, []);
+  const handleItemClick = useCallback(
+    (item: CarouselItem) => {
+      // Special handling for journey start/end cards
+      if (item.id === 'start-card' || item.id === 'end-card') {
+        return;
+      }
+      // Navigate to memory detail page with proper routing
+      router.push(`/memories/${item.id}`);
+    },
+    [router]
+  );
 
-  const handleBack = useCallback(() => {
-    setSelectedItem(null);
-    setViewState(ViewState.IDLE);
-  }, []);
 
   const handleActiveIndexChange = useCallback((index: number) => {
     const item = carouselItems[index] ?? null;
     setActiveItem(item);
     if (item?.coordinates) {
-      setCurrentLocation({
-        lat: item.coordinates.lat,
-        lng: item.coordinates.lng,
-        name: item.coordinates.name || item.title,
-        region: item.coordinates.region,
-        country: item.coordinates.country,
-      });
+      const name =
+        (item.coordinates.name && item.coordinates.name.trim()) ||
+        item.title ||
+        item.subtitle ||
+        INITIAL_LOCATION.name;
+      const { lat, lng } = item.coordinates;
+      const hasValidCoords = lat !== 0 || lng !== 0;
+      if (hasValidCoords) {
+        setCurrentLocation({
+          lat,
+          lng,
+          name,
+          region: item.coordinates.region,
+          country: item.coordinates.country,
+        });
+      } else {
+        setCurrentLocation((prev) => ({ ...prev, name }));
+      }
+    } else if (item) {
+      setCurrentLocation((prev) => ({
+        ...prev,
+        name: item.subtitle || item.title || prev.name,
+      }));
     }
     setCalloutPlaying(false);
     if (calloutAudioRef.current) {
@@ -146,7 +152,12 @@ export default function HomePage() {
   }, [currentLocation]);
 
   const displayItems = carouselItems;
-  const titleText = activeItem ? (activeItem.coordinates?.name ?? activeItem.title) : currentLocation.name;
+  /** Header: location name from active card (coordinates or subtitle/title) so title and globe stay in sync */
+  const titleText =
+    (activeItem?.coordinates?.name?.trim()) ||
+    activeItem?.subtitle ||
+    activeItem?.title ||
+    currentLocation.name;
   const avatarSeeds = (activeItem?.participants?.length ? activeItem.participants : DEFAULT_AVATAR_SEEDS) as string[];
   const calloutText = activeItem?.description ?? DEFAULT_CALLOUT_TEXT;
   const effectiveAudioUrl = activeItem?.audioUrl ?? currentDemoAudioUrl;
@@ -177,23 +188,9 @@ export default function HomePage() {
     <div className="relative h-screen w-full select-none overflow-hidden bg-black font-sans">
       <StarField />
 
-      <div
-        className={`transition-opacity duration-500 ${
-          viewState === ViewState.INFO ? 'opacity-0' : 'opacity-100'
-        }`}
-      >
-        <InteractiveGlobe center={currentLocation} />
-      </div>
+      <InteractiveGlobe center={currentLocation} />
 
-      {viewState === ViewState.INFO && selectedItem && (
-        <MemoryDetail item={selectedItem} onBack={handleBack} />
-      )}
-
-      <div
-        className={`absolute inset-0 z-20 pointer-events-none transition-opacity duration-300 ${
-          viewState === ViewState.INFO ? 'opacity-0 pointer-events-none' : 'opacity-100'
-        }`}
-      >
+      <div className="absolute inset-0 z-20 pointer-events-none">
         <div className="fixed right-5 top-5 z-30 pointer-events-auto">
           <UserAvatar size="sm" showDropdown className="rounded-full" />
         </div>

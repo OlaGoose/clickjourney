@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { MapPin, Calendar, Edit2, ArrowLeft, Share2, Download } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { MapPin, Calendar, Edit2, ArrowLeft, Share2, Download, Save, Check } from 'lucide-react';
 import Link from 'next/link';
 import { DirectorScript, StoryBlock } from '@/types/cinematic';
 import { StaticBlockRenderer } from '@/components/cinematic/StaticBlockRenderer';
 import { useDayNightTheme } from '@/hooks/useDayNightTheme';
+import { useOptionalAuth } from '@/lib/auth';
+import { saveMemory } from '@/lib/storage';
+import { directorScriptToCarouselItem } from '@/lib/upload-to-memory';
+import { saveCinematicScript, saveLocalCinematic } from '@/lib/cinematic-storage';
 import './cinematic.css';
 
 const DEFAULT_SCRIPT: DirectorScript = {
@@ -31,6 +35,10 @@ export default function CinematicMemoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeChapter, setActiveChapter] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  const auth = useOptionalAuth();
+  const userId = auth?.user?.id ?? null;
 
   // Load script from sessionStorage
   useEffect(() => {
@@ -59,6 +67,30 @@ export default function CinematicMemoryPage() {
       blocks: prev.blocks.map(b => b.id === id ? { ...b, ...updates } : b)
     }));
   };
+
+  /** Save current script to memory carousel (recall cards on home). */
+  const handleSaveToMemory = useCallback(async () => {
+    setSaveStatus('saving');
+    try {
+      const carouselInput = directorScriptToCarouselItem(script);
+      if (userId) {
+        const { data, error } = await saveMemory(userId, carouselInput);
+        if (error) {
+          setSaveStatus('error');
+          return;
+        }
+        if (data?.id) saveCinematicScript(data.id, script);
+      } else {
+        const tempId = `cinematic-${Date.now()}`;
+        saveLocalCinematic({ ...carouselInput, id: tempId }, script);
+      }
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    }
+  }, [script, userId]);
 
   const getCurrentDate = () => {
     return new Date().toLocaleDateString('zh-CN', { 
@@ -100,7 +132,34 @@ export default function CinematicMemoryPage() {
             <span className="text-sm font-medium">返回</span>
           </Link>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
+            <button
+              onClick={handleSaveToMemory}
+              disabled={saveStatus === 'saving'}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                saveStatus === 'saved'
+                  ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-500/20 text-emerald-700'
+                  : saveStatus === 'saving'
+                    ? isDark ? 'bg-white/10 text-white/50 cursor-wait' : 'bg-black/5 text-black/50 cursor-wait'
+                    : isDark
+                      ? 'bg-white/10 text-white hover:bg-white/20'
+                      : 'bg-black/5 text-black hover:bg-black/10'
+              }`}
+              title="保存到回忆"
+              aria-label="保存到回忆"
+            >
+              {saveStatus === 'saving' ? (
+                <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : saveStatus === 'saved' ? (
+                <Check size={16} />
+              ) : (
+                <Save size={16} />
+              )}
+              <span className="hidden sm:inline">
+                {saveStatus === 'saved' ? '已保存' : saveStatus === 'saving' ? '保存中…' : saveStatus === 'error' ? '保存失败' : '保存'}
+              </span>
+            </button>
+
             <button
               onClick={() => setIsEditMode(!isEditMode)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
@@ -115,11 +174,11 @@ export default function CinematicMemoryPage() {
               {isEditMode ? '完成编辑' : '编辑'}
             </button>
 
-            <button className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}>
+            <button className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`} title="分享" aria-label="分享">
               <Share2 size={20} className={isDark ? 'text-white/70' : 'text-black/70'} />
             </button>
 
-            <button className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}>
+            <button className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`} title="下载" aria-label="下载">
               <Download size={20} className={isDark ? 'text-white/70' : 'text-black/70'} />
             </button>
           </div>

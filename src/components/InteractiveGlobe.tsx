@@ -18,6 +18,27 @@ const Globe = dynamic(() => import('@/components/GlobeWrapper'), { ssr: false })
 const INITIAL_ALTITUDE = 4;
 const POV_TRANSITION_MS = 1000;
 
+/** three-globe uses Latin-only font by default; map CJK location names to ASCII so label doesn't show "??.??" */
+function getGlobeLabel(name: string | undefined): string {
+  if (name == null || typeof name !== 'string') return 'Location';
+  const t = name.trim();
+  if (!t) return 'Location';
+  const n = t.toLowerCase();
+  if (n.includes('东京') || n.includes('tokyo') || n.includes('東京都')) return 'Tokyo';
+  if (n.includes('日本') || n.includes('japan') || n.includes('日本国')) return 'Japan';
+  if (n.includes('京都') || n.includes('kyoto')) return 'Kyoto';
+  if (n.includes('大阪') || n.includes('osaka')) return 'Osaka';
+  if (n.includes('北海道') || n.includes('hokkaido')) return 'Hokkaido';
+  if (n.includes('纽约') || n.includes('new york') || n.includes('nyc')) return 'New York';
+  if (n.includes('伦敦') || n.includes('london')) return 'London';
+  if (n.includes('巴黎') || n.includes('paris')) return 'Paris';
+  if (n.includes('香港') || n.includes('hong kong')) return 'Hong Kong';
+  if (n.includes('上海') || n.includes('shanghai')) return 'Shanghai';
+  if (n.includes('北京') || n.includes('beijing')) return 'Beijing';
+  if (n.includes('orbit view') || n.includes('space')) return 'Orbit View';
+  return t;
+}
+
 interface InteractiveGlobeProps {
   center: LocationData;
   onGlobeReady?: () => void;
@@ -77,7 +98,7 @@ export default function InteractiveGlobe({ center, onGlobeReady }: InteractiveGl
         labelsData={[center]}
         labelLat={(d: unknown) => (d as LocationData).lat}
         labelLng={(d: unknown) => (d as LocationData).lng}
-        labelText={(d: unknown) => (d as LocationData).name}
+        labelText={(d: unknown) => getGlobeLabel((d as LocationData).name)}
         labelSize={1.5}
         labelDotRadius={0.8}
         labelColor={() => '#fbbf24'}

@@ -11,6 +11,7 @@ import { MemoryService } from '../db/services/memory-service';
 import { initializeDemoData, hasDemoData } from '../db/utils/demo-data';
 import type { CarouselItem, NewMemoryInput } from '@/types';
 import { getDemoGallerySlice } from './demo-gallery';
+import { getLocalCinematicItems } from '@/lib/cinematic-storage';
 
 /** Original 4 cards for homepage carousel (with coordinates + description + participants for full linkage). */
 const DEMO_ITEMS_MAIN: CarouselItem[] = [
@@ -121,29 +122,34 @@ export async function fetchMemoriesForUser(userId: string | null): Promise<Carou
 
 /**
  * Get carousel items from IndexedDB
- * Note: Database initialization should be done via DatabaseProvider in layout
+ * Merges upload-generated cinematic memories (local-only when not authenticated).
  */
 export async function getCarouselItems(userId: string | null): Promise<CarouselItem[]> {
   if (typeof window === 'undefined') return buildCarouselItems([]);
-  
-  // Fetch memories (demo data will be auto-initialized if needed)
+
   const memories = await fetchMemoriesForUser(userId);
-  return buildCarouselItems(memories);
+  const localCinematic = userId == null ? getLocalCinematicItems() : [];
+  const merged = [...memories, ...localCinematic];
+  return buildCarouselItems(merged);
 }
 
 /**
  * Save a new memory to IndexedDB (local-first)
  * Automatically syncs to Supabase in background if authenticated
+ * Returns created item (with id) so callers can e.g. store cinematic script by id
  */
-export async function saveMemory(userId: string, item: NewMemoryInput | CarouselItem): Promise<{ error: string | null }> {
+export async function saveMemory(
+  userId: string,
+  item: NewMemoryInput | CarouselItem
+): Promise<{ data: CarouselItem | null; error: string | null }> {
   if (typeof window === 'undefined') {
-    return { error: 'Storage not available on server' };
+    return { data: null, error: 'Storage not available on server' };
   }
-  
+
   try {
     const result = await MemoryService.createMemory(userId, item);
-    return { error: result.error };
+    return { data: result.data, error: result.error };
   } catch (e) {
-    return { error: e instanceof Error ? e.message : 'Unknown error' };
+    return { data: null, error: e instanceof Error ? e.message : 'Unknown error' };
   }
 }

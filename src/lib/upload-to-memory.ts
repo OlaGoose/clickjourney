@@ -52,6 +52,7 @@ export function directorScriptToCarouselItem(script: DirectorScript): NewMemoryI
         }
       : resolveCoordinatesForLocation(script.location);
   return {
+    type: 'cinematic',
     title: script.title,
     subtitle: script.location,
     image,

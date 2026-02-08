@@ -4,6 +4,7 @@ import type { CarouselItem, LocationData } from '@/types';
 export interface TravelMemoryRow {
   id: string;
   user_id: string | null;
+  type: string | null; // MemoryType
   title: string;
   subtitle: string;
   image_url: string;
@@ -39,6 +40,7 @@ export function rowToCarouselItem(row: TravelMemoryRow): CarouselItem {
       : undefined;
   return {
     id: row.id,
+    type: row.type as any, // Cast to MemoryType; null handled by inferMemoryType
     title: row.title,
     subtitle: row.subtitle,
     image: row.image_url,
@@ -62,6 +64,7 @@ export function carouselItemToRow(
 ): Omit<TravelMemoryRow, 'id' | 'created_at' | 'updated_at'> {
   return {
     user_id: userId,
+    type: item.type ?? null,
     title: item.title,
     subtitle: item.subtitle,
     image_url: item.image,

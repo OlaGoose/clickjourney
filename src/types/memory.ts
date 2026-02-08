@@ -34,8 +34,19 @@ export enum ViewState {
   INFO = 'INFO',
 }
 
+/**
+ * Memory types for discriminated union rendering
+ * - photo-gallery: Photo collection with description
+ * - cinematic: AI-generated cinematic story with director script
+ * - rich-story: Rich text content (markdown/HTML)
+ * - video: Video memory collection
+ */
+export type MemoryType = 'photo-gallery' | 'cinematic' | 'rich-story' | 'video';
+
 export interface CarouselItem {
   id: string;
+  /** Memory type for discriminated rendering; inferred from content if not set (backward compat) */
+  type?: MemoryType;
   title: string;
   subtitle: string;
   image: string;
@@ -63,3 +74,14 @@ export interface CarouselItem {
 
 /** Input for creating a new memory (no id yet). */
 export type NewMemoryInput = Omit<CarouselItem, 'id'>;
+
+/**
+ * Infer memory type from content for backward compatibility
+ * Used when type field is not explicitly set
+ */
+export function inferMemoryType(item: CarouselItem): MemoryType {
+  if (item.type) return item.type;
+  if (item.videoUrls && item.videoUrls.length > 0) return 'video';
+  if (item.richContent && item.richContent.replace(/<[^>]+>/g, '').trim().length > 50) return 'rich-story';
+  return 'photo-gallery';
+}

@@ -19,6 +19,7 @@ export interface MemoryRecord {
   userId: string | null;
   
   // Memory content
+  type: string | null; // MemoryType: 'photo-gallery' | 'cinematic' | 'rich-story' | 'video'
   title: string;
   subtitle: string;
   imageUrl: string;

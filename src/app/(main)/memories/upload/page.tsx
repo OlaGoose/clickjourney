@@ -24,6 +24,10 @@ import { ErrorDisplay } from '@/components/upload/ErrorDisplay';
 import { DEFAULT_UPLOAD_IMAGES, UPLOAD_STEP_COUNT } from '@/lib/upload/constants';
 import { compressMultipleImages } from '@/lib/utils/imageUtils';
 import { useDayNightTheme } from '@/hooks/useDayNightTheme';
+import { useOptionalAuth } from '@/lib/auth';
+import { saveMemory } from '@/lib/storage';
+import { directorScriptToCarouselItem } from '@/lib/upload-to-memory';
+import { saveCinematicScript, saveLocalCinematic } from '@/lib/cinematic-storage';
 import type { UploadedImage } from '@/types/upload';
 import type { DirectorScript } from '@/types/cinematic';
 
@@ -95,6 +99,9 @@ export default function MemoryUploadPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationError, setGenerationError] = useState<string | null>(null);
+
+  const auth = useOptionalAuth();
+  const userId = auth?.user?.id ?? null;
 
   const analyzeImages = useCallback(async () => {
     if (isDefault) return;
@@ -186,13 +193,22 @@ export default function MemoryUploadPage() {
 
       const directorScript: DirectorScript = await response.json();
 
-      // Step 3: Navigate to cinematic page (100%)
+      // Step 3: Save as memory card and persist script for recall
       setGenerationProgress(100);
-      
-      // Store in sessionStorage for immediate access
+      const carouselInput = directorScriptToCarouselItem(directorScript);
+      if (userId) {
+        const { data, error } = await saveMemory(userId, carouselInput);
+        if (!error && data?.id) {
+          saveCinematicScript(data.id, directorScript);
+        }
+      } else {
+        const tempId = `cinematic-${Date.now()}`;
+        saveLocalCinematic({ ...carouselInput, id: tempId }, directorScript);
+      }
+
+      // Store in sessionStorage for immediate access on cinematic page
       sessionStorage.setItem('cinematicScript', JSON.stringify(directorScript));
-      
-      // Navigate after brief delay for visual feedback
+
       setTimeout(() => {
         router.push('/memories/cinematic');
       }, 500);
@@ -204,7 +220,7 @@ export default function MemoryUploadPage() {
       );
       setIsGenerating(false);
     }
-  }, [images, isDefault, transcript, imageAnalyses, router]);
+  }, [images, isDefault, transcript, imageAnalyses, userId, router]);
 
   const goToNextStep = useCallback(() => {
     if (currentStep === 0) {
@@ -502,7 +518,7 @@ export default function MemoryUploadPage() {
                   </div>
                 ) : (
                   <textarea
-                    className={`w-full text-sm leading-relaxed bg-transparent resize-none outline-none rounded-xl p-2 -ml-2 transition-colors ${
+                    className={`w-full text-sm leading-relaxed bg-transparent resize-none outline-none rounded-xl p-2 ml-1 transition-colors ${
                       isDark
                         ? 'text-white/90 placeholder:text-white/40 focus:bg-white/5'
                         : 'text-gray-800 placeholder:text-gray-400 focus:bg-white/40'

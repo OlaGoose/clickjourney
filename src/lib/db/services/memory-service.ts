@@ -20,6 +20,7 @@ export function carouselItemToMemoryRecord(
 ): CreateMemoryInput {
   return {
     userId,
+    type: item.type ?? null,
     title: item.title,
     subtitle: item.subtitle,
     imageUrl: item.image,
@@ -58,6 +59,7 @@ export function memoryRecordToCarouselItem(record: MemoryRecord): CarouselItem {
 
   return {
     id: record.id,
+    type: record.type as any, // Cast to MemoryType; null handled by inferMemoryType
     title: record.title,
     subtitle: record.subtitle,
     image: record.imageUrl,
