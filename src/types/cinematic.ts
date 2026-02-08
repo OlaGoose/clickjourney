@@ -25,6 +25,9 @@ export interface StoryBlock {
 export interface DirectorScript {
   title: string;
   location: string;
+  /** Optional coordinates from AI (decimal degrees) for globe/location sync */
+  latitude?: number;
+  longitude?: number;
   blocks: StoryBlock[];
 }
 

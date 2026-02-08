@@ -45,6 +45,9 @@ interface GeminiBlock {
 interface GeminiResponse {
   title: string;
   location: string;
+  /** Primary location coordinates in decimal degrees (inferred from images) */
+  latitude?: number;
+  longitude?: number;
   blocks: GeminiBlock[];
 }
 
@@ -186,6 +189,8 @@ OUTPUT FORMAT (Strict JSON):
 {
   "title": "Poetic title (4-6 Chinese characters, unforgettable)",
   "location": "City/Region, Country",
+  "latitude": 35.6762,
+  "longitude": 139.6503,
   "blocks": [
     {
       "layout": "full_bleed" | "hero_split" | "immersive_focus" | "magazine_spread" | "minimal_caption" | "portrait_feature" | "text_overlay" | "side_by_side",
@@ -198,6 +203,7 @@ OUTPUT FORMAT (Strict JSON):
     }
   ]
 }
+- "latitude" and "longitude": Infer primary location from images; provide WGS84 decimal degrees (city center if uncertain). Required.
 
 GOLDEN RULES:
 ✓ ${imageCount} blocks total (one per image, in sequence)
@@ -302,6 +308,8 @@ Return ONLY valid JSON (no markdown blocks):
 {
   "title": "Poetic title (4-8 Chinese characters)",
   "location": "City/Region, Country",
+  "latitude": 35.6762,
+  "longitude": 139.6503,
   "blocks": [
     {
       "layout": "full_bleed" | "hero_split" | "immersive_focus" | "magazine_spread" | "minimal_caption" | "portrait_feature" | "text_overlay" | "side_by_side",
@@ -314,6 +322,7 @@ Return ONLY valid JSON (no markdown blocks):
     }
   ]
 }
+- "latitude" and "longitude": Infer the primary location from images (landmarks, scenery, signs) and provide approximate WGS84 decimal degrees. Use the city center if uncertain. Required.
 </output_format>
 
 <critical_rules>
@@ -406,6 +415,9 @@ Now analyze the ${imageCount} images. Create a story that honors the user's auth
         );
       }
 
+      const lat = typeof parsed.latitude === 'number' && parsed.latitude >= -90 && parsed.latitude <= 90 ? parsed.latitude : undefined;
+      const lng = typeof parsed.longitude === 'number' && parsed.longitude >= -180 && parsed.longitude <= 180 ? parsed.longitude : undefined;
+
       if (parsed.blocks.length !== imageCount) {
         console.warn(`[AI Director] Block count mismatch: expected ${imageCount}, got ${parsed.blocks.length}`);
       }
@@ -414,6 +426,7 @@ Now analyze the ${imageCount} images. Create a story that honors the user's auth
       const directorScript: DirectorScript = {
         title: parsed.title,
         location: parsed.location,
+        ...(lat != null && lng != null && { latitude: lat, longitude: lng }),
         blocks: parsed.blocks.slice(0, imageCount).map((block, index) => ({
           id: `block_${Date.now()}_${index}`,
           layout: block.layout,
