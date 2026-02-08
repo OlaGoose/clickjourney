@@ -518,17 +518,9 @@ export default function MemoryUploadPage() {
                     }`}
                   >
                     <Pencil size={14} className={isDark ? 'text-white/50' : 'text-gray-500'} />
-                    Transcript
+                    Story
                   </h3>
                 </div>
-                {isTranscribing ? (
-                  <div
-                    className={`flex flex-col items-center justify-center py-4 gap-2 ${isDark ? 'text-white/50' : 'text-gray-500'}`}
-                  >
-                    <Loader2 size={20} className={isDark ? 'animate-spin text-white' : 'animate-spin text-black'} />
-                    <p className="text-xs font-medium">Transcribing...</p>
-                  </div>
-                ) : null}
                 <textarea
                   className={`w-full text-sm leading-relaxed bg-transparent resize-none outline-none rounded-xl p-2 ml-1 transition-colors ${
                     isDark
