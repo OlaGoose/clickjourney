@@ -111,7 +111,6 @@
 ```
 TravelEditorPage (主页面)
 ├── EditorHeader (头部导航)
-├── PhotoGridSection (照片网格)
 ├── ContentBlock (内容块，可复用)
 ├── EditPanel (底部编辑面板)
 └── AddBlockButton (添加按钮)
@@ -123,7 +122,6 @@ TravelEditorPage (主页面)
 interface TravelEditorData {
   title: string;
   description: string;
-  images: string[]; // 最多4张
   blocks: ContentBlock[];
 }
 
@@ -136,6 +134,8 @@ interface ContentBlock {
     duration?: number;
     thumbnail?: string;
     fileName?: string;
+    images?: string[];        // 图片块多图 (1–6)
+    imageDisplayMode?: 'grid' | 'gallery';  // 网格(PhotoGrid) 或 相册(upload 风格)
   };
 }
 ```

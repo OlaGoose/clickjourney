@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import { Edit2, Image, Video, Music, Type } from 'lucide-react';
-import type { ContentBlock as ContentBlockType } from '@/types/editor';
+import PhotoGrid from '@/components/PhotoGrid';
+import GalleryModal from '@/components/GalleryModal';
+import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
+import type { ContentBlock as ContentBlockType, ImageDisplayMode } from '@/types/editor';
 
 interface ContentBlockProps {
   block: ContentBlockType;
@@ -13,6 +16,8 @@ interface ContentBlockProps {
 
 export function ContentBlock({ block, isSelected, onClick, onEdit }: ContentBlockProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
 
   const renderContent = () => {
     switch (block.type) {
@@ -24,23 +29,49 @@ export function ContentBlock({ block, isSelected, onClick, onEdit }: ContentBloc
             </p>
           </div>
         );
-      case 'image':
+      case 'image': {
+        const images = block.metadata?.images?.length
+          ? block.metadata.images
+          : block.content
+            ? [block.content]
+            : [];
+        const displayMode: ImageDisplayMode = block.metadata?.imageDisplayMode ?? 'grid';
+        const openGallery = (index: number) => {
+          setGalleryIndex(index);
+          setShowGallery(true);
+        };
         return (
-          <div className="relative w-full overflow-hidden rounded-2xl bg-gray-100">
-            {block.content ? (
-              <img
-                src={block.content}
-                alt="Content"
-                className="h-auto w-full object-cover"
-                loading="lazy"
-              />
+          <div className="relative w-full" onClick={(e) => e.stopPropagation()}>
+            {images.length > 0 ? (
+              displayMode === 'gallery' ? (
+                <GalleryDisplayView
+                  images={images}
+                  onImageClick={openGallery}
+                  ariaLabel="区块照片"
+                />
+              ) : (
+                <PhotoGrid
+                  images={images}
+                  onImageClick={openGallery}
+                  totalCount={images.length}
+                  ariaLabel="区块照片"
+                />
+              )
             ) : (
-              <div className="flex h-48 items-center justify-center">
+              <div className="flex h-48 items-center justify-center rounded-2xl bg-gray-100">
                 <Image size={48} className="text-gray-300" />
               </div>
             )}
+            {images.length > 0 && showGallery && (
+              <GalleryModal
+                images={images}
+                initialIndex={galleryIndex}
+                onClose={() => setShowGallery(false)}
+              />
+            )}
           </div>
         );
+      }
       case 'video':
         return (
           <div className="relative w-full overflow-hidden rounded-2xl bg-gray-100">
@@ -100,9 +131,7 @@ export function ContentBlock({ block, isSelected, onClick, onEdit }: ContentBloc
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`group relative cursor-pointer transition-all ${
-        isSelected ? 'ring-2 ring-black ring-offset-2' : ''
-      }`}
+      className="group relative cursor-pointer transition-all"
     >
       {renderContent()}
       
@@ -119,12 +148,6 @@ export function ContentBlock({ block, isSelected, onClick, onEdit }: ContentBloc
           <Edit2 size={12} strokeWidth={2.5} />
           <span>编辑</span>
         </button>
-      )}
-      
-      {isSelected && (
-        <div className="absolute -bottom-1 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full bg-black text-white">
-          {getIcon()}
-        </div>
       )}
     </div>
   );

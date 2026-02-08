@@ -4,21 +4,8 @@ import { useState } from 'react';
 import { RefreshCw, Trash2 } from 'lucide-react';
 import type { GalleryProps } from '@/types/upload';
 
-/**
- * Airbnb-style gallery: polaroid-like cards with "perfectly messy" layout.
- * Click a card to show replace/delete actions in a glass bubble.
- * 
- * Performance optimizations:
- * - Progressive image loading with blur-up effect
- * - Skeleton placeholders during load
- * - Intersection Observer for lazy loading
- */
-export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
-  const count = images.length;
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
-
-  const getImageStyle = (index: number, total: number) => {
+/** Shared polaroid layout: position/rotation by index and total. Used by GalleryDisplay and GalleryDisplayView. */
+export function getGalleryImageStyle(index: number, total: number) {
     let sizeClass = 'w-64 h-64 md:w-80 md:h-80';
     if (total === 2) sizeClass = 'w-56 h-56 md:w-72 md:h-72';
     if (total === 3) sizeClass = 'w-48 h-48 md:w-64 md:h-64';
@@ -133,14 +120,23 @@ export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
       r = randomR;
     }
 
-    return {
-      className: `absolute top-1/2 left-1/2 origin-center transition-all duration-700 ease-out ${sizeClass}`,
-      style: {
-        transform: `translate(calc(-50% + ${x}%), calc(-50% + ${y}%)) rotate(${r}deg)`,
-        zIndex: z,
-      },
-    };
+  return {
+    className: `absolute top-1/2 left-1/2 origin-center transition-all duration-700 ease-out ${sizeClass}`,
+    style: {
+      transform: `translate(calc(-50% + ${x}%), calc(-50% + ${y}%)) rotate(${r}deg)`,
+      zIndex: z,
+    },
   };
+}
+
+/**
+ * Airbnb-style gallery: polaroid-like cards with "perfectly messy" layout.
+ * Click a card to show replace/delete actions in a glass bubble.
+ */
+export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
+  const count = images.length;
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
 
   const handleImageClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -148,7 +144,7 @@ export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
   };
 
   const handleImageLoad = (id: string) => {
-    setLoadedImages(prev => new Set(prev).add(id));
+    setLoadedImages((prev) => new Set(prev).add(id));
   };
 
   return (
@@ -157,7 +153,7 @@ export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
       onClick={() => setActiveId(null)}
     >
       {images.map((img, index) => {
-        const { className, style } = getImageStyle(index, count);
+        const { className, style } = getGalleryImageStyle(index, count);
         const isActive = activeId === img.id;
         const isLoaded = loadedImages.has(img.id);
 
@@ -235,6 +231,72 @@ export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
               </div>
             )}
           </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export interface GalleryDisplayViewProps {
+  images: string[];
+  onImageClick?: (index: number) => void;
+  className?: string;
+  ariaLabel?: string;
+}
+
+/**
+ * Read-only polaroid gallery (same layout as upload page). For editor image blocks.
+ */
+export function GalleryDisplayView({
+  images,
+  onImageClick,
+  className = '',
+  ariaLabel = '相册',
+}: GalleryDisplayViewProps) {
+  const count = images.length;
+  const [loadedIndices, setLoadedIndices] = useState<Set<number>>(new Set());
+
+  if (count === 0) return null;
+
+  return (
+    <div
+      className={`relative w-full min-h-[280px] flex justify-center items-center ${className}`}
+      role="group"
+      aria-label={ariaLabel}
+    >
+      {images.map((src, index) => {
+        const { className: cardClass, style } = getGalleryImageStyle(index, count);
+        const isLoaded = loadedIndices.has(index);
+
+        return (
+          <button
+            key={`${index}-${src.slice(0, 30)}`}
+            type="button"
+            className={`${cardClass} cursor-pointer text-left`}
+            style={style}
+            onClick={() => onImageClick?.(index)}
+            aria-label={`第 ${index + 1} 张照片，共 ${count} 张`}
+          >
+            <div className="relative w-full h-full rounded-[32px] overflow-hidden bg-white shadow-[0_8px_40px_rgba(0,0,0,0.18)] transition-all duration-300 hover:scale-105 hover:shadow-[0_12px_50px_rgba(0,0,0,0.22)]">
+              {!isLoaded && (
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 animate-pulse">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-10 h-10 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
+                  </div>
+                </div>
+              )}
+              <img
+                src={src}
+                alt=""
+                className={`w-full h-full object-cover transition-all duration-700 ease-out ${
+                  isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-lg scale-105'
+                }`}
+                onLoad={() => setLoadedIndices((prev) => new Set(prev).add(index))}
+                loading={index < 2 ? 'eager' : 'lazy'}
+              />
+              <div className="absolute inset-0 rounded-[32px] ring-1 ring-black/5 pointer-events-none" />
+            </div>
+          </button>
         );
       })}
     </div>

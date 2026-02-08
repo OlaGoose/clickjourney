@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { EditorHeader } from '@/components/editor/EditorHeader';
-import { PhotoGridSection } from '@/components/editor/PhotoGridSection';
 import { ContentBlock } from '@/components/editor/ContentBlock';
 import { EditPanel } from '@/components/editor/EditPanel';
 import { AddBlockButton } from '@/components/editor/AddBlockButton';
@@ -25,7 +24,6 @@ export default function TravelEditorPage() {
   const [editorData, setEditorData] = useState<TravelEditorData>({
     title: '',
     description: '',
-    images: [],
     blocks: [],
   });
 
@@ -43,18 +41,6 @@ export default function TravelEditorPage() {
         setEditorData(draft);
       } catch (e) {
         console.error('Failed to load draft:', e);
-      }
-    }
-
-    // Load images from sessionStorage (from upload page)
-    const uploadedImages = sessionStorage.getItem('editor-images');
-    if (uploadedImages) {
-      try {
-        const images = JSON.parse(uploadedImages);
-        setEditorData(prev => ({ ...prev, images: images.slice(0, 4) }));
-        sessionStorage.removeItem('editor-images');
-      } catch (e) {
-        console.error('Failed to load uploaded images:', e);
       }
     }
   }, []);
@@ -82,23 +68,23 @@ export default function TravelEditorPage() {
       return;
     }
 
-    if (editorData.images.length === 0) {
-      alert('请至少添加一张照片');
+    const allImages = collectImagesFromBlocks(editorData.blocks);
+    if (allImages.length === 0) {
+      alert('请至少添加一张照片（在内容块中添加图片）');
       return;
     }
 
     setIsSaving(true);
 
     try {
-      // Convert editor data to memory format
       const memoryData = {
         type: 'rich-story' as const,
         title: editorData.title,
         subtitle: editorData.description.slice(0, 50) || '旅行回忆',
         detailTitle: editorData.title,
         description: editorData.description,
-        image: editorData.images[0] || '',
-        gallery: editorData.images,
+        image: allImages[0] ?? '',
+        gallery: allImages,
         color: '#3B82F6',
         chord: [0.2, 0.4, 0.6],
         category: '旅行回忆',
@@ -131,6 +117,11 @@ export default function TravelEditorPage() {
       setIsSaving(false);
     }
   }, [editorData, userId, router]);
+
+/** Collect all image URLs from image blocks (metadata.images or content). */
+function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
+  return blocks.filter((b) => b.type === 'image').flatMap((b) => (b.metadata?.images?.length ? b.metadata.images : b.content ? [b.content] : []));
+}
 
   const handleAddBlock = useCallback((type: ContentBlockType['type']) => {
     const newBlock: ContentBlockType = {
@@ -197,15 +188,6 @@ export default function TravelEditorPage() {
       <EditorHeader onBack={handleBack} onSave={handleSave} isSaving={isSaving} />
 
       <div className="no-scrollbar flex-1 overflow-y-auto pb-24">
-        {/* Photo Grid Section */}
-        <PhotoGridSection
-          images={editorData.images}
-          onUpdateImages={(images) =>
-            setEditorData(prev => ({ ...prev, images }))
-          }
-        />
-
-        {/* Content Section */}
         <div className="px-4 space-y-6">
           {/* Title Input */}
           <div>

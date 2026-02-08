@@ -1,8 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon } from 'lucide-react';
-import type { ContentBlock } from '@/types/editor';
+import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, LayoutGrid, Images } from 'lucide-react';
+import PhotoGrid from '@/components/PhotoGrid';
+import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
+import type { ContentBlock, ImageDisplayMode } from '@/types/editor';
+
+const MAX_IMAGES = 6;
 
 interface EditPanelProps {
   isOpen: boolean;
@@ -15,6 +19,8 @@ interface EditPanelProps {
 export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPanelProps) {
   const [content, setContent] = useState('');
   const [fileName, setFileName] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+  const [imageDisplayMode, setImageDisplayMode] = useState<ImageDisplayMode>('grid');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -22,6 +28,15 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
     if (block) {
       setContent(block.content);
       setFileName(block.metadata?.fileName || '');
+      if (block.type === 'image') {
+        const list = block.metadata?.images?.length
+          ? block.metadata.images
+          : block.content
+            ? [block.content]
+            : [];
+        setImages(list);
+        setImageDisplayMode(block.metadata?.imageDisplayMode ?? 'grid');
+      }
     }
   }, [block]);
 
@@ -34,24 +49,44 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
   if (!block) return null;
 
   const handleSave = () => {
-    onSave({
-      ...block,
-      content,
-      metadata: {
-        ...block.metadata,
-        fileName: fileName || undefined,
-      },
-    });
+    if (block.type === 'image') {
+      onSave({
+        ...block,
+        content: images[0] ?? '',
+        metadata: {
+          ...block.metadata,
+          images: images.length ? images : undefined,
+          imageDisplayMode,
+        },
+      });
+    } else {
+      onSave({
+        ...block,
+        content,
+        metadata: {
+          ...block.metadata,
+          fileName: fileName || undefined,
+        },
+      });
+    }
     onClose();
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files?.length) return;
 
-    const url = URL.createObjectURL(file);
-    setContent(url);
-    setFileName(file.name);
+    const list = Array.from(files).map((file) => URL.createObjectURL(file));
+    if (block.type === 'image') {
+      setImages((prev) => [...prev, ...list].slice(0, MAX_IMAGES));
+    } else {
+      const file = files[0];
+      if (file) {
+        setContent(URL.createObjectURL(file));
+        setFileName(file.name);
+      }
+    }
+    e.target.value = '';
   };
 
   const handleUploadClick = () => {
@@ -76,27 +111,69 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
 
       case 'image':
         return (
-          <div className="flex-1 px-4">
+          <div className="flex-1 px-4 space-y-3">
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple
               onChange={handleFileSelect}
               className="hidden"
             />
-            {content ? (
-              <div className="space-y-3">
-                <div className="relative overflow-hidden rounded-2xl bg-gray-100">
-                  <img src={content} alt="Preview" className="h-auto w-full object-cover" />
-                </div>
+            {/* 呈现形式：网格 / 相册 */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600">呈现形式</span>
+              <div className="flex rounded-full bg-gray-100 p-0.5">
                 <button
                   type="button"
-                  onClick={handleUploadClick}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-200 active:scale-95"
+                  onClick={() => setImageDisplayMode('grid')}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                    imageDisplayMode === 'grid' ? 'bg-white text-black shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  aria-pressed={imageDisplayMode === 'grid'}
                 >
-                  <Upload size={16} />
-                  替换图片
+                  <LayoutGrid size={14} />
+                  网格
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setImageDisplayMode('gallery')}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                    imageDisplayMode === 'gallery' ? 'bg-white text-black shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  aria-pressed={imageDisplayMode === 'gallery'}
+                >
+                  <Images size={14} />
+                  相册
+                </button>
+              </div>
+            </div>
+            {images.length > 0 ? (
+              <div className="space-y-3">
+                {imageDisplayMode === 'gallery' ? (
+                  <GalleryDisplayView
+                    images={images}
+                    ariaLabel="编辑区块照片"
+                    className="max-h-[320px]"
+                  />
+                ) : (
+                  <PhotoGrid
+                    images={images}
+                    totalCount={images.length}
+                    ariaLabel="编辑区块照片"
+                    className="max-h-[320px]"
+                  />
+                )}
+                {images.length < MAX_IMAGES && (
+                  <button
+                    type="button"
+                    onClick={handleUploadClick}
+                    className="flex w-full items-center justify-center gap-2 rounded-full bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-200 active:scale-95"
+                  >
+                    <Upload size={16} />
+                    添加图片（{images.length}/{MAX_IMAGES}）
+                  </button>
+                )}
               </div>
             ) : (
               <button
@@ -105,7 +182,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
                 className="flex h-48 w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 transition-all hover:border-gray-300 hover:bg-gray-100 active:scale-[0.99]"
               >
                 <ImageIcon size={32} className="text-gray-400" />
-                <span className="text-sm font-medium text-gray-600">点击上传图片</span>
+                <span className="text-sm font-medium text-gray-600">点击上传图片（可多选，最多 {MAX_IMAGES} 张）</span>
               </button>
             )}
           </div>

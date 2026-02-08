@@ -14,13 +14,21 @@ export interface ContentBlock {
     duration?: number; // For video/audio
     thumbnail?: string; // For video
     fileName?: string;
+    /** Multiple image URLs for image block (1–6). When set, content may be first image for backward compat. */
+    images?: string[];
+    /** How to display images: grid (PhotoGrid) or gallery (upload-style polaroid). */
+    imageDisplayMode?: ImageDisplayMode;
   };
 }
+
+/** Image block display: grid = PhotoGrid layout, gallery = upload-page polaroid layout */
+export type ImageDisplayMode = 'grid' | 'gallery';
 
 export interface TravelEditorData {
   title: string;
   description: string;
-  images: string[]; // Fixed 4 images for grid display
+  /** @deprecated No longer used; images come from image blocks. Kept for draft migration. */
+  images?: string[];
   blocks: ContentBlock[];
 }
 
