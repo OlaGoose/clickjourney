@@ -297,7 +297,7 @@ export function CinematicGenerationLoader({
               y: containerY,
               willChange: 'transform',
             }}
-            className="absolute top-[calc(66.67%-0.6vh)] left-[calc(50%-0.5vw)] -translate-x-1/2 -translate-y-1/2 w-full max-w-7xl h-[60vh] z-10 perspective-1000"
+            className="absolute -left-1/3 w-full max-w-7xl h-[60vh] z-10 perspective-1000"
           >
             {IMAGE_LAYOUT.map((config, i) => {
               const src = imageSources[i];

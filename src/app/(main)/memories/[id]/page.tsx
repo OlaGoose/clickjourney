@@ -13,12 +13,12 @@ import { RichStoryDetail } from '@/components/memory-detail/RichStoryDetail';
 import { VideoDetail } from '@/components/memory-detail/VideoDetail';
 
 interface MemoryPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string }> | { id: string };
 }
 
 export default function MemoryPage({ params }: MemoryPageProps) {
   const router = useRouter();
-  const resolvedParams = use(params);
+  const resolvedParams = use(Promise.resolve(params));
   const { id } = resolvedParams;
 
   const [memory, setMemory] = useState<CarouselItem | null>(null);
