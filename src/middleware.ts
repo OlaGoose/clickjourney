@@ -46,5 +46,7 @@ export const config = {
      * - public files (public folder)
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Run for known-missing source map so we can return 200 with empty map (avoids 404)
+    '/(.*)LayoutGroupContext.mjs.map',
   ],
 };
