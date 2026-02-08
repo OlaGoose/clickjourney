@@ -258,9 +258,12 @@ export function GalleryDisplayView({
 
   if (count === 0) return null;
 
+  const minHeightClass =
+    count >= 6 ? 'min-h-[400px]' : count >= 4 ? 'min-h-[360px]' : 'min-h-[280px]';
+
   return (
     <div
-      className={`relative w-full min-h-[280px] flex justify-center items-center ${className}`}
+      className={`relative w-full ${minHeightClass} flex justify-center items-center overflow-visible ${className}`}
       role="group"
       aria-label={ariaLabel}
     >

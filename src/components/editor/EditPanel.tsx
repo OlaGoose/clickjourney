@@ -8,15 +8,34 @@ import type { ContentBlock, ImageDisplayMode } from '@/types/editor';
 
 const MAX_IMAGES = 6;
 
+/** Returns true if the block has meaningful content (no empty blocks). */
+function blockHasContent(b: ContentBlock): boolean {
+  switch (b.type) {
+    case 'text':
+      return (b.content ?? '').trim().length > 0;
+    case 'image':
+      const imgs = b.metadata?.images?.length ? b.metadata.images : b.content ? [b.content] : [];
+      return imgs.length > 0;
+    case 'video':
+    case 'audio':
+      return (b.content ?? '').length > 0;
+    default:
+      return false;
+  }
+}
+
 interface EditPanelProps {
   isOpen: boolean;
   onClose: () => void;
   block: ContentBlock | null;
   onSave: (block: ContentBlock) => void;
   onDelete: () => void;
+  /** Called when panel is closed with no content, so parent can remove the block. */
+  onDiscard?: () => void;
+  isDark?: boolean;
 }
 
-export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPanelProps) {
+export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, isDark = false }: EditPanelProps) {
   const [content, setContent] = useState('');
   const [fileName, setFileName] = useState('');
   const [images, setImages] = useState<string[]>([]);
@@ -48,9 +67,10 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
 
   if (!block) return null;
 
-  const handleSave = () => {
+  /** Current state as a block (for empty check when closing without save). */
+  const getCurrentBlock = (): ContentBlock => {
     if (block.type === 'image') {
-      onSave({
+      return {
         ...block,
         content: images[0] ?? '',
         metadata: {
@@ -58,16 +78,29 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
           images: images.length ? images : undefined,
           imageDisplayMode,
         },
-      });
-    } else {
-      onSave({
-        ...block,
-        content,
-        metadata: {
-          ...block.metadata,
-          fileName: fileName || undefined,
-        },
-      });
+      };
+    }
+    return {
+      ...block,
+      content,
+      metadata: { ...block.metadata, fileName: fileName || undefined },
+    };
+  };
+
+  const handleSave = () => {
+    const updated = getCurrentBlock();
+    if (!blockHasContent(updated)) {
+      onDiscard?.();
+      onClose();
+      return;
+    }
+    onSave(updated);
+    onClose();
+  };
+
+  const handleClose = () => {
+    if (!blockHasContent(getCurrentBlock())) {
+      onDiscard?.();
     }
     onClose();
   };
@@ -103,7 +136,11 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="输入文本内容..."
-              className="h-full w-full resize-none bg-transparent px-4 py-3 text-sm leading-relaxed text-gray-800 placeholder:text-gray-400 focus:outline-none"
+              className={`h-full w-full resize-none bg-transparent px-4 py-3 text-sm leading-relaxed rounded-2xl focus:outline-none placeholder:opacity-50 ${
+                isDark
+                  ? 'text-white placeholder:text-white/40 focus:bg-white/5'
+                  : 'text-gray-800 placeholder:text-gray-400 focus:bg-gray-50/80'
+              }`}
               rows={8}
             />
           </div>
@@ -120,15 +157,23 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
               onChange={handleFileSelect}
               className="hidden"
             />
-            {/* 呈现形式：网格 / 相册 */}
+            {/* 呈现形式：网格 / 相册 — pill toggle Apple-style */}
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-600">呈现形式</span>
-              <div className="flex rounded-full bg-gray-100 p-0.5">
+              <span className={`text-sm font-medium ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                呈现形式
+              </span>
+              <div className={`flex rounded-full p-0.5 ${isDark ? 'bg-white/10' : 'bg-gray-100'}`}>
                 <button
                   type="button"
                   onClick={() => setImageDisplayMode('grid')}
-                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                    imageDisplayMode === 'grid' ? 'bg-white text-black shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                  className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-all active:scale-95 ${
+                    imageDisplayMode === 'grid'
+                      ? isDark
+                        ? 'bg-white text-black shadow-sm'
+                        : 'bg-white text-black shadow-sm'
+                      : isDark
+                        ? 'text-white/70 hover:text-white'
+                        : 'text-gray-600 hover:text-gray-900'
                   }`}
                   aria-pressed={imageDisplayMode === 'grid'}
                 >
@@ -138,8 +183,14 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
                 <button
                   type="button"
                   onClick={() => setImageDisplayMode('gallery')}
-                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                    imageDisplayMode === 'gallery' ? 'bg-white text-black shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                  className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-all active:scale-95 ${
+                    imageDisplayMode === 'gallery'
+                      ? isDark
+                        ? 'bg-white text-black shadow-sm'
+                        : 'bg-white text-black shadow-sm'
+                      : isDark
+                        ? 'text-white/70 hover:text-white'
+                        : 'text-gray-600 hover:text-gray-900'
                   }`}
                   aria-pressed={imageDisplayMode === 'gallery'}
                 >
@@ -168,7 +219,11 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
                   <button
                     type="button"
                     onClick={handleUploadClick}
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-200 active:scale-95"
+                    className={`flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold transition-all active:scale-95 ${
+                      isDark
+                        ? 'bg-white/10 text-white hover:bg-white/20'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                   >
                     <Upload size={16} />
                     添加图片（{images.length}/{MAX_IMAGES}）
@@ -179,10 +234,16 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
               <button
                 type="button"
                 onClick={handleUploadClick}
-                className="flex h-48 w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 transition-all hover:border-gray-300 hover:bg-gray-100 active:scale-[0.99]"
+                className={`flex h-48 w-full flex-col items-center justify-center gap-2 rounded-2xl transition-all hover:opacity-90 active:scale-[0.99] ${
+                  isDark
+                    ? 'bg-white/5 hover:bg-white/10'
+                    : 'bg-gray-50 hover:bg-gray-100'
+                }`}
               >
-                <ImageIcon size={32} className="text-gray-400" />
-                <span className="text-sm font-medium text-gray-600">点击上传图片（可多选，最多 {MAX_IMAGES} 张）</span>
+                <ImageIcon size={32} className={isDark ? 'text-white/40' : 'text-gray-400'} />
+                <span className={`text-sm font-medium ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                  点击上传图片（可多选，最多 {MAX_IMAGES} 张）
+                </span>
               </button>
             )}
           </div>
@@ -200,7 +261,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
             />
             {content ? (
               <div className="space-y-3">
-                <div className="relative overflow-hidden rounded-2xl bg-gray-100">
+                <div className={`relative overflow-hidden rounded-2xl ${isDark ? 'bg-white/5' : 'bg-gray-100'}`}>
                   <video src={content} controls className="h-auto w-full">
                     Your browser does not support the video tag.
                   </video>
@@ -208,7 +269,9 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
                 <button
                   type="button"
                   onClick={handleUploadClick}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-200 active:scale-95"
+                  className={`flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold transition-all active:scale-95 ${
+                    isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
                 >
                   <Upload size={16} />
                   替换视频
@@ -218,10 +281,16 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
               <button
                 type="button"
                 onClick={handleUploadClick}
-                className="flex h-48 w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 transition-all hover:border-gray-300 hover:bg-gray-100 active:scale-[0.99]"
+                className={`flex h-48 w-full flex-col items-center justify-center gap-2 rounded-2xl transition-all hover:opacity-90 active:scale-[0.99] ${
+                  isDark
+                    ? 'bg-white/5 hover:bg-white/10'
+                    : 'bg-gray-50 hover:bg-gray-100'
+                }`}
               >
-                <VideoIcon size={32} className="text-gray-400" />
-                <span className="text-sm font-medium text-gray-600">点击上传视频</span>
+                <VideoIcon size={32} className={isDark ? 'text-white/40' : 'text-gray-400'} />
+                <span className={`text-sm font-medium ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                  点击上传视频
+                </span>
               </button>
             )}
           </div>
@@ -239,18 +308,22 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
             />
             {content ? (
               <div className="space-y-3">
-                <div className="rounded-2xl bg-gray-50 p-4">
+                <div className={`rounded-2xl p-4 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
                   <audio src={content} controls className="w-full">
                     Your browser does not support the audio tag.
                   </audio>
                   {fileName && (
-                    <p className="mt-2 text-xs text-gray-500 truncate">{fileName}</p>
+                    <p className={`mt-2 text-xs truncate ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                      {fileName}
+                    </p>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={handleUploadClick}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-200 active:scale-95"
+                  className={`flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold transition-all active:scale-95 ${
+                    isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
                 >
                   <Upload size={16} />
                   替换音频
@@ -260,10 +333,16 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
               <button
                 type="button"
                 onClick={handleUploadClick}
-                className="flex h-48 w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 transition-all hover:border-gray-300 hover:bg-gray-100 active:scale-[0.99]"
+                className={`flex h-48 w-full flex-col items-center justify-center gap-2 rounded-2xl transition-all hover:opacity-90 active:scale-[0.99] ${
+                  isDark
+                    ? 'bg-white/5 hover:bg-white/10'
+                    : 'bg-gray-50 hover:bg-gray-100'
+                }`}
               >
-                <MusicIcon size={32} className="text-gray-400" />
-                <span className="text-sm font-medium text-gray-600">点击上传音频</span>
+                <MusicIcon size={32} className={isDark ? 'text-white/40' : 'text-gray-400'} />
+                <span className={`text-sm font-medium ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                  点击上传音频
+                </span>
               </button>
             )}
           </div>
@@ -276,36 +355,47 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — 与面板同步淡入；关闭时先收再淡出 */}
       <div
-        className={`fixed inset-0 z-40 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
-        }`}
-        onClick={onClose}
+        className={`fixed inset-0 z-40 backdrop-blur-md transition-opacity duration-300 ${
+          isDark ? 'bg-black/50' : 'bg-black/25'
+        } ${isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+        onClick={handleClose}
+        aria-hidden
       />
 
-      {/* Panel */}
+      {/* Panel — iOS 风格：从下往上拉起（带轻微 overshoot），从上往下收进去 */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[80vh] flex-col rounded-t-[32px] bg-white shadow-2xl transition-transform duration-300 ease-out ${
-          isOpen ? 'translate-y-0' : 'translate-y-full'
+        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[80vh] flex-col rounded-t-[32px] shadow-[0_-8px_32px_rgba(0,0,0,0.15)] ${
+          isDark ? 'bg-[#1c1c1e]' : 'bg-white'
+        } ${
+          isOpen
+            ? 'translate-y-0 animate-sheetSlideUp'
+            : 'translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]'
         }`}
       >
         {/* Drag Handle */}
         <div className="flex items-center justify-center pt-3 pb-2">
-          <div className="h-1 w-10 rounded-full bg-gray-300" />
+          <div className={`h-1 w-10 rounded-full ${isDark ? 'bg-white/30' : 'bg-gray-300'}`} />
         </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 pb-3">
+        {/* Header — 标题水平居中，左右对称布局 */}
+        <div className="grid grid-cols-3 items-center px-4 pb-3">
           <button
             type="button"
             onClick={onDelete}
-            className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-red-600 transition-all hover:bg-red-50 active:scale-95"
+            className={`justify-self-start flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-all active:scale-95 ${
+              isDark
+                ? 'text-red-400 hover:bg-red-500/20'
+                : 'text-red-600 hover:bg-red-50'
+            }`}
           >
             <Trash2 size={14} />
             删除
           </button>
-          <h3 className="text-sm font-semibold text-gray-900">
+          <h3
+            className={`justify-self-center text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+          >
             {block.type === 'text' && '编辑文本'}
             {block.type === 'image' && '编辑图片'}
             {block.type === 'video' && '编辑视频'}
@@ -313,8 +403,10 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
           </h3>
           <button
             type="button"
-            onClick={onClose}
-            className="rounded-full p-1.5 transition-colors hover:bg-gray-100"
+            onClick={handleClose}
+            className={`justify-self-end rounded-full p-2.5 transition-all active:scale-95 ${
+              isDark ? 'hover:bg-white/10 text-white' : 'hover:bg-gray-100 text-gray-700'
+            }`}
             aria-label="关闭"
           >
             <X size={18} />
@@ -326,12 +418,16 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete }: EditPane
           {renderEditor()}
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-gray-100 p-4">
+        {/* Footer — 无边框 */}
+        <div className="p-4">
           <button
             type="button"
             onClick={handleSave}
-            className="w-full rounded-full bg-black py-3 text-sm font-semibold text-white transition-all hover:bg-gray-800 active:scale-95"
+            className={`w-full rounded-full py-3.5 text-[15px] font-semibold transition-all active:scale-95 ${
+              isDark
+                ? 'bg-white text-black hover:bg-white/95 shadow-lg'
+                : 'bg-black text-white hover:bg-gray-800 shadow-lg'
+            }`}
           >
             完成
           </button>
