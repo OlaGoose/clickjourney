@@ -158,6 +158,10 @@ export default function HomePage() {
     activeItem?.subtitle ||
     activeItem?.title ||
     currentLocation.name;
+  /** Only show globe ring/label for content cards with valid coordinates */
+  const hasLocationHighlight =
+    isContentCard(activeItem) &&
+    !!(activeItem?.coordinates && (activeItem.coordinates.lat !== 0 || activeItem.coordinates.lng !== 0));
   const avatarSeeds = (activeItem?.participants?.length ? activeItem.participants : DEFAULT_AVATAR_SEEDS) as string[];
   const calloutText = activeItem?.description ?? DEFAULT_CALLOUT_TEXT;
   const effectiveAudioUrl = activeItem?.audioUrl ?? currentDemoAudioUrl;
@@ -188,14 +192,18 @@ export default function HomePage() {
     <div className="relative h-screen w-full select-none overflow-hidden bg-black font-sans">
       <StarField />
 
-      <InteractiveGlobe center={currentLocation} />
+      <InteractiveGlobe center={currentLocation} showHighlight={hasLocationHighlight} />
 
       <div className="absolute inset-0 z-20 pointer-events-none">
         <div className="fixed right-5 top-5 z-30 pointer-events-auto">
           <UserAvatar size="sm" showDropdown className="rounded-full" />
         </div>
-        <div className="absolute left-6 top-12 right-6 z-30 pointer-events-auto md:left-16">
-          <h2 className="mb-3 text-5xl font-bold leading-tight tracking-tight text-[#f5f5f7] drop-shadow-lg md:text-6xl">
+        <div className="absolute left-6 top-12 right-6 z-30 pointer-events-auto md:left-16 flex flex-col gap-3">
+          <h2
+            className={`text-5xl font-bold tracking-tight text-[#f5f5f7] drop-shadow-lg md:text-6xl ${
+              hasLocationHighlight ? 'leading-tight' : 'truncate pr-4 min-w-0'
+            }`}
+          >
             {titleText}
           </h2>
           <div className="flex items-center gap-3">

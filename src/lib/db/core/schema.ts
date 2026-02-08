@@ -30,6 +30,8 @@ export interface MemoryRecord {
   galleryUrls: string[];
   description: string | null;
   richContent: string | null;
+  /** JSON-serialized editor blocks for rich-story (ContentBlock[]); optional for backward compat */
+  editorBlocksJson?: string | null;
   audioUrls: string[];
   videoUrls: string[];
   

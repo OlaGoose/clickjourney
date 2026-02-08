@@ -7,7 +7,7 @@
  * - Demo data for non-authenticated users
  */
 
-import { MemoryService } from '../db/services/memory-service';
+import { MemoryService, carouselItemToUpdateInput } from '../db/services/memory-service';
 import { initializeDemoData, hasDemoData } from '../db/utils/demo-data';
 import type { CarouselItem, NewMemoryInput } from '@/types';
 import { getDemoGallerySlice } from './demo-gallery';
@@ -148,6 +148,27 @@ export async function saveMemory(
 
   try {
     const result = await MemoryService.createMemory(userId, item);
+    return { data: result.data, error: result.error };
+  } catch (e) {
+    return { data: null, error: e instanceof Error ? e.message : 'Unknown error' };
+  }
+}
+
+/**
+ * Update an existing memory by id (local-first, syncs in background when authenticated)
+ */
+export async function updateMemory(
+  userId: string | null,
+  id: string,
+  partial: Partial<CarouselItem>
+): Promise<{ data: CarouselItem | null; error: string | null }> {
+  if (typeof window === 'undefined') {
+    return { data: null, error: 'Storage not available on server' };
+  }
+
+  try {
+    const updateInput = carouselItemToUpdateInput(partial);
+    const result = await MemoryService.updateMemory(id, updateInput);
     return { data: result.data, error: result.error };
   } catch (e) {
     return { data: null, error: e instanceof Error ? e.message : 'Unknown error' };

@@ -9,10 +9,12 @@ import type { ContentBlock as ContentBlockType, ImageDisplayMode } from '@/types
 
 interface ContentBlockProps {
   block: ContentBlockType;
-  isSelected: boolean;
-  onClick: () => void;
-  onEdit: () => void;
+  isSelected?: boolean;
+  onClick?: () => void;
+  onEdit?: () => void;
   onTextChange?: (blockId: string, content: string) => void;
+  /** When true, render same layout as editor but non-interactive (for detail view) */
+  readOnly?: boolean;
 }
 
 const TEXTAREA_MIN_HEIGHT_PX = 72;
@@ -36,7 +38,14 @@ function useAutoHeightTextarea(value: string) {
 }
 
 /** Apple light mode only: clean white/gray surfaces, #1d1d1f text. */
-export function ContentBlock({ block, isSelected, onClick, onEdit, onTextChange }: ContentBlockProps) {
+export function ContentBlock({
+  block,
+  isSelected = false,
+  onClick,
+  onEdit,
+  onTextChange,
+  readOnly = false,
+}: ContentBlockProps) {
   const [showGallery, setShowGallery] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const { ref: textareaRef, syncHeight } = useAutoHeightTextarea(block.type === 'text' ? block.content : '');
@@ -44,6 +53,13 @@ export function ContentBlock({ block, isSelected, onClick, onEdit, onTextChange 
   const renderContent = () => {
     switch (block.type) {
       case 'text':
+        if (readOnly) {
+          return (
+            <p className="w-full text-base text-[#1d1d1f] leading-relaxed whitespace-pre-wrap py-3">
+              {block.content || ''}
+            </p>
+          );
+        }
         return (
           <textarea
             ref={textareaRef}
@@ -167,11 +183,10 @@ export function ContentBlock({ block, isSelected, onClick, onEdit, onTextChange 
 
   return (
     <div
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      className={`group relative cursor-pointer transition-all rounded-[20px] ${
+      onClick={readOnly ? undefined : (e) => { e.stopPropagation(); onClick?.(); }}
+      className={`group relative transition-all rounded-[20px] ${
+        readOnly ? '' : 'cursor-pointer'
+      } ${
         block.type === 'image' && block.metadata?.imageDisplayMode === 'gallery'
           ? 'overflow-visible'
           : 'overflow-hidden'
@@ -181,8 +196,7 @@ export function ContentBlock({ block, isSelected, onClick, onEdit, onTextChange 
         {renderContent()}
       </div>
 
-      {/* 非文本块：仅在被点击/选中时显示「编辑」按钮，不依赖 hover */}
-      {isSelected && block.type !== 'text' && (
+      {!readOnly && isSelected && block.type !== 'text' && onEdit && (
         <button
           type="button"
           onClick={(e) => {

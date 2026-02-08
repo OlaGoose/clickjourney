@@ -3,6 +3,8 @@
  * Mirrors orbit-travel-memory types with DB-friendly shape.
  */
 
+import type { ContentBlock } from '@/types/editor';
+
 export interface LocationData {
   lat: number;
   lng: number;
@@ -59,6 +61,8 @@ export interface CarouselItem {
   description?: string;
   /** Rich text HTML content for the full memory story */
   richContent?: string;
+  /** Editor blocks for rich-story; when set, detail view renders same as editor (read-only) */
+  editorBlocks?: ContentBlock[];
   /** Optional audio URL for this memory; callout play button uses it when set */
   audioUrl?: string;
   /** Audio files uploaded by user */

@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { EditorHeader } from '@/components/editor/EditorHeader';
 import { ContentBlock } from '@/components/editor/ContentBlock';
 import { EditPanel } from '@/components/editor/EditPanel';
 import { AddBlockButton } from '@/components/editor/AddBlockButton';
 import type { TravelEditorData, ContentBlock as ContentBlockType } from '@/types/editor';
-import { saveMemory } from '@/lib/storage';
+import { saveMemory, updateMemory } from '@/lib/storage';
 import { useOptionalAuth } from '@/lib/auth';
+import { MemoryService } from '@/lib/db/services/memory-service';
 
 const STORAGE_KEY = 'travel-editor-draft';
 
@@ -32,7 +33,10 @@ export default function TravelEditorPage() {
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load draft from localStorage, or pre-fill from upload (sessionStorage: editor-images + editor-description)
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('id');
+
+  // Load: from edit id (memory), from upload (sessionStorage), or draft (localStorage)
   useEffect(() => {
     const fromUpload = sessionStorage.getItem('editor-images');
     if (fromUpload) {
@@ -63,6 +67,31 @@ export default function TravelEditorPage() {
         sessionStorage.removeItem('editor-description');
       }
     }
+
+    if (editId) {
+      MemoryService.getMemory(editId).then((memory) => {
+        if (memory && (memory.type === 'rich-story' || (memory.editorBlocks != null && memory.editorBlocks.length > 0))) {
+          const blocks = memory.editorBlocks ?? [];
+          const normalized = blocks.map((b) => ({
+            ...b,
+            metadata: b.metadata?.images ? { ...b.metadata, images: b.metadata.images } : b.metadata,
+          }));
+          setEditorData({
+            title: memory.detailTitle ?? memory.title ?? '',
+            description: memory.description ?? '',
+            blocks: normalized.length > 0 ? normalized : (memory.richContent ? [] : []),
+          });
+        } else if (memory) {
+          setEditorData({
+            title: memory.detailTitle ?? memory.title ?? '',
+            description: memory.description ?? '',
+            blocks: [],
+          });
+        }
+      });
+      return;
+    }
+
     const savedDraft = localStorage.getItem(STORAGE_KEY);
     if (savedDraft) {
       try {
@@ -72,7 +101,7 @@ export default function TravelEditorPage() {
         console.error('Failed to load draft:', e);
       }
     }
-  }, []);
+  }, [editId]);
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -105,47 +134,47 @@ export default function TravelEditorPage() {
 
     setIsSaving(true);
 
-    try {
-      const memoryData = {
-        type: 'rich-story' as const,
-        title: editorData.title,
-        subtitle: editorData.description.slice(0, 50) || '旅行回忆',
-        detailTitle: editorData.title,
-        description: editorData.description,
-        image: allImages[0] ?? '',
-        gallery: allImages,
-        color: '#3B82F6',
-        chord: [0.2, 0.4, 0.6],
-        category: '旅行回忆',
-        // Store blocks as rich content (can be enhanced later)
-        richContent: generateRichContent(editorData),
-      };
+    const memoryData = {
+      type: 'rich-story' as const,
+      title: editorData.title,
+      subtitle: editorData.description.slice(0, 50) || '旅行回忆',
+      detailTitle: editorData.title,
+      description: editorData.description,
+      image: allImages[0] ?? '',
+      gallery: allImages,
+      color: '#3B82F6',
+      chord: [0.2, 0.4, 0.6],
+      category: '旅行回忆',
+      richContent: generateRichContent(editorData),
+      editorBlocks: editorData.blocks,
+    };
 
-      if (userId) {
+    try {
+      if (editId) {
+        const { data, error } = await updateMemory(userId, editId, memoryData);
+        if (error) throw new Error(error);
+        console.log('Memory updated:', data);
+      } else if (userId) {
         const { data, error } = await saveMemory(userId, memoryData);
-        if (error) {
-          throw new Error(error);
-        }
+        if (error) throw new Error(error);
         console.log('Memory saved:', data);
       } else {
-        // Save locally for non-authenticated users
         const localMemories = JSON.parse(localStorage.getItem('local-memories') || '[]');
         const newMemory = { ...memoryData, id: generateId() };
         localMemories.push(newMemory);
         localStorage.setItem('local-memories', JSON.stringify(localMemories));
       }
 
-      // Clear draft after successful save
       localStorage.removeItem(STORAGE_KEY);
-      alert('保存成功！');
-      router.push('/');
+      alert(editId ? '更新成功！' : '保存成功！');
+      router.push(editId ? `/memories/${editId}` : '/');
     } catch (error) {
       console.error('Failed to save:', error);
       alert('保存失败，请重试');
     } finally {
       setIsSaving(false);
     }
-  }, [editorData, userId, router]);
+  }, [editorData, userId, router, editId]);
 
 /** Collect all image URLs from image blocks (metadata.images or content). */
 function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {

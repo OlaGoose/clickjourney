@@ -31,6 +31,7 @@ export function carouselItemToMemoryRecord(
     galleryUrls: Array.isArray(item.gallery) ? item.gallery : [],
     description: item.description ?? null,
     richContent: item.richContent ?? null,
+    editorBlocksJson: item.editorBlocks != null ? JSON.stringify(item.editorBlocks) : null,
     audioUrls: Array.isArray(item.audioUrls) ? item.audioUrls : [],
     videoUrls: Array.isArray(item.videoUrls) ? item.videoUrls : [],
     lat: item.coordinates?.lat ?? null,
@@ -70,10 +71,44 @@ export function memoryRecordToCarouselItem(record: MemoryRecord): CarouselItem {
     gallery: record.galleryUrls,
     description: record.description ?? undefined,
     richContent: record.richContent ?? undefined,
+    editorBlocks:
+      record.editorBlocksJson != null && record.editorBlocksJson !== ''
+        ? (JSON.parse(record.editorBlocksJson) as CarouselItem['editorBlocks'])
+        : undefined,
     audioUrls: record.audioUrls,
     videoUrls: record.videoUrls,
     coordinates: coords,
   };
+}
+
+/**
+ * Convert partial CarouselItem to UpdateMemoryInput for updates
+ */
+export function carouselItemToUpdateInput(partial: Partial<CarouselItem>): UpdateMemoryInput {
+  const input: UpdateMemoryInput = {};
+  if (partial.type !== undefined) input.type = partial.type;
+  if (partial.title !== undefined) input.title = partial.title;
+  if (partial.subtitle !== undefined) input.subtitle = partial.subtitle;
+  if (partial.image !== undefined) input.imageUrl = partial.image;
+  if (partial.color !== undefined) input.color = partial.color;
+  if (partial.chord !== undefined) input.chord = partial.chord;
+  if (partial.detailTitle !== undefined) input.detailTitle = partial.detailTitle;
+  if (partial.category !== undefined) input.category = partial.category;
+  if (partial.gallery !== undefined) input.galleryUrls = partial.gallery;
+  if (partial.description !== undefined) input.description = partial.description;
+  if (partial.richContent !== undefined) input.richContent = partial.richContent;
+  if (partial.editorBlocks !== undefined) {
+    input.editorBlocksJson = partial.editorBlocks != null ? JSON.stringify(partial.editorBlocks) : null;
+  }
+  if (partial.audioUrls !== undefined) input.audioUrls = partial.audioUrls;
+  if (partial.videoUrls !== undefined) input.videoUrls = partial.videoUrls;
+  if (partial.coordinates !== undefined) {
+    input.lat = partial.coordinates?.lat ?? null;
+    input.lng = partial.coordinates?.lng ?? null;
+    input.placeName = partial.coordinates?.name ?? null;
+    input.placeAddress = partial.coordinates?.address ?? null;
+  }
+  return input;
 }
 
 /**

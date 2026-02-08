@@ -42,9 +42,11 @@ function getGlobeLabel(name: string | undefined): string {
 interface InteractiveGlobeProps {
   center: LocationData;
   onGlobeReady?: () => void;
+  /** When false, no ring/label on globe (default state for memories without location) */
+  showHighlight?: boolean;
 }
 
-export default function InteractiveGlobe({ center, onGlobeReady }: InteractiveGlobeProps) {
+export default function InteractiveGlobe({ center, onGlobeReady, showHighlight = true }: InteractiveGlobeProps) {
   const [globeWidth, setGlobeWidth] = useState(800);
   const [globeHeight, setGlobeHeight] = useState(600);
   const globeEl = useRef<any>(undefined);
@@ -76,7 +78,8 @@ export default function InteractiveGlobe({ center, onGlobeReady }: InteractiveGl
     onGlobeReady?.();
   }, [setPointOfView, onGlobeReady]);
 
-  const ringData = useMemo(() => [center], [center]);
+  const ringData = useMemo(() => (showHighlight ? [center] : []), [center, showHighlight]);
+  const labelsData = useMemo(() => (showHighlight ? [center] : []), [center, showHighlight]);
 
   return (
     <div className="absolute inset-0 z-10 cursor-grab active:cursor-grabbing">
@@ -95,7 +98,7 @@ export default function InteractiveGlobe({ center, onGlobeReady }: InteractiveGl
         ringMaxRadius={2.5}
         ringPropagationSpeed={2}
         ringRepeatPeriod={800}
-        labelsData={[center]}
+        labelsData={labelsData}
         labelLat={(d: unknown) => (d as LocationData).lat}
         labelLng={(d: unknown) => (d as LocationData).lng}
         labelText={(d: unknown) => getGlobeLabel((d as LocationData).name)}
