@@ -15,6 +15,7 @@ import {
   Pencil,
   ChevronRight,
   Sparkles,
+  Edit3,
 } from 'lucide-react';
 import { GalleryDisplay } from '@/components/upload/GalleryDisplay';
 import { StoryStepBar } from '@/components/upload/StoryStepBar';
@@ -228,6 +229,19 @@ export default function MemoryUploadPage() {
       generateCinematicMemory();
     }
   }, [currentStep, isDefault, generateCinematicMemory]);
+
+  const goToEditor = useCallback(() => {
+    if (isDefault) {
+      alert('请先上传至少一张照片');
+      return;
+    }
+
+    // Store images in sessionStorage for editor to pick up
+    const imageUrls = images.map((img) => img.url);
+    sessionStorage.setItem('editor-images', JSON.stringify(imageUrls));
+    
+    router.push('/memories/editor');
+  }, [images, isDefault, router]);
 
   const handleStartClick = useCallback(() => {
     setReplaceTargetId(null);
@@ -652,6 +666,22 @@ export default function MemoryUploadPage() {
               </>
             ) : (
               <>
+                <button
+                  type="button"
+                  onClick={goToEditor}
+                  disabled={isDefault}
+                  className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 ${
+                    isDefault
+                      ? isDark
+                        ? 'bg-white/10 text-white/30 cursor-not-allowed'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-black hover:bg-gray-800 text-white'
+                  }`}
+                >
+                  <Edit3 size={16} strokeWidth={2.5} />
+                  <span className="font-semibold text-[13px]">Edit Journey</span>
+                </button>
+                <div className={`w-px h-5 mx-1 ${isDark ? 'bg-white/20' : 'bg-black/10'}`} />
                 <button
                   type="button"
                   onClick={goToNextStep}
