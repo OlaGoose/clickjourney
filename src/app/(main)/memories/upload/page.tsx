@@ -518,7 +518,7 @@ export default function MemoryUploadPage() {
                     }`}
                   >
                     <Pencil size={14} className={isDark ? 'text-white/50' : 'text-gray-500'} />
-                    Story
+                    Transcript
                   </h3>
                 </div>
                 <textarea
@@ -533,6 +533,78 @@ export default function MemoryUploadPage() {
                   placeholder="No transcript available. Record and click Transcribe."
                   readOnly={isTranscribing}
                 />
+                <div className={`mt-3 flex items-center justify-end gap-1.5 ${isDark ? 'text-white/90' : 'text-gray-800'}`}>
+                  {isRecording ? (
+                    <>
+                      <span className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-red-500 text-white text-xs font-medium tabular-nums">
+                        <span className="relative flex h-1 w-1">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                          <span className="relative rounded-full h-1 w-1 bg-white" />
+                        </span>
+                        {formatTime(recordingTime)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={stopRecording}
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-black text-white hover:bg-gray-800 transition-all active:scale-95"
+                        aria-label="停止录音"
+                      >
+                        <Square size={12} fill="currentColor" />
+                      </button>
+                    </>
+                  ) : audioUrl ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={togglePlayback}
+                        className={`flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95 ${
+                          isPlaying
+                            ? isDark ? 'bg-white/20 text-white' : 'bg-gray-800 text-white'
+                            : 'bg-black hover:bg-gray-800 text-white'
+                        }`}
+                        title={isPlaying ? 'Pause' : 'Play'}
+                        aria-label={isPlaying ? 'Pause' : 'Play'}
+                      >
+                        {isPlaying ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleTranscribeClick}
+                        disabled={isTranscribing}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 ${
+                          isTranscribing
+                            ? isDark ? 'bg-white/10 text-white/50 cursor-wait' : 'bg-gray-200 text-gray-400 cursor-wait'
+                            : 'bg-black hover:bg-gray-800 text-white'
+                        }`}
+                      >
+                        {isTranscribing ? <Loader2 size={12} className="animate-spin" /> : null}
+                        <span>{isTranscribing ? '…' : 'Transcribe'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={deleteAudio}
+                        className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+                          isDark
+                            ? 'hover:bg-white/10 text-white/50 hover:text-red-400'
+                            : 'hover:bg-black/5 text-gray-500 hover:text-red-500'
+                        }`}
+                        title="Delete"
+                        aria-label="删除录音"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={startRecording}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black hover:bg-gray-800 text-white text-xs font-semibold transition-all active:scale-95"
+                    >
+                      <Mic size={12} strokeWidth={2.5} />
+                      <span>Record</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -580,81 +652,6 @@ export default function MemoryUploadPage() {
               </>
             ) : (
               <>
-                <div className="flex items-center">
-                  {isRecording ? (
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-red-500 text-white font-medium shadow-lg animate-pulse">
-                        <span className="relative flex h-1.5 w-1.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
-                        </span>
-                        <span className="text-[13px] tabular-nums">{formatTime(recordingTime)}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={stopRecording}
-                        className="flex items-center justify-center w-10 h-10 rounded-full bg-black text-white hover:bg-gray-800 shadow-lg transition-all active:scale-95"
-                        aria-label="停止录音"
-                      >
-                        <Square size={14} fill="currentColor" />
-                      </button>
-                    </div>
-                  ) : audioUrl ? (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={togglePlayback}
-                        className={`flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-95 ${
-                          isPlaying
-                            ? isDark ? 'bg-white/20 text-white' : 'bg-gray-800 text-white'
-                            : 'bg-black hover:bg-gray-800 text-white'
-                        }`}
-                        title={isPlaying ? 'Pause' : 'Play'}
-                        aria-label={isPlaying ? 'Pause' : 'Play'}
-                      >
-                        {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleTranscribeClick}
-                        disabled={isTranscribing}
-                        className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-semibold transition-all active:scale-95 shadow-lg ${
-                          isTranscribing
-                            ? isDark ? 'bg-white/10 text-white/50 cursor-wait' : 'bg-gray-200 text-gray-400 cursor-wait'
-                            : 'bg-black hover:bg-gray-800 text-white'
-                        }`}
-                      >
-                        {isTranscribing ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : null}
-                        <span>{isTranscribing ? 'Transcribing…' : 'Transcribe'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={deleteAudio}
-                        className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
-                          isDark
-                            ? 'hover:bg-white/10 text-white/50 hover:text-red-400'
-                            : 'hover:bg-black/5 text-gray-500 hover:text-red-500'
-                        }`}
-                        title="Delete"
-                        aria-label="删除录音"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={startRecording}
-                      className="group flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl transition-all active:scale-95"
-                    >
-                      <Mic size={16} strokeWidth={2.5} className="text-white" />
-                      <span className="font-semibold text-[13px]">Record</span>
-                    </button>
-                  )}
-                </div>
-                <div className={`w-px h-5 mx-1 ${isDark ? 'bg-white/20' : 'bg-black/10'}`} />
                 <button
                   type="button"
                   onClick={goToNextStep}
