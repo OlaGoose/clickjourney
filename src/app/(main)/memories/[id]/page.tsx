@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { MemoryService } from '@/lib/db/services/memory-service';
 import { getScriptForCard } from '@/lib/cinematic-storage';
@@ -12,14 +12,9 @@ import { CinematicDetail } from '@/components/memory-detail/CinematicDetail';
 import { RichStoryDetail } from '@/components/memory-detail/RichStoryDetail';
 import { VideoDetail } from '@/components/memory-detail/VideoDetail';
 
-interface MemoryPageProps {
-  params: Promise<{ id: string }> | { id: string };
-}
-
-export default function MemoryPage({ params }: MemoryPageProps) {
+export default function MemoryPage() {
   const router = useRouter();
-  const resolvedParams = use(Promise.resolve(params));
-  const { id } = resolvedParams;
+  const { id } = useParams<{ id: string }>();
 
   const [memory, setMemory] = useState<CarouselItem | null>(null);
   const [script, setScript] = useState<DirectorScript | null>(null);
@@ -27,6 +22,11 @@ export default function MemoryPage({ params }: MemoryPageProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!id) {
+      setIsLoading(false);
+      setError('Invalid memory ID');
+      return;
+    }
     async function loadMemory() {
       try {
         setIsLoading(true);
