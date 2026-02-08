@@ -210,7 +210,7 @@ export default function MemoryUploadPage() {
       sessionStorage.setItem('cinematicScript', JSON.stringify(directorScript));
 
       setTimeout(() => {
-        router.push('/memories/cinematic');
+        router.push('/');
       }, 500);
 
     } catch (error) {
@@ -466,13 +466,26 @@ export default function MemoryUploadPage() {
         <audio ref={audioPlayerRef} src={audioUrl} className="hidden" aria-hidden />
       )}
 
-      <main className="max-w-4xl w-full flex flex-col items-center gap-12 z-10 flex-1 pt-24 md:pt-28 pb-32 md:pb-36">
-        <div className="w-full relative h-[360px] md:h-[500px] flex justify-center items-center">
-          <GalleryDisplay
-            images={images}
-            onDelete={handleDeleteImage}
-            onReplace={handleTriggerReplace}
-          />
+      <main className="max-w-4xl w-full flex flex-col items-center z-10 flex-1 pt-24 md:pt-28 pb-32 md:pb-36">
+        {/* 页面上半部分中间：标题文案 */}
+        <div className="w-full flex-[0_0_50vh] flex items-center justify-center shrink-0">
+          <p
+            className={`text-center text-xl md:text-2xl font-medium tracking-tight px-4 ${
+              isDark ? 'text-white/90' : 'text-black/85'
+            }`}
+          >
+            {currentStep === 0 ? '添加照片，开始你的旅程' : '录下你的故事'}
+          </p>
+        </div>
+        {/* 中间偏下三分之二：移动图片组，横向居中 */}
+        <div className="w-full flex-1 min-h-[280px] flex justify-center items-center">
+          <div className="w-full relative h-[320px] md:h-[420px] flex justify-center items-center">
+            <GalleryDisplay
+              images={images}
+              onDelete={handleDeleteImage}
+              onReplace={handleTriggerReplace}
+            />
+          </div>
         </div>
       </main>
 
