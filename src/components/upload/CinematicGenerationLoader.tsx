@@ -290,15 +290,14 @@ export function CinematicGenerationLoader({
         >
           {isDark && <AmbientGlow />}
 
-          {/* Photo grid (user images, repeated if needed) - optimized with GPU acceleration */}
+          {/* Photo grid: center at 2/3 down, horizontally centered */}
           <motion.div
             style={{ 
               x: containerX, 
               y: containerY,
-              // Force GPU acceleration and hint browser for optimization
               willChange: 'transform',
             }}
-            className="relative w-full h-full max-w-7xl max-h-[90vh] mx-auto z-10 perspective-1000"
+            className="absolute top-2/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-7xl h-[60vh] z-10 perspective-1000"
           >
             {IMAGE_LAYOUT.map((config, i) => {
               const src = imageSources[i];
@@ -323,8 +322,8 @@ export function CinematicGenerationLoader({
             }}
           />
 
-          {/* Text overlay — +30% font size, deepened colors */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-center pointer-events-none">
+          {/* Text overlay — upper half center */}
+          <div className="absolute top-[28%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-center pointer-events-none">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

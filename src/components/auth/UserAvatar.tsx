@@ -73,22 +73,25 @@ export function UserAvatar({
       <button
         type="button"
         onClick={handleAvatarClick}
-        className={`${sizeClasses[size]} flex items-center justify-center overflow-hidden rounded-full bg-white/[0.12] transition-[background-color,transform] duration-200 hover:bg-white/[0.18] hover:scale-[1.02] active:scale-[0.98] ${className}`}
+        onPointerDown={(e) => {
+          if (e.pointerType !== 'mouse') handleAvatarClick();
+        }}
+        className={`min-w-[44px] min-h-[44px] p-2 -m-2 flex items-center justify-center rounded-full transition-[background-color,transform] duration-200 hover:bg-white/[0.18] hover:scale-[1.02] active:scale-[0.98] ${className}`}
         aria-label="Open menu"
       >
-        {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt={displayName}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <span
-            className={`${textSizeClasses[size]} font-semibold text-white`}
-          >
-            {displayName.charAt(0).toUpperCase()}
-          </span>
-        )}
+        <span className={`${sizeClasses[size]} flex items-center justify-center overflow-hidden rounded-full bg-white/[0.12]`}>
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={displayName}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span className={`${textSizeClasses[size]} font-semibold text-white`}>
+              {displayName.charAt(0).toUpperCase()}
+            </span>
+          )}
+        </span>
       </button>
       <Sidebar
         isOpen={isSidebarOpen}

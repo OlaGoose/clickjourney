@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { MapPin, Calendar, Edit2, ArrowLeft, Share2, Download, Save, Check } from 'lucide-react';
 import Link from 'next/link';
 import { DirectorScript, StoryBlock } from '@/types/cinematic';
@@ -31,6 +32,7 @@ const DEFAULT_SCRIPT: DirectorScript = {
 };
 
 export default function CinematicMemoryPage() {
+  const router = useRouter();
   const [script, setScript] = useState<DirectorScript>(DEFAULT_SCRIPT);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -85,7 +87,7 @@ export default function CinematicMemoryPage() {
         saveLocalCinematic({ ...carouselInput, id: tempId }, script);
       }
       setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
+      router.push('/');
     } catch {
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 2000);
