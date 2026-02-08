@@ -38,7 +38,6 @@ interface CinematicDetailProps {
 export function CinematicDetail({ memory, script: initialScript, onBack }: CinematicDetailProps) {
   const [script, setScript] = useState<DirectorScript>(initialScript || DEFAULT_SCRIPT);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [activeChapter, setActiveChapter] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const auth = useOptionalAuth();
@@ -190,10 +189,8 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
             block={block}
             index={index}
             isEditMode={isEditMode}
-            isActive={activeChapter === block.id}
-            onUpdate={(updates) => handleUpdateBlock(block.id, updates)}
-            onClick={() => setActiveChapter(block.id)}
-            theme={isDark ? 'dark' : 'light'}
+            onUpdate={handleUpdateBlock}
+            isDark={isDark}
           />
         ))}
       </div>

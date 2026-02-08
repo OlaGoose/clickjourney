@@ -108,6 +108,7 @@ export async function initializeDemoData(): Promise<void> {
 
       demoRecords.push({
         userId: null,
+        type: null,
         title: DEMO_TITLES[i],
         subtitle: 'Memory',
         imageUrl: `https://picsum.photos/id/${MOCK_CARD_IMAGES[i % MOCK_CARD_IMAGES.length]}/600/400`,

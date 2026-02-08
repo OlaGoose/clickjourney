@@ -160,6 +160,7 @@ export async function seedTestData(userId: string, count: number = 10): Promise<
   for (let i = 0; i < count; i++) {
     await MemoryRepository.create({
       userId,
+      type: null,
       title: `Test Memory ${i + 1}`,
       subtitle: 'Test',
       imageUrl: `https://picsum.photos/id/${1000 + i}/600/400`,
@@ -201,6 +202,7 @@ export const perfTools = {
     
     const records = Array.from({ length: count }, (_, i) => ({
       userId: 'perf-test',
+      type: null,
       title: `Perf Test ${i}`,
       subtitle: 'Perf',
       imageUrl: 'https://picsum.photos/600/400',

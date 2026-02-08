@@ -16,6 +16,7 @@ function memoryRecordToRow(record: MemoryRecord): Omit<TravelMemoryRow, 'created
   return {
     id: record.id,
     user_id: record.userId,
+    type: record.type,
     title: record.title,
     subtitle: record.subtitle,
     image_url: record.imageUrl,
@@ -45,6 +46,7 @@ function rowToMemoryRecord(row: TravelMemoryRow): MemoryRecord {
   return {
     id: row.id,
     userId: row.user_id,
+    type: row.type,
     title: row.title,
     subtitle: row.subtitle,
     imageUrl: row.image_url,
