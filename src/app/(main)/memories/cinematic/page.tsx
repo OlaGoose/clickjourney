@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Calendar, Edit2, ArrowLeft, Share2, Download, Save, Check } from 'lucide-react';
+import { MapPin, Calendar, Edit2, Share2, Download, Save, Check, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { DirectorScript, StoryBlock } from '@/types/cinematic';
 import { StaticBlockRenderer } from '@/components/cinematic/StaticBlockRenderer';
+import { NotionTopbar, NotionTopbarButton } from '@/components/NotionTopbar';
 import { useDayNightTheme } from '@/hooks/useDayNightTheme';
 import { useOptionalAuth } from '@/lib/auth';
 import { saveMemory } from '@/lib/storage';
@@ -38,6 +39,8 @@ export default function CinematicMemoryPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeChapter, setActiveChapter] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   const auth = useOptionalAuth();
   const userId = auth?.user?.id ?? null;
@@ -117,78 +120,86 @@ export default function CinematicMemoryPage() {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'dark bg-[#050505]' : 'bg-white'}`}>
-      {/* Fixed Header — light: Airbnb style; dark: Apple TV style */}
-      <header
-        className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-sm border-b transition-colors duration-300 ${
-          isDark ? 'bg-black/95 border-white/10' : 'bg-white/95 border-black/5'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-6 md:px-12 py-4 flex items-center justify-between">
-          <Link
-            href="/memories/upload"
-            className={`flex items-center gap-2 transition-colors group ${
-              isDark ? 'text-white/70 hover:text-white' : 'text-black/70 hover:text-black'
-            }`}
-          >
-            <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-medium">返回</span>
-          </Link>
-
-          <div className="flex items-center gap-2 md:gap-4">
-            <button
-              onClick={handleSaveToMemory}
-              disabled={saveStatus === 'saving'}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                saveStatus === 'saved'
-                  ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-500/20 text-emerald-700'
-                  : saveStatus === 'saving'
-                    ? isDark ? 'bg-white/10 text-white/50 cursor-wait' : 'bg-black/5 text-black/50 cursor-wait'
-                    : isDark
-                      ? 'bg-white/10 text-white hover:bg-white/20'
-                      : 'bg-black/5 text-black hover:bg-black/10'
-              }`}
-              title="保存到回忆"
-              aria-label="保存到回忆"
-            >
-              {saveStatus === 'saving' ? (
-                <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              ) : saveStatus === 'saved' ? (
-                <Check size={16} />
-              ) : (
-                <Save size={16} />
+      {/* Notion-style fixed header */}
+      <NotionTopbar
+        onBack={() => router.push('/memories/upload')}
+        title={script.title || '未命名的旅程'}
+        rightActions={
+          <>
+            <NotionTopbarButton onClick={() => {}} aria-label="Share">
+              <Share2 className="h-[26px] w-[26px] shrink-0" />
+            </NotionTopbarButton>
+            <div className="relative" ref={actionsRef}>
+              <NotionTopbarButton
+                onClick={() => setActionsOpen((o) => !o)}
+                aria-label="Actions"
+                aria-expanded={actionsOpen}
+                aria-haspopup="dialog"
+              >
+                <svg viewBox="0 0 20 20" className="h-[26px] w-[26px] shrink-0" fill="currentColor" aria-hidden>
+                  <path d="M4 11.375a1.375 1.375 0 1 0 0-2.75 1.375 1.375 0 0 0 0 2.75m6 0a1.375 1.375 0 1 0 0-2.75 1.375 1.375 0 0 0 0 2.75m6 0a1.375 1.375 0 1 0 0-2.75 1.375 1.375 0 0 0 0 2.75" />
+                </svg>
+              </NotionTopbarButton>
+              {actionsOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    aria-hidden
+                    onClick={() => setActionsOpen(false)}
+                  />
+                  <div
+                    className="absolute right-0 top-full z-50 mt-1 min-w-[180px] rounded-lg bg-[#2d2d30] py-1 shadow-xl"
+                    role="dialog"
+                    aria-label="Actions menu"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActionsOpen(false);
+                        handleSaveToMemory();
+                      }}
+                      disabled={saveStatus === 'saving'}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-white/90 hover:bg-white/[0.08] disabled:opacity-50"
+                    >
+                      {saveStatus === 'saving' ? (
+                        <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      ) : saveStatus === 'saved' ? (
+                        <Check size={16} />
+                      ) : (
+                        <Save size={16} />
+                      )}
+                      {saveStatus === 'saved' ? '已保存' : saveStatus === 'saving' ? '保存中…' : '保存到回忆'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActionsOpen(false);
+                        setIsEditMode((e) => !e);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-white/90 hover:bg-white/[0.08]"
+                    >
+                      <Edit2 size={16} />
+                      {isEditMode ? '完成编辑' : '编辑'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActionsOpen(false)}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-white/90 hover:bg-white/[0.08]"
+                    >
+                      <Download size={16} />
+                      下载
+                    </button>
+                  </div>
+                </>
               )}
-              <span className="hidden sm:inline">
-                {saveStatus === 'saved' ? '已保存' : saveStatus === 'saving' ? '保存中…' : saveStatus === 'error' ? '保存失败' : '保存'}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setIsEditMode(!isEditMode)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                isEditMode
-                  ? 'bg-white text-black dark:bg-white dark:text-black'
-                  : isDark
-                    ? 'bg-white/10 text-white hover:bg-white/20'
-                    : 'bg-black/5 text-black hover:bg-black/10'
-              }`}
-            >
-              <Edit2 size={16} />
-              {isEditMode ? '完成编辑' : '编辑'}
-            </button>
-
-            <button className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`} title="分享" aria-label="分享">
-              <Share2 size={20} className={isDark ? 'text-white/70' : 'text-black/70'} />
-            </button>
-
-            <button className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`} title="下载" aria-label="下载">
-              <Download size={20} className={isDark ? 'text-white/70' : 'text-black/70'} />
-            </button>
-          </div>
-        </div>
-      </header>
+            </div>
+            <div className="w-1" />
+          </>
+        }
+      />
 
       {/* Main Content */}
-      <main className="pt-20">
+      <main className="pt-[44px]">
         {/* Hero Title Section - Magazine Style */}
         <section className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-24">
           <div className="space-y-8">

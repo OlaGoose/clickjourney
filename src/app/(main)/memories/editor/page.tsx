@@ -218,7 +218,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
       />
 
       <div
-        className="no-scrollbar flex-1 overflow-y-auto pb-24"
+        className="no-scrollbar flex-1 overflow-y-auto pb-24 pt-[44px]"
         onClick={handleDeselectBlocks}
         role="presentation"
       >

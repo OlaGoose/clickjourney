@@ -1,6 +1,7 @@
 'use client';
 
-import { ArrowLeft, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { NotionTopbar, NotionTopbarButton } from '@/components/NotionTopbar';
 
 interface EditorHeaderProps {
   onBack: () => void;
@@ -8,46 +9,29 @@ interface EditorHeaderProps {
   isSaving?: boolean;
 }
 
-/** Apple light mode only: white header, black text, minimal chrome. */
+/** Notion-style black topbar: Back | 编辑旅程 | Save. */
 export function EditorHeader({ onBack, onSave, isSaving = false }: EditorHeaderProps) {
   return (
-    <div className="sticky top-0 z-10 grid grid-cols-3 items-center px-4 py-3 bg-[#fbfbfd]/95 backdrop-blur-xl border-b border-black/[0.06]">
-      <button
-        type="button"
-        onClick={onBack}
-        className="justify-self-start -ml-2 rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] transition-all active:scale-95"
-        aria-label="Back"
-      >
-        <ArrowLeft size={20} strokeWidth={2} />
-      </button>
-      <span className="justify-self-center text-base font-semibold text-[#1d1d1f]">
-        编辑旅程
-      </span>
-      <div className="justify-self-end">
+    <NotionTopbar
+      onBack={onBack}
+      title="编辑旅程"
+      rightActions={
         <button
           type="button"
           onClick={onSave}
           disabled={isSaving}
-          className={`rounded-full px-5 py-2.5 text-[13px] font-semibold transition-all active:scale-95 ${
-            isSaving
-              ? 'bg-[#e8e8ed] text-[#86868b] cursor-not-allowed'
-              : 'bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
-          }`}
+          className="flex p-1.5 flex-shrink-0 items-center justify-center gap-1.5 rounded-md text-white/90 transition-[background] duration-[20ms] ease-in hover:bg-white/[0.08] active:bg-white/[0.12] disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ marginInlineEnd: 14 }}
           aria-label="Save"
         >
           {isSaving ? (
-            <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#86868b]/30 border-t-[#1d1d1f]" />
-              保存中
-            </span>
+            <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
           ) : (
-            <span className="flex items-center gap-1.5">
-              <Check size={14} strokeWidth={2.5} />
-              保存
-            </span>
+            <Check className="h-5 w-5 shrink-0" strokeWidth={2.5} />
           )}
+          <span className="text-[13px] font-medium">保存</span>
         </button>
-      </div>
-    </div>
+      }
+    />
   );
 }
