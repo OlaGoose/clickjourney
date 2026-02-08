@@ -1,9 +1,10 @@
 /**
  * Supabase browser client
  * Used in client components and auth.
+ * Uses cookies for session persistence to work with SSR.
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from '@/types/database';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -15,10 +16,5 @@ if (typeof window !== 'undefined' && (!supabaseUrl || !supabaseAnonKey)) {
 
 export const supabase =
   supabaseUrl && supabaseAnonKey
-    ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-        },
-      })
-    : (null as unknown as ReturnType<typeof createClient<Database>>);
+    ? createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
+    : (null as unknown as ReturnType<typeof createBrowserClient<Database>>);

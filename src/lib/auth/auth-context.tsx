@@ -48,8 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    
     const init = async () => {
       try {
+        // Check for mock session in development
         if (isLocalDevelopment() && typeof window !== 'undefined') {
           const mock = getMockSession();
           if (mock && mounted) {
@@ -60,32 +62,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return;
           }
         }
+        
+        // Get current session from Supabase (from cookies)
+        // This will restore the session if it exists
         const { session: s } = await SupabaseAuthService.getSession();
         if (!mounted) return;
-        if (s) {
+        
+        if (s?.user) {
           setSession(s);
           setUser(s.user);
           await loadUserProfile(s.user.id);
         }
       } catch (e) {
-        console.error('Auth init', e);
+        console.error('Auth initialization error:', e);
       } finally {
         if (mounted) setIsLoading(false);
       }
     };
+    
     init();
+    
+    // Listen for auth state changes
     const { data: { subscription } } = SupabaseAuthService.onAuthStateChange((event, newSession) => {
       if (!mounted) return;
+      
       setSession(newSession);
       setUser(newSession?.user ?? null);
-      if (newSession?.user) loadUserProfile(newSession.user.id).catch(() => {});
-      else setProfile(null);
+      
+      if (newSession?.user) {
+        loadUserProfile(newSession.user.id).catch(() => {});
+      } else {
+        setProfile(null);
+      }
+      
+      // Handle sign out
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
         setSession(null);
       }
     });
+    
     return () => {
       mounted = false;
       subscription.unsubscribe();

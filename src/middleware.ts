@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { updateSession } from '@/lib/supabase/middleware';
 
 /**
  * Avoid 404s for known-missing source maps (Next internal chunks that don't emit .map).
@@ -14,8 +15,10 @@ const EMPTY_SOURCE_MAP = JSON.stringify({
 
 const MISSING_MAP_PATTERN = /LayoutGroupContext\.mjs\.map$/;
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
+  
+  // Handle source map requests
   if (path.endsWith('.map') && MISSING_MAP_PATTERN.test(path)) {
     return new NextResponse(EMPTY_SOURCE_MAP, {
       status: 200,
@@ -25,9 +28,23 @@ export function middleware(request: NextRequest) {
       },
     });
   }
-  return NextResponse.next();
+
+  // Refresh Supabase session for all requests
+  // This ensures the session is always up to date and automatically refreshes tokens
+  const { response } = await updateSession(request);
+  
+  return response;
 }
 
 export const config = {
-  matcher: ['/_next/static/chunks/:path*'],
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (public folder)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 };
