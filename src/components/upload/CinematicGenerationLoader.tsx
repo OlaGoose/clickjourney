@@ -290,14 +290,14 @@ export function CinematicGenerationLoader({
         >
           {isDark && <AmbientGlow />}
 
-          {/* Photo grid: center at 2/3 down, horizontally centered */}
+          {/* Photo grid: visual center at 2/3 down (66.67%), horizontally centered. Adjusted for photo distribution bias. */}
           <motion.div
             style={{ 
               x: containerX, 
               y: containerY,
               willChange: 'transform',
             }}
-            className="absolute top-2/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-7xl h-[60vh] z-10 perspective-1000"
+            className="absolute top-[calc(66.67%-0.6vh)] left-[calc(50%-0.5vw)] -translate-x-1/2 -translate-y-1/2 w-full max-w-7xl h-[60vh] z-10 perspective-1000"
           >
             {IMAGE_LAYOUT.map((config, i) => {
               const src = imageSources[i];
