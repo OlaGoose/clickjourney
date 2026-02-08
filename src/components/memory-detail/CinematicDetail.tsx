@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { MapPin, Calendar, Edit2, ArrowLeft, Share2, Download, Save, Check } from 'lucide-react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { MapPin, Calendar, Edit2, ArrowLeft, Share2, Download, Save, Check, MoreHorizontal } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import type { CarouselItem } from '@/types/memory';
 import type { DirectorScript, StoryBlock } from '@/types/cinematic';
 import { StaticBlockRenderer } from '@/components/cinematic/StaticBlockRenderer';
@@ -10,6 +11,7 @@ import { useOptionalAuth } from '@/lib/auth';
 import { saveMemory } from '@/lib/storage';
 import { directorScriptToCarouselItem } from '@/lib/upload-to-memory';
 import { saveCinematicScript, saveLocalCinematic } from '@/lib/cinematic-storage';
+import { MemoryService } from '@/lib/db/services/memory-service';
 
 const DEFAULT_SCRIPT: DirectorScript = {
   title: "未命名的旅程",
@@ -36,9 +38,13 @@ interface CinematicDetailProps {
 }
 
 export function CinematicDetail({ memory, script: initialScript, onBack }: CinematicDetailProps) {
+  const router = useRouter();
   const [script, setScript] = useState<DirectorScript>(initialScript || DEFAULT_SCRIPT);
   const [isEditMode, setIsEditMode] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   const auth = useOptionalAuth();
   const userId = auth?.user?.id ?? null;
@@ -80,6 +86,40 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
       month: 'long', 
       day: 'numeric' 
     });
+  };
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [moreOpen]);
+
+  const handleDelete = async () => {
+    setMoreOpen(false);
+    
+    const confirmed = confirm('确定要删除这个回忆吗？此操作无法撤销。');
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await MemoryService.deleteMemory(memory.id);
+      if (error) {
+        alert(`删除失败：${error}`);
+        setIsDeleting(false);
+        return;
+      }
+      
+      router.push('/');
+    } catch (e) {
+      console.error('Failed to delete memory:', e);
+      alert('删除失败，请重试');
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -142,6 +182,37 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
           <button className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`} aria-label="下载">
             <Download size={18} />
           </button>
+          <div className="relative" ref={moreRef}>
+            <button
+              type="button"
+              onClick={() => setMoreOpen((v) => !v)}
+              className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
+              aria-label="更多操作"
+              aria-expanded={moreOpen}
+            >
+              <MoreHorizontal size={18} />
+            </button>
+            {moreOpen && (
+              <div
+                className={`absolute right-0 top-full mt-1 min-w-[140px] rounded-lg py-1 shadow-lg border text-left z-50 ${
+                  isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-gray-200'
+                }`}
+                role="menu"
+              >
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className={`w-full px-4 py-2 text-left text-[13px] text-red-600 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isDark ? 'hover:bg-white/5' : 'hover:bg-red-50'
+                  }`}
+                  role="menuitem"
+                >
+                  {isDeleting ? '删除中...' : '删除'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -174,3 +174,21 @@ export async function updateMemory(
     return { data: null, error: e instanceof Error ? e.message : 'Unknown error' };
   }
 }
+
+/**
+ * Delete a memory by id (local-first, syncs in background when authenticated)
+ */
+export async function deleteMemory(
+  id: string
+): Promise<{ error: string | null }> {
+  if (typeof window === 'undefined') {
+    return { error: 'Storage not available on server' };
+  }
+
+  try {
+    const result = await MemoryService.deleteMemory(id);
+    return { error: result.error };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Unknown error' };
+  }
+}

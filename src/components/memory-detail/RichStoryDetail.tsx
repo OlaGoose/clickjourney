@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ContentBlock } from '@/components/editor/ContentBlock';
+import { MemoryService } from '@/lib/db/services/memory-service';
 import type { CarouselItem } from '@/types/memory';
 
 interface RichStoryDetailProps {
@@ -10,10 +11,11 @@ interface RichStoryDetailProps {
   onBack: () => void;
 }
 
-/** Renders rich-story memory with same layout as memories/editor (read-only). Header "..." menu includes Edit. */
+/** Renders rich-story memory with same layout as memories/editor (read-only). Header "..." menu includes Edit and Delete. */
 export function RichStoryDetail({ memory, onBack }: RichStoryDetailProps) {
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
 
   const category = memory.category ?? '故事回忆';
@@ -37,6 +39,30 @@ export function RichStoryDetail({ memory, onBack }: RichStoryDetailProps) {
   const handleEdit = () => {
     setMoreOpen(false);
     router.push(`/memories/editor?id=${memory.id}`);
+  };
+
+  const handleDelete = async () => {
+    setMoreOpen(false);
+    
+    const confirmed = confirm('确定要删除这个回忆吗？此操作无法撤销。');
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await MemoryService.deleteMemory(memory.id);
+      if (error) {
+        alert(`删除失败：${error}`);
+        setIsDeleting(false);
+        return;
+      }
+      
+      // Successfully deleted, navigate back to home
+      router.push('/');
+    } catch (e) {
+      console.error('Failed to delete memory:', e);
+      alert('删除失败，请重试');
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -142,6 +168,15 @@ export function RichStoryDetail({ memory, onBack }: RichStoryDetailProps) {
                   role="menuitem"
                 >
                   编辑
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  role="menuitem"
+                >
+                  {isDeleting ? '删除中...' : '删除'}
                 </button>
               </div>
             )}

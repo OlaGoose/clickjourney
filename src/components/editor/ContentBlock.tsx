@@ -80,6 +80,7 @@ export function ContentBlock({
           />
         );
       case 'image': {
+        // Ensure images are correctly extracted from metadata
         const images = block.metadata?.images?.length
           ? block.metadata.images
           : block.content

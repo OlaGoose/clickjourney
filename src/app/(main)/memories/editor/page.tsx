@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { EditorHeader } from '@/components/editor/EditorHeader';
 import { ContentBlock } from '@/components/editor/ContentBlock';
@@ -17,7 +17,7 @@ function generateId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-export default function TravelEditorPage() {
+function TravelEditorContent() {
   const router = useRouter();
   const auth = useOptionalAuth();
   const userId = auth?.user?.id ?? null;
@@ -382,4 +382,16 @@ function generateRichContent(data: TravelEditorData): string {
   });
 
   return html;
+}
+
+export default function TravelEditorPage() {
+  return (
+    <Suspense fallback={
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#fbfbfd]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#1d1d1f] border-t-transparent"></div>
+      </div>
+    }>
+      <TravelEditorContent />
+    </Suspense>
+  );
 }
