@@ -11,7 +11,6 @@ import {
   Play,
   Pause,
   Trash2,
-  X,
   Loader2,
   Pencil,
   ChevronRight,
@@ -58,7 +57,6 @@ export default function MemoryUploadPage() {
 
   const [transcript, setTranscript] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [showTranscript, setShowTranscript] = useState(false);
 
   // Image analysis state
   interface ImageAnalysis {
@@ -338,7 +336,6 @@ export default function MemoryUploadPage() {
       setIsRecording(true);
       setRecordingTime(0);
       setTranscript('');
-      setShowTranscript(false);
 
       timerIntervalRef.current = window.setInterval(() => {
         setRecordingTime((prev) => prev + 1);
@@ -362,7 +359,6 @@ export default function MemoryUploadPage() {
   const deleteAudio = useCallback(() => {
     setAudioUrl(null);
     setIsPlaying(false);
-    setShowTranscript(false);
     setTranscript('');
   }, []);
 
@@ -372,10 +368,35 @@ export default function MemoryUploadPage() {
       audioPlayerRef.current.pause();
     } else {
       audioPlayerRef.current.play();
-      setShowTranscript(true);
     }
     setIsPlaying(!isPlaying);
   }, [isPlaying]);
+
+  /** Fetch audio from url, run transcription, put result into transcript textarea. */
+  const handleTranscribeClick = useCallback(async () => {
+    if (!audioUrl) return;
+    setIsTranscribing(true);
+    try {
+      const res = await fetch(audioUrl);
+      const blob = await res.blob();
+      const base64Data = await blobToBase64(blob);
+      const apiRes = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64: base64Data, mimeType: 'audio/webm' }),
+      });
+      const data = await apiRes.json();
+      if (apiRes.ok) {
+        setTranscript(data.text ?? '');
+      } else {
+        setTranscript(data?.error ?? '无法识别录音内容');
+      }
+    } catch {
+      setTranscript('无法识别录音内容');
+    } finally {
+      setIsTranscribing(false);
+    }
+  }, [audioUrl]);
 
   useEffect(() => {
     const audio = audioPlayerRef.current;
@@ -391,7 +412,6 @@ export default function MemoryUploadPage() {
     setAudioUrl(null);
     setIsPlaying(false);
     setTranscript('');
-    setShowTranscript(false);
     setCurrentStep(0);
     setImageAnalyses([]);
     setAnalysisError(false);
@@ -482,7 +502,7 @@ export default function MemoryUploadPage() {
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       >
         <div className="w-full max-w-4xl flex flex-col items-center px-4 pointer-events-auto">
-          {currentStep === 1 && showTranscript && audioUrl && (
+          {currentStep === 1 && (
             <div className="w-full max-w-sm mb-4">
               <div
                 className={`backdrop-blur-2xl rounded-3xl shadow-2xl p-5 relative transition-colors duration-300 ${
@@ -491,7 +511,7 @@ export default function MemoryUploadPage() {
                     : 'bg-white/60 border border-white/40'
                 }`}
               >
-                <div className="flex justify-between items-center mb-3">
+                <div className="flex justify-between items-center mb-2">
                   <h3
                     className={`text-sm font-semibold flex items-center gap-2 ${
                       isDark ? 'text-white/90' : 'text-gray-800'
@@ -500,35 +520,27 @@ export default function MemoryUploadPage() {
                     <Pencil size={14} className={isDark ? 'text-white/50' : 'text-gray-500'} />
                     Transcript
                   </h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowTranscript(false)}
-                    className={`p-1.5 rounded-full transition-colors ${isDark ? 'hover:bg-white/10 text-white/50' : 'hover:bg-black/5 text-gray-500'}`}
-                    aria-label="关闭"
-                  >
-                    <X size={14} />
-                  </button>
                 </div>
                 {isTranscribing ? (
                   <div
-                    className={`flex flex-col items-center justify-center py-6 gap-2 ${isDark ? 'text-white/50' : 'text-gray-500'}`}
+                    className={`flex flex-col items-center justify-center py-4 gap-2 ${isDark ? 'text-white/50' : 'text-gray-500'}`}
                   >
-                    <Loader2 size={24} className={isDark ? 'animate-spin text-white' : 'animate-spin text-black'} />
-                    <p className="text-xs font-medium">Generating text...</p>
+                    <Loader2 size={20} className={isDark ? 'animate-spin text-white' : 'animate-spin text-black'} />
+                    <p className="text-xs font-medium">Transcribing...</p>
                   </div>
-                ) : (
-                  <textarea
-                    className={`w-full text-sm leading-relaxed bg-transparent resize-none outline-none rounded-xl p-2 ml-1 transition-colors ${
-                      isDark
-                        ? 'text-white/90 placeholder:text-white/40 focus:bg-white/5'
-                        : 'text-gray-800 placeholder:text-gray-400 focus:bg-white/40'
-                    }`}
-                    rows={4}
-                    value={transcript}
-                    onChange={(e) => setTranscript(e.target.value)}
-                    placeholder="No transcript available"
-                  />
-                )}
+                ) : null}
+                <textarea
+                  className={`w-full text-sm leading-relaxed bg-transparent resize-none outline-none rounded-xl p-2 ml-1 transition-colors ${
+                    isDark
+                      ? 'text-white/90 placeholder:text-white/40 focus:bg-white/5'
+                      : 'text-gray-800 placeholder:text-gray-400 focus:bg-white/40'
+                  }`}
+                  rows={4}
+                  value={transcript}
+                  onChange={(e) => setTranscript(e.target.value)}
+                  placeholder="No transcript available. Record and click Transcribe."
+                  readOnly={isTranscribing}
+                />
               </div>
             </div>
           )}
@@ -600,16 +612,30 @@ export default function MemoryUploadPage() {
                       <button
                         type="button"
                         onClick={togglePlayback}
+                        className={`flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-95 ${
+                          isPlaying
+                            ? isDark ? 'bg-white/20 text-white' : 'bg-gray-800 text-white'
+                            : 'bg-black hover:bg-gray-800 text-white'
+                        }`}
+                        title={isPlaying ? 'Pause' : 'Play'}
+                        aria-label={isPlaying ? 'Pause' : 'Play'}
+                      >
+                        {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleTranscribeClick}
+                        disabled={isTranscribing}
                         className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-semibold transition-all active:scale-95 shadow-lg ${
-                          showTranscript
-                            ? isDark
-                              ? 'bg-white/20 text-white ring-2 ring-white/20'
-                              : 'bg-gray-800 text-white ring-2 ring-black/10'
+                          isTranscribing
+                            ? isDark ? 'bg-white/10 text-white/50 cursor-wait' : 'bg-gray-200 text-gray-400 cursor-wait'
                             : 'bg-black hover:bg-gray-800 text-white'
                         }`}
                       >
-                        {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-                        <span>Preview</span>
+                        {isTranscribing ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : null}
+                        <span>{isTranscribing ? 'Transcribing…' : 'Transcribe'}</span>
                       </button>
                       <button
                         type="button"
