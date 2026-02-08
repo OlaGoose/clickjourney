@@ -32,8 +32,37 @@ export default function TravelEditorPage() {
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load draft from localStorage on mount
+  // Load draft from localStorage, or pre-fill from upload (sessionStorage: editor-images + editor-description)
   useEffect(() => {
+    const fromUpload = sessionStorage.getItem('editor-images');
+    if (fromUpload) {
+      try {
+        const imageUrls: string[] = JSON.parse(fromUpload);
+        const description = sessionStorage.getItem('editor-description') || '';
+        sessionStorage.removeItem('editor-images');
+        sessionStorage.removeItem('editor-description');
+        setEditorData({
+          title: '',
+          description: description,
+          blocks: imageUrls.length
+            ? [
+                {
+                  id: generateId(),
+                  type: 'image',
+                  content: imageUrls[0] ?? '',
+                  order: 0,
+                  metadata: { images: imageUrls },
+                },
+              ]
+            : [],
+        });
+        return;
+      } catch (e) {
+        console.error('Failed to parse editor-images:', e);
+        sessionStorage.removeItem('editor-images');
+        sessionStorage.removeItem('editor-description');
+      }
+    }
     const savedDraft = localStorage.getItem(STORAGE_KEY);
     if (savedDraft) {
       try {
@@ -109,7 +138,7 @@ export default function TravelEditorPage() {
       // Clear draft after successful save
       localStorage.removeItem(STORAGE_KEY);
       alert('保存成功！');
-      router.push('/memories');
+      router.push('/');
     } catch (error) {
       console.error('Failed to save:', error);
       alert('保存失败，请重试');

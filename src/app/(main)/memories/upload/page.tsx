@@ -236,12 +236,13 @@ export default function MemoryUploadPage() {
       return;
     }
 
-    // Store images in sessionStorage for editor to pick up
     const imageUrls = images.map((img) => img.url);
     sessionStorage.setItem('editor-images', JSON.stringify(imageUrls));
-    
+    if (transcript.trim()) {
+      sessionStorage.setItem('editor-description', transcript.trim());
+    }
     router.push('/memories/editor');
-  }, [images, isDefault, router]);
+  }, [images, isDefault, transcript, router]);
 
   const handleStartClick = useCallback(() => {
     setReplaceTargetId(null);
