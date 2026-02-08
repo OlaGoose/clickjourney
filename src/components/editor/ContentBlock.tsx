@@ -10,7 +10,6 @@ import type { ContentBlock as ContentBlockType, ImageDisplayMode } from '@/types
 interface ContentBlockProps {
   block: ContentBlockType;
   isSelected: boolean;
-  isDark?: boolean;
   onClick: () => void;
   onEdit: () => void;
   onTextChange?: (blockId: string, content: string) => void;
@@ -36,7 +35,8 @@ function useAutoHeightTextarea(value: string) {
   return { ref, syncHeight };
 }
 
-export function ContentBlock({ block, isSelected, isDark = false, onClick, onEdit, onTextChange }: ContentBlockProps) {
+/** Apple light mode only: clean white/gray surfaces, #1d1d1f text. */
+export function ContentBlock({ block, isSelected, onClick, onEdit, onTextChange }: ContentBlockProps) {
   const [showGallery, setShowGallery] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const { ref: textareaRef, syncHeight } = useAutoHeightTextarea(block.type === 'text' ? block.content : '');
@@ -59,11 +59,7 @@ export function ContentBlock({ block, isSelected, isDark = false, onClick, onEdi
             rows={1}
             maxLength={500}
             style={{ minHeight: TEXTAREA_MIN_HEIGHT_PX }}
-            className={`w-full resize-none overflow-hidden text-base focus:outline-none bg-transparent rounded-xl py-3 placeholder:opacity-50 ${
-              isDark
-                ? 'text-white/80 placeholder:text-white/40 focus:bg-white/5'
-                : 'text-gray-600 placeholder:text-gray-300 focus:bg-gray-50/80'
-            }`}
+            className="w-full resize-none overflow-hidden text-base focus:outline-none bg-transparent rounded-xl py-3 text-[#1d1d1f] placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80"
             aria-label="文本内容"
           />
         );
@@ -99,12 +95,8 @@ export function ContentBlock({ block, isSelected, isDark = false, onClick, onEdi
                 />
               )
             ) : (
-              <div
-                className={`flex h-48 items-center justify-center rounded-2xl ${
-                  isDark ? 'bg-white/5' : 'bg-gray-100'
-                }`}
-              >
-                <Image size={48} className={isDark ? 'text-white/20' : 'text-gray-300'} />
+              <div className="flex h-48 items-center justify-center rounded-2xl bg-[#f5f5f7]">
+                <Image size={48} className="text-[#86868b]" />
               </div>
             )}
             {images.length > 0 && showGallery && (
@@ -119,11 +111,7 @@ export function ContentBlock({ block, isSelected, isDark = false, onClick, onEdi
       }
       case 'video':
         return (
-          <div
-            className={`relative w-full overflow-hidden rounded-2xl ${
-              isDark ? 'bg-white/5' : 'bg-gray-100'
-            }`}
-          >
+          <div className="relative w-full overflow-hidden rounded-2xl bg-[#f5f5f7]">
             {block.content ? (
               <video
                 src={block.content}
@@ -135,31 +123,23 @@ export function ContentBlock({ block, isSelected, isDark = false, onClick, onEdi
               </video>
             ) : (
               <div className="flex h-48 items-center justify-center">
-                <Video size={48} className={isDark ? 'text-white/20' : 'text-gray-300'} />
+                <Video size={48} className="text-[#86868b]" />
               </div>
             )}
           </div>
         );
       case 'audio':
         return (
-          <div
-            className={`flex items-center gap-3 rounded-2xl p-4 ${
-              isDark ? 'bg-white/5' : 'bg-gray-50'
-            }`}
-          >
-            <div
-              className={`flex h-12 w-12 items-center justify-center rounded-full ${
-                isDark ? 'bg-white/10' : 'bg-black/5'
-              }`}
-            >
-              <Music size={20} className={isDark ? 'text-white/70' : 'text-gray-600'} />
+          <div className="flex items-center gap-3 rounded-2xl p-4 bg-[#f5f5f7]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/[0.06]">
+              <Music size={20} className="text-[#6e6e73]" />
             </div>
             {block.content ? (
               <audio src={block.content} controls className="flex-1">
                 Your browser does not support the audio tag.
               </audio>
             ) : (
-              <span className={`flex-1 text-sm ${isDark ? 'text-white/50' : 'text-gray-400'}`}>
+              <span className="flex-1 text-sm text-[#86868b]">
                 点击上传音频...
               </span>
             )}
@@ -209,11 +189,7 @@ export function ContentBlock({ block, isSelected, isDark = false, onClick, onEdi
             e.stopPropagation();
             onEdit();
           }}
-          className={`absolute top-3 right-3 flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold backdrop-blur-sm transition-all active:scale-95 ${
-            isDark
-              ? 'bg-white text-black hover:bg-white/95 shadow-lg'
-              : 'bg-black text-white hover:bg-gray-800 shadow-lg'
-          }`}
+          className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all active:scale-95"
           aria-label="编辑内容块"
         >
           <Edit2 size={12} strokeWidth={2.5} />

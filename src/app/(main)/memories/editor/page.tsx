@@ -9,7 +9,6 @@ import { AddBlockButton } from '@/components/editor/AddBlockButton';
 import type { TravelEditorData, ContentBlock as ContentBlockType } from '@/types/editor';
 import { saveMemory } from '@/lib/storage';
 import { useOptionalAuth } from '@/lib/auth';
-import { useDayNightTheme } from '@/hooks/useDayNightTheme';
 
 const STORAGE_KEY = 'travel-editor-draft';
 
@@ -21,7 +20,6 @@ export default function TravelEditorPage() {
   const router = useRouter();
   const auth = useOptionalAuth();
   const userId = auth?.user?.id ?? null;
-  const isDark = useDayNightTheme() === 'dark';
 
   const [editorData, setEditorData] = useState<TravelEditorData>({
     title: '',
@@ -212,15 +210,8 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
   }, [editingBlock]);
 
   return (
-    <div
-      className={`fixed inset-0 z-50 flex flex-col animate-fadeIn font-sans transition-colors duration-300 ${
-        isDark
-          ? 'bg-[#0a0a0a] text-white'
-          : 'bg-white text-black'
-      }`}
-    >
+    <div className="fixed inset-0 z-50 flex flex-col animate-fadeIn font-sans bg-[#fbfbfd] text-[#1d1d1f]">
       <EditorHeader
-        isDark={isDark}
         onBack={handleBack}
         onSave={handleSave}
         isSaving={isSaving}
@@ -232,7 +223,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
         role="presentation"
       >
         <div className="px-8 pt-4 space-y-4 max-w-2xl mx-auto">
-          {/* Title Input — Apple-style minimal, no heavy border */}
+          {/* Title Input — Apple-style minimal, light mode only */}
           <div className="pt-1">
             <input
               type="text"
@@ -241,9 +232,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
                 setEditorData(prev => ({ ...prev, title: e.target.value }))
               }
               placeholder="输入标题..."
-              className={`w-full text-2xl font-bold focus:outline-none bg-transparent placeholder:opacity-50 ${
-                isDark ? 'text-white placeholder:text-white/40' : 'text-black placeholder:text-gray-300'
-              }`}
+              className="w-full text-2xl font-bold focus:outline-none bg-transparent text-[#1d1d1f] placeholder:text-[#86868b]"
               maxLength={100}
             />
           </div>
@@ -256,11 +245,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
                 setEditorData(prev => ({ ...prev, description: e.target.value }))
               }
               placeholder="添加描述..."
-              className={`w-full resize-none text-base focus:outline-none bg-transparent rounded-xl py-3 placeholder:opacity-50 ${
-                isDark
-                  ? 'text-white/80 placeholder:text-white/40 focus:bg-white/5'
-                  : 'text-gray-600 placeholder:text-gray-300 focus:bg-gray-50/80'
-              }`}
+              className="w-full resize-none text-base focus:outline-none bg-transparent rounded-xl py-3 text-[#1d1d1f] placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80"
               rows={3}
               maxLength={500}
             />
@@ -275,7 +260,6 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
                   key={block.id}
                   block={block}
                   isSelected={selectedBlockId === block.id}
-                  isDark={isDark}
                   onClick={() => handleBlockClick(block.id)}
                   onEdit={() => handleEditBlock(block.id)}
                   onTextChange={handleTextBlockChange}
@@ -285,7 +269,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
 
           {/* Add Block Button */}
           <div className="py-6">
-            <AddBlockButton isDark={isDark} onAddBlock={handleAddBlock} />
+            <AddBlockButton onAddBlock={handleAddBlock} />
           </div>
         </div>
       </div>
@@ -298,7 +282,6 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
         onSave={handleSaveBlock}
         onDelete={handleDeleteBlock}
         onDiscard={handleDiscardBlock}
-        isDark={isDark}
       />
     </div>
   );
