@@ -5,15 +5,22 @@ import { Edit2, Image, Video, Music, Type, FileText } from 'lucide-react';
 import PhotoGrid from '@/components/PhotoGrid';
 import GalleryModal from '@/components/GalleryModal';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
+import { StaticBlockRenderer } from '@/components/cinematic/StaticBlockRenderer';
+import { getCinematicPlaceholderImage } from '@/lib/editor-cinematic-templates';
 import { sanitizeBlockHtml } from '@/lib/sanitize-block-html';
 import type { ContentBlock as ContentBlockType, ImageDisplayMode } from '@/types/editor';
+import type { StoryBlock } from '@/types/cinematic';
 
 interface ContentBlockProps {
   block: ContentBlockType;
+  /** Block index (for cinematic layout ordering). */
+  index?: number;
   isSelected?: boolean;
   onClick?: () => void;
   onEdit?: () => void;
   onTextChange?: (blockId: string, content: string) => void;
+  /** When block is cinematic, called when user edits image/text in the block. */
+  onCinematicUpdate?: (blockId: string, updates: Partial<StoryBlock>) => void;
   /** When true, render same layout as editor but non-interactive (for detail view) */
   readOnly?: boolean;
 }
@@ -38,13 +45,27 @@ function useAutoHeightTextarea(value: string) {
   return { ref, syncHeight };
 }
 
+/** Map editor ContentBlock (cinematic) to StoryBlock for StaticBlockRenderer. */
+function contentBlockToStoryBlock(block: ContentBlockType): StoryBlock {
+  return {
+    id: block.id,
+    layout: block.metadata?.cinematicLayout ?? 'full_bleed',
+    image: block.metadata?.cinematicImage || getCinematicPlaceholderImage(),
+    text: block.content ?? '',
+    imageFilter: block.metadata?.imageFilter,
+    mood: block.metadata?.mood,
+  };
+}
+
 /** Apple light mode only: clean white/gray surfaces, #1d1d1f text. */
 export function ContentBlock({
   block,
+  index = 0,
   isSelected = false,
   onClick,
   onEdit,
   onTextChange,
+  onCinematicUpdate,
   readOnly = false,
 }: ContentBlockProps) {
   const [showGallery, setShowGallery] = useState(false);
@@ -52,6 +73,27 @@ export function ContentBlock({
   const { ref: textareaRef, syncHeight } = useAutoHeightTextarea(block.type === 'text' ? block.content : '');
 
   const renderContent = () => {
+    if (block.type === 'cinematic') {
+      const storyBlock = contentBlockToStoryBlock(block);
+      return (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!readOnly) onClick?.();
+          }}
+          className="rounded-2xl overflow-hidden"
+        >
+          <StaticBlockRenderer
+            block={storyBlock}
+            index={index}
+            isEditMode={!readOnly}
+            onUpdate={(id, updates) => onCinematicUpdate?.(id, updates)}
+            isDark={false}
+          />
+        </div>
+      );
+    }
+
     switch (block.type) {
       case 'text':
         if (readOnly) {
@@ -205,6 +247,8 @@ export function ContentBlock({
       case 'richtext':
         return <FileText size={14} />;
       case 'image':
+        return <Image size={14} />;
+      case 'cinematic':
         return <Image size={14} />;
       case 'video':
         return <Video size={14} />;

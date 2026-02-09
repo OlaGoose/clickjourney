@@ -5,14 +5,19 @@ import { RefreshCw } from 'lucide-react';
 
 interface ReflectionEndLayoutProps {
   onReplay: () => void;
+  /** 可编辑的结尾文案，为空时显示默认英文句 */
+  closingText?: string;
 }
+
+const DEFAULT_CLOSING = 'Every journey leaves its mark,\nevery memory tells its story.';
 
 /**
  * Reflection End Layout - Poetic Closure
  * Inspired by film credits and art book endings
  * Leaves space for contemplation
  */
-export const ReflectionEndLayout = ({ onReplay }: ReflectionEndLayoutProps) => {
+export const ReflectionEndLayout = ({ onReplay, closingText }: ReflectionEndLayoutProps) => {
+  const displayText = (closingText ?? '').trim() || DEFAULT_CLOSING;
   return (
     <section className="h-screen w-full bg-black flex flex-col items-center justify-center text-center p-8 relative overflow-hidden">
       {/* Subtle ambient gradient */}
@@ -42,15 +47,14 @@ export const ReflectionEndLayout = ({ onReplay }: ReflectionEndLayoutProps) => {
           Fin.
         </motion.h2>
         
-        {/* Poetic closing line */}
+        {/* Poetic closing line（支持自定义文案） */}
         <motion.p 
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 0.4 }}
           transition={{ duration: 2, delay: 1.2 }}
-          className="font-serif text-lg md:text-xl text-white font-light tracking-wide leading-relaxed px-6"
+          className="font-serif text-lg md:text-xl text-white font-light tracking-wide leading-relaxed px-6 whitespace-pre-line"
         >
-          Every journey leaves its mark,<br />
-          every memory tells its story.
+          {displayText}
         </motion.p>
         
         {/* Decorative bottom line */}

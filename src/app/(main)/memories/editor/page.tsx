@@ -8,6 +8,8 @@ import { EditPanel } from '@/components/editor/EditPanel';
 import { AddBlockButton } from '@/components/editor/AddBlockButton';
 import type { TravelEditorData, ContentBlock as ContentBlockType } from '@/types/editor';
 import type { AIGeneratedDocBlock } from '@/types/ai-document-blocks';
+import type { LayoutType, StoryBlock } from '@/types/cinematic';
+import { getCinematicPlaceholderImage } from '@/lib/editor-cinematic-templates';
 import { saveMemory, updateMemory } from '@/lib/storage';
 import { useOptionalAuth } from '@/lib/auth';
 import { MemoryService } from '@/lib/db/services/memory-service';
@@ -177,9 +179,11 @@ function TravelEditorContent() {
     }
   }, [editorData, userId, router, editId]);
 
-/** Collect all image URLs from image blocks (metadata.images or content). */
+/** Collect all image URLs from image and cinematic blocks. */
 function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
-  return blocks.filter((b) => b.type === 'image').flatMap((b) => (b.metadata?.images?.length ? b.metadata.images : b.content ? [b.content] : []));
+  const fromImage = blocks.filter((b) => b.type === 'image').flatMap((b) => (b.metadata?.images?.length ? b.metadata.images : b.content ? [b.content] : []));
+  const fromCinematic = blocks.filter((b) => b.type === 'cinematic').map((b) => b.metadata?.cinematicImage).filter(Boolean) as string[];
+  return [...fromImage, ...fromCinematic];
 }
 
   const handleOpenAddPanel = useCallback(() => {
@@ -205,6 +209,25 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
     if (type === 'text') {
       setIsEditPanelOpen(false);
     }
+  }, [editorData.blocks.length]);
+
+  const handleSelectCinematicTemplate = useCallback((layout: LayoutType) => {
+    const newBlock: ContentBlockType = {
+      id: generateId(),
+      type: 'cinematic',
+      content: '',
+      order: editorData.blocks.length,
+      metadata: {
+        cinematicLayout: layout,
+        cinematicImage: getCinematicPlaceholderImage(),
+      },
+    };
+    setEditorData(prev => ({
+      ...prev,
+      blocks: [...prev.blocks, newBlock],
+    }));
+    setEditingBlock(newBlock);
+    setSelectedBlockId(newBlock.id);
   }, [editorData.blocks.length]);
 
   const handleInsertGeneratedContent = useCallback((html: string) => {
@@ -320,6 +343,25 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
     setEditingBlock(null);
   }, [editingBlock]);
 
+  const handleCinematicBlockUpdate = useCallback((blockId: string, updates: Partial<StoryBlock>) => {
+    setEditorData(prev => ({
+      ...prev,
+      blocks: prev.blocks.map(b => {
+        if (b.id !== blockId || b.type !== 'cinematic') return b;
+        return {
+          ...b,
+          content: updates.text !== undefined ? updates.text : b.content,
+          metadata: {
+            ...b.metadata,
+            ...(updates.image !== undefined && { cinematicImage: updates.image }),
+            ...(updates.imageFilter !== undefined && { imageFilter: updates.imageFilter }),
+            ...(updates.mood !== undefined && { mood: updates.mood }),
+          },
+        };
+      }),
+    }));
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col animate-fadeIn font-sans bg-[#fbfbfd] text-[#1d1d1f]">
       <EditorHeader
@@ -367,14 +409,16 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
           <div className="space-y-3 pt-2">
             {editorData.blocks
               .sort((a, b) => a.order - b.order)
-              .map((block) => (
+              .map((block, index) => (
                 <ContentBlock
                   key={block.id}
                   block={block}
+                  index={index}
                   isSelected={selectedBlockId === block.id}
                   onClick={() => handleBlockClick(block.id)}
                   onEdit={() => handleEditBlock(block.id)}
                   onTextChange={handleTextBlockChange}
+                  onCinematicUpdate={handleCinematicBlockUpdate}
                 />
               ))}
           </div>
@@ -395,6 +439,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
         onDelete={handleDeleteBlock}
         onDiscard={handleDiscardBlock}
         onSelectType={handleSelectType}
+        onSelectCinematicTemplate={handleSelectCinematicTemplate}
         onInsertGeneratedContent={handleInsertGeneratedContent}
         onInsertGeneratedBlocks={handleInsertGeneratedBlocks}
       />
@@ -430,6 +475,12 @@ function generateRichContent(data: TravelEditorData): string {
           html += `<img src="${escapeHtml(block.content)}" alt="Travel memory" />`;
         }
         break;
+      case 'cinematic': {
+        const img = block.metadata?.cinematicImage;
+        if (img) html += `<img src="${escapeHtml(img)}" alt="Story moment" />`;
+        if (block.content) html += `<p>${escapeHtml(block.content)}</p>`;
+        break;
+      }
       case 'video':
         if (block.content) {
           html += `<video src="${escapeHtml(block.content)}" controls></video>`;

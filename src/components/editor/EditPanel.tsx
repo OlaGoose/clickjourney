@@ -7,6 +7,9 @@ import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
 import BlockRichTextEditor from '@/components/editor/BlockRichTextEditor';
 import type { ContentBlock, ContentBlockType, ImageDisplayMode } from '@/types/editor';
 import type { AIGeneratedDocBlock } from '@/types/ai-document-blocks';
+import type { LayoutType } from '@/types/cinematic';
+import { CINEMATIC_TEMPLATES, ALL_CINEMATIC_LAYOUTS } from '@/lib/editor-cinematic-templates';
+import { CinematicTemplatePreview } from '@/components/editor/CinematicTemplatePreview';
 
 const MAX_IMAGES = 6;
 
@@ -20,6 +23,8 @@ function blockHasContent(b: ContentBlock): boolean {
     case 'image':
       const imgs = b.metadata?.images?.length ? b.metadata.images : b.content ? [b.content] : [];
       return imgs.length > 0;
+    case 'cinematic':
+      return !!(b.metadata?.cinematicImage || (b.content ?? '').trim());
     case 'video':
     case 'audio':
       return (b.content ?? '').length > 0;
@@ -38,6 +43,8 @@ interface EditPanelProps {
   onDiscard?: () => void;
   /** When set and block is null, panel shows type picker; when user selects type, this is called. */
   onSelectType?: (type: ContentBlockType) => void;
+  /** When user selects a cinematic layout template, this is called with the layout. */
+  onSelectCinematicTemplate?: (layout: LayoutType) => void;
   /** When user inserts AI-generated content as richtext, this is called with HTML. */
   onInsertGeneratedContent?: (html: string) => void;
   /** When user inserts AI-generated document blocks (richtext/text/image), this is called. imageUrls 与生成时上传顺序一致，用于解析 imageIndex。 */
@@ -53,7 +60,7 @@ const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[
 ];
 
 /** Apple light mode only: white panel, gray controls, #1d1d1f text. Apple Arcade–inspired layout. */
-export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, onSelectType, onInsertGeneratedContent, onInsertGeneratedBlocks }: EditPanelProps) {
+export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, onSelectType, onSelectCinematicTemplate, onInsertGeneratedContent, onInsertGeneratedBlocks }: EditPanelProps) {
   const [content, setContent] = useState('');
   const [fileName, setFileName] = useState('');
   const [images, setImages] = useState<string[]>([]);
@@ -83,6 +90,9 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     }
   }, [isOpen]);
 
+  const [cinematicImage, setCinematicImage] = useState('');
+  const [cinematicLayout, setCinematicLayout] = useState<LayoutType>('full_bleed');
+
   useEffect(() => {
     if (block) {
       setContent(block.content);
@@ -96,6 +106,10 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             : [];
         setImages(list);
         setImageDisplayMode(block.metadata?.imageDisplayMode ?? 'grid');
+      }
+      if (block.type === 'cinematic') {
+        setCinematicImage(block.metadata?.cinematicImage ?? '');
+        setCinematicLayout(block.metadata?.cinematicLayout ?? 'full_bleed');
       }
     }
   }, [block]);
@@ -274,7 +288,27 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-5">
             {templateTab === 'template' && (
-              <div className="py-16 text-center text-[13px] text-[#86868b]">—</div>
+              <div className="space-y-3">
+                <p className="text-[13px] text-[#6e6e73] mb-3">杂志风区块（选布局即插入）</p>
+                {CINEMATIC_TEMPLATES.map((t) => (
+                  <button
+                    key={t.layout}
+                    type="button"
+                    onClick={() => {
+                      onSelectCinematicTemplate?.(t.layout);
+                      setTemplatePanelOpen(false);
+                      onClose();
+                    }}
+                    className="w-full flex items-center gap-4 rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99]"
+                  >
+                    <div className="flex-shrink-0 w-20 h-[52px] rounded-xl overflow-hidden bg-[#f5f5f7]">
+                      <CinematicTemplatePreview layout={t.layout} className="h-full w-full" />
+                    </div>
+                    <span className="flex-1">{t.label}</span>
+                    <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
             )}
             {templateTab === 'ai' && (
               <div className="space-y-4">
@@ -442,6 +476,17 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           ...block.metadata,
           images: images.length ? images : undefined,
           imageDisplayMode,
+        },
+      };
+    }
+    if (block.type === 'cinematic') {
+      return {
+        ...block,
+        content,
+        metadata: {
+          ...block.metadata,
+          cinematicLayout: cinematicLayout,
+          cinematicImage: cinematicImage || block.metadata?.cinematicImage,
         },
       };
     }
@@ -638,6 +683,66 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           </div>
         );
 
+      case 'cinematic':
+        return (
+          <div className="flex-1 px-4 space-y-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) setCinematicImage(URL.createObjectURL(file));
+                e.target.value = '';
+              }}
+              className="hidden"
+            />
+            <div>
+              <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">布局</label>
+              <select
+                value={cinematicLayout}
+                onChange={(e) => setCinematicLayout(e.target.value as LayoutType)}
+                className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+              >
+                {ALL_CINEMATIC_LAYOUTS.map((t) => (
+                  <option key={t.layout} value={t.layout}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+            {cinematicImage ? (
+              <div className="space-y-2">
+                <img src={cinematicImage} alt="" className="w-full rounded-2xl object-cover max-h-48" />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full rounded-full py-2.5 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09]"
+                >
+                  更换图片
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex h-32 w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.1] hover:bg-black/[0.02]"
+              >
+                <ImageIcon size={24} className="text-[#86868b]" />
+                <span className="text-[13px] text-[#6e6e73]">添加图片</span>
+              </button>
+            )}
+            <div>
+              <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">图注 / 文案</label>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="描述这个瞬间..."
+                rows={3}
+                className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
+              />
+            </div>
+          </div>
+        );
+
       case 'audio':
         return (
           <div className="flex-1 px-4 space-y-4">
@@ -757,6 +862,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             {block.type === 'image' && '图片'}
             {block.type === 'video' && '视频'}
             {block.type === 'audio' && '音频'}
+            {block.type === 'cinematic' && (ALL_CINEMATIC_LAYOUTS.find((t) => t.layout === block.metadata?.cinematicLayout)?.label ?? '杂志风区块')}
           </h3>
           <button
             type="button"

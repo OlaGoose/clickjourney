@@ -137,8 +137,8 @@ export function RichStoryDetail({ memory, onBack, shareView = false }: RichStory
 
         {hasBlocks ? (
           <div className="space-y-3 pt-2">
-            {blocks.map((block) => (
-              <ContentBlock key={block.id} block={block} readOnly />
+            {blocks.map((block, index) => (
+              <ContentBlock key={block.id} block={block} index={index} readOnly />
             ))}
           </div>
         ) : richContent ? (

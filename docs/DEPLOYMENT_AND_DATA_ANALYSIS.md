@@ -34,7 +34,7 @@
    - `getCarouselItems(userId)` → `fetchMemoriesForUser` → `MemoryService.listMemories(userId)`  
    - 读的是 IndexedDB，不直接读 Supabase  
 
-3. **新建记忆**（`/memories/new`）  
+3. **新建记忆**（`/memories/editor`）  
    - `saveMemory(userId, memory)` → `MemoryService.createMemory()` → `MemoryRepository.create()` 写 IndexedDB  
    - 若有 Supabase 且非 Mock：`SyncEngine.push()` 在后台把 pending 推到 Supabase  
 

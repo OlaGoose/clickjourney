@@ -3,7 +3,9 @@
  * Types for the travel content editor
  */
 
-export type ContentBlockType = 'text' | 'image' | 'video' | 'audio' | 'richtext';
+import type { LayoutType } from './cinematic';
+
+export type ContentBlockType = 'text' | 'image' | 'video' | 'audio' | 'richtext' | 'cinematic';
 
 export interface ContentBlock {
   id: string;
@@ -18,6 +20,14 @@ export interface ContentBlock {
     images?: string[];
     /** How to display images: grid (PhotoGrid) or gallery (upload-style polaroid). */
     imageDisplayMode?: ImageDisplayMode;
+    /** Cinematic block: layout from cinematic templates (full_bleed, hero_split, etc.). */
+    cinematicLayout?: LayoutType;
+    /** Cinematic block: single image URL for the block. */
+    cinematicImage?: string;
+    /** Cinematic block: optional image filter. */
+    imageFilter?: 'none' | 'grayscale' | 'warm' | 'cool' | 'vibrant' | 'muted';
+    /** Cinematic block: optional mood label. */
+    mood?: string;
   };
 }
 
