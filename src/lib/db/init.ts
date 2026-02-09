@@ -9,7 +9,7 @@ import React, { useEffect } from 'react';
 import { MemoryService } from './services/memory-service';
 import { installDevTools } from './utils/dev-tools';
 import { logEnvironmentInfo, isDevelopment } from './utils/environment';
-import { initializeDemoData } from './utils/demo-data';
+import { initializeDemoData, hasDemoData } from './utils/demo-data';
 import { useAuth } from '@/lib/auth';
 
 /**
@@ -32,9 +32,9 @@ export function useInitializeDatabase() {
     // Initialize memory service
     const init = async () => {
       try {
-        // Initialize demo data for non-authenticated users
+        // Initialize demo data for non-authenticated users (only if not already present, avoid duplicate init)
         if (!userId) {
-          await initializeDemoData();
+          if (!(await hasDemoData())) await initializeDemoData();
         }
         
         // Initialize memory service (starts sync if authenticated)
