@@ -7,6 +7,7 @@ import { ContentBlock } from '@/components/editor/ContentBlock';
 import { EditPanel } from '@/components/editor/EditPanel';
 import { AddBlockButton } from '@/components/editor/AddBlockButton';
 import type { TravelEditorData, ContentBlock as ContentBlockType } from '@/types/editor';
+import type { AIGeneratedDocBlock } from '@/types/ai-document-blocks';
 import { saveMemory, updateMemory } from '@/lib/storage';
 import { useOptionalAuth } from '@/lib/auth';
 import { MemoryService } from '@/lib/db/services/memory-service';
@@ -222,6 +223,38 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
     setEditingBlock(null);
   }, [editorData.blocks.length]);
 
+  const handleInsertGeneratedBlocks = useCallback((blocks: AIGeneratedDocBlock[], imageUrls: string[]) => {
+    const baseOrder = editorData.blocks.length;
+    const newBlocks: ContentBlockType[] = blocks.map((b, i) => {
+      const id = generateId();
+      const order = baseOrder + i;
+      if (b.type === 'richtext') {
+        return { id, type: 'richtext', content: b.content ?? '', order };
+      }
+      if (b.type === 'text') {
+        return { id, type: 'text', content: b.content ?? '', order };
+      }
+      if (b.type === 'image') {
+        const url = imageUrls[b.imageIndex];
+        return {
+          id,
+          type: 'image',
+          content: url ?? '',
+          order,
+          metadata: { images: url ? [url] : [] },
+        };
+      }
+      return { id, type: 'text', content: '', order };
+    });
+    setEditorData(prev => ({
+      ...prev,
+      blocks: [...prev.blocks, ...newBlocks],
+    }));
+    if (newBlocks.length > 0) setSelectedBlockId(newBlocks[0].id);
+    setIsEditPanelOpen(false);
+    setEditingBlock(null);
+  }, [editorData.blocks.length]);
+
   const handleTextBlockChange = useCallback((blockId: string, content: string) => {
     setEditorData(prev => ({
       ...prev,
@@ -363,6 +396,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
         onDiscard={handleDiscardBlock}
         onSelectType={handleSelectType}
         onInsertGeneratedContent={handleInsertGeneratedContent}
+        onInsertGeneratedBlocks={handleInsertGeneratedBlocks}
       />
     </div>
   );

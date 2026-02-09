@@ -87,7 +87,10 @@ export function ContentBlock({
         return (
           <div
             className="w-full py-3"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!readOnly) onClick?.();
+            }}
           >
             {hasContent ? (
               <div
@@ -115,7 +118,10 @@ export function ContentBlock({
         return (
           <div
             className={`relative w-full ${displayMode === 'gallery' ? 'overflow-visible' : ''}`}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!readOnly) onClick?.();
+            }}
           >
             {images.length > 0 ? (
               displayMode === 'gallery' ? (

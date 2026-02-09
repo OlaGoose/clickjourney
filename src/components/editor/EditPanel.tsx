@@ -5,8 +5,8 @@ import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as Mus
 import PhotoGrid from '@/components/PhotoGrid';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
 import BlockRichTextEditor from '@/components/editor/BlockRichTextEditor';
-import { sanitizeBlockHtml } from '@/lib/sanitize-block-html';
 import type { ContentBlock, ContentBlockType, ImageDisplayMode } from '@/types/editor';
+import type { AIGeneratedDocBlock } from '@/types/ai-document-blocks';
 
 const MAX_IMAGES = 6;
 
@@ -38,8 +38,10 @@ interface EditPanelProps {
   onDiscard?: () => void;
   /** When set and block is null, panel shows type picker; when user selects type, this is called. */
   onSelectType?: (type: ContentBlockType) => void;
-  /** When user inserts AI-generated section content from template panel, this is called with HTML. */
+  /** When user inserts AI-generated content as richtext, this is called with HTML. */
   onInsertGeneratedContent?: (html: string) => void;
+  /** When user inserts AI-generated document blocks (richtext/text/image), this is called. imageUrls 与生成时上传顺序一致，用于解析 imageIndex。 */
+  onInsertGeneratedBlocks?: (blocks: AIGeneratedDocBlock[], imageUrls: string[]) => void;
 }
 
 const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[] = [
@@ -51,7 +53,7 @@ const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[
 ];
 
 /** Apple light mode only: white panel, gray controls, #1d1d1f text. Apple Arcade–inspired layout. */
-export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, onSelectType, onInsertGeneratedContent }: EditPanelProps) {
+export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, onSelectType, onInsertGeneratedContent, onInsertGeneratedBlocks }: EditPanelProps) {
   const [content, setContent] = useState('');
   const [fileName, setFileName] = useState('');
   const [images, setImages] = useState<string[]>([]);
@@ -61,7 +63,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
   const [templateTab, setTemplateTab] = useState<'template' | 'ai'>('template');
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiImages, setAiImages] = useState<string[]>([]);
-  const [aiGeneratedHtml, setAiGeneratedHtml] = useState('');
+  const [aiGeneratedBlocks, setAiGeneratedBlocks] = useState<AIGeneratedDocBlock[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,7 +78,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
       setTemplateTab('template');
       setAiPrompt('');
       setAiImages([]);
-      setAiGeneratedHtml('');
+      setAiGeneratedBlocks([]);
       setAiError(null);
     }
   }, [isOpen]);
@@ -158,9 +160,11 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     if (!aiPrompt.trim()) return;
     setAiLoading(true);
     setAiError(null);
-    setAiGeneratedHtml('');
+    setAiGeneratedBlocks([]);
     try {
-      const body: { prompt: string; images?: string[] } = { prompt: aiPrompt.trim() };
+      const body: { prompt: string; images?: string[] } = {
+        prompt: aiPrompt.trim(),
+      };
       if (aiImages.length > 0) {
         const dataUrls = await Promise.all(
           aiImages.map((url) =>
@@ -186,8 +190,8 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '生成失败');
-      if (!data.html) throw new Error('未返回内容');
-      setAiGeneratedHtml(data.html);
+      if (!Array.isArray(data.blocks)) throw new Error('未返回内容块');
+      setAiGeneratedBlocks(data.blocks);
     } catch (e) {
       setAiError(e instanceof Error ? e.message : '生成失败，请重试');
     } finally {
@@ -195,11 +199,12 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     }
   }, [aiPrompt, aiImages]);
 
-  const handleInsertGenerated = useCallback(() => {
-    if (!aiGeneratedHtml.trim() || !onInsertGeneratedContent) return;
-    onInsertGeneratedContent(aiGeneratedHtml.trim());
-    setAiGeneratedHtml('');
-  }, [aiGeneratedHtml, onInsertGeneratedContent]);
+  const handleInsertAsBlocks = useCallback(() => {
+    if (aiGeneratedBlocks.length === 0 || !onInsertGeneratedBlocks) return;
+    onInsertGeneratedBlocks(aiGeneratedBlocks, aiImages);
+    setAiGeneratedBlocks([]);
+    onClose();
+  }, [aiGeneratedBlocks, aiImages, onInsertGeneratedBlocks, onClose]);
 
   /** Template panel: 模版 (待开发) + AI (prompt → preview → 插入) */
   if (showTypePicker && templatePanelOpen) {
@@ -344,21 +349,17 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                   )}
                 </button>
                 {aiError && <p className="text-[13px] text-[#ff3b30]">{aiError}</p>}
-                {aiGeneratedHtml && (
+                {aiGeneratedBlocks.length > 0 && (
                   <>
-                    <div>
-                      <p className="mb-1.5 text-[13px] font-medium text-[#6e6e73]">预览</p>
-                      <div
-                        className="rounded-2xl border border-black/[0.08] bg-[#fafafa] p-4 text-[15px] text-[#1d1d1f] leading-relaxed prose prose-neutral max-w-none [&_a]:text-[#007aff] [&_a]:underline [&_h2]:text-lg [&_h3]:text-base"
-                        dangerouslySetInnerHTML={{ __html: typeof document !== 'undefined' ? sanitizeBlockHtml(aiGeneratedHtml) : aiGeneratedHtml }}
-                      />
-                    </div>
+                    <p className="text-[13px] text-[#6e6e73]">
+                      已生成 {aiGeneratedBlocks.length} 个内容块，将按顺序插入文档。
+                    </p>
                     <button
                       type="button"
-                      onClick={handleInsertGenerated}
-                      className="w-full rounded-[14px] py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] active:scale-[0.98]"
+                      onClick={handleInsertAsBlocks}
+                      className="w-full rounded-[14px] py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] active:scale-[0.98] flex items-center justify-center gap-2"
                     >
-                      插入到正文
+                      插入文档
                     </button>
                   </>
                 )}
