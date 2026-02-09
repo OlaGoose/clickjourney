@@ -206,6 +206,22 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
     }
   }, [editorData.blocks.length]);
 
+  const handleInsertGeneratedContent = useCallback((html: string) => {
+    const newBlock: ContentBlockType = {
+      id: generateId(),
+      type: 'richtext',
+      content: html,
+      order: editorData.blocks.length,
+    };
+    setEditorData(prev => ({
+      ...prev,
+      blocks: [...prev.blocks, newBlock],
+    }));
+    setSelectedBlockId(newBlock.id);
+    setIsEditPanelOpen(false);
+    setEditingBlock(null);
+  }, [editorData.blocks.length]);
+
   const handleTextBlockChange = useCallback((blockId: string, content: string) => {
     setEditorData(prev => ({
       ...prev,
@@ -346,6 +362,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
         onDelete={handleDeleteBlock}
         onDiscard={handleDiscardBlock}
         onSelectType={handleSelectType}
+        onInsertGeneratedContent={handleInsertGeneratedContent}
       />
     </div>
   );

@@ -51,7 +51,7 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
     editorProps: {
       attributes: {
         class:
-          'prose prose-neutral max-w-none focus:outline-none min-h-[120px] px-2 py-3 text-[15px] leading-relaxed [&_.ProseMirror]:min-h-[100px] [&_.ProseMirror]:text-[#1d1d1f] [&_.ProseMirror_p]:text-[#1d1d1f] [&_.ProseMirror_li]:text-[#1d1d1f] [&_.ProseMirror_h1]:text-[#1d1d1f] [&_.ProseMirror_h2]:text-[#1d1d1f] [&_.ProseMirror_h3]:text-[#1d1d1f] [&_.ProseMirror_blockquote]:text-[#1d1d1f]',
+          'prose prose-neutral max-w-none focus:outline-none min-h-[120px] px-2 py-3 text-[15px] leading-relaxed [&_.ProseMirror]:min-h-[100px] [&_.ProseMirror]:!text-[#1d1d1f] [&_.ProseMirror_p]:!text-[#1d1d1f] [&_.ProseMirror_li]:!text-[#1d1d1f] [&_.ProseMirror_h1]:!text-[#1d1d1f] [&_.ProseMirror_h2]:!text-[#1d1d1f] [&_.ProseMirror_h3]:!text-[#1d1d1f] [&_.ProseMirror_blockquote]:!text-[#1d1d1f] [&_.ProseMirror_div]:!text-[#1d1d1f]',
       },
     },
     onUpdate: ({ editor }) => {
@@ -85,7 +85,17 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
     }`;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex-1 flex flex-col min-h-0 block-richtext-editor">
+      <style dangerouslySetInnerHTML={{ __html: `
+        .block-richtext-editor .ProseMirror,
+        .block-richtext-editor .ProseMirror p,
+        .block-richtext-editor .ProseMirror li,
+        .block-richtext-editor .ProseMirror h1,
+        .block-richtext-editor .ProseMirror h2,
+        .block-richtext-editor .ProseMirror h3,
+        .block-richtext-editor .ProseMirror blockquote,
+        .block-richtext-editor .ProseMirror div { color: #1d1d1f !important; }
+      `}} />
       <div className="flex flex-wrap items-center gap-1 p-2 border-b border-black/[0.06] bg-[#fafafa] rounded-t-2xl">
         <button
           type="button"

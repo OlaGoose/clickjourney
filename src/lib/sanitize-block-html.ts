@@ -4,12 +4,18 @@
  */
 const ALLOWED_TAGS = new Set([
   'p', 'div', 'strong', 'em', 'b', 'i', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-  'ul', 'ol', 'li', 'blockquote', 'span', 'br', 'a',
+  'ul', 'ol', 'li', 'blockquote', 'span', 'br', 'a', 'img',
 ]);
 const ALLOWED_ATTRS: Record<string, Set<string>> = {
   a: new Set(['href', 'target', 'rel']),
   span: new Set(['style']), // for color
+  img: new Set(['src', 'alt']),
 };
+
+function isSafeImgSrc(src: string): boolean {
+  const s = src.trim();
+  return s.startsWith('data:image/') || s.startsWith('https://');
+}
 
 /** Strip script/iframe and on* attributes when DOM is not available (e.g. SSR). */
 function stripDangerousBasic(html: string): string {
@@ -32,6 +38,13 @@ export function sanitizeBlockHtml(html: string): string {
     const tag = el.tagName.toLowerCase();
     if (!ALLOWED_TAGS.has(tag)) return el.textContent || '';
     if (tag === 'br') return '<br>';
+    if (tag === 'img') {
+      const src = el.getAttribute('src');
+      if (!src || !isSafeImgSrc(src)) return '';
+      const alt = (el.getAttribute('alt') || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      const safeSrc = src.replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      return `<img src="${safeSrc}" alt="${alt}">`;
+    }
     const attrs = ALLOWED_ATTRS[tag];
     let out = '<' + tag;
     if (attrs && el.attributes) {

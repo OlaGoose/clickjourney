@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, LayoutGrid, Images, Mic, Square, Type, FileText } from 'lucide-react';
+import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, LayoutGrid, Images, Mic, Square, Type, FileText, LayoutTemplate, ChevronLeft, Sparkles } from 'lucide-react';
 import PhotoGrid from '@/components/PhotoGrid';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
 import BlockRichTextEditor from '@/components/editor/BlockRichTextEditor';
+import { sanitizeBlockHtml } from '@/lib/sanitize-block-html';
 import type { ContentBlock, ContentBlockType, ImageDisplayMode } from '@/types/editor';
 
 const MAX_IMAGES = 6;
@@ -37,6 +38,8 @@ interface EditPanelProps {
   onDiscard?: () => void;
   /** When set and block is null, panel shows type picker; when user selects type, this is called. */
   onSelectType?: (type: ContentBlockType) => void;
+  /** When user inserts AI-generated section content from template panel, this is called with HTML. */
+  onInsertGeneratedContent?: (html: string) => void;
 }
 
 const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[] = [
@@ -48,16 +51,35 @@ const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[
 ];
 
 /** Apple light mode only: white panel, gray controls, #1d1d1f text. Apple Arcade–inspired layout. */
-export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, onSelectType }: EditPanelProps) {
+export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, onSelectType, onInsertGeneratedContent }: EditPanelProps) {
   const [content, setContent] = useState('');
   const [fileName, setFileName] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [imageDisplayMode, setImageDisplayMode] = useState<ImageDisplayMode>('grid');
   const [isRecording, setIsRecording] = useState(false);
+  const [templatePanelOpen, setTemplatePanelOpen] = useState(false);
+  const [templateTab, setTemplateTab] = useState<'template' | 'ai'>('template');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiImages, setAiImages] = useState<string[]>([]);
+  const [aiGeneratedHtml, setAiGeneratedHtml] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const aiImageInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setTemplatePanelOpen(false);
+      setTemplateTab('template');
+      setAiPrompt('');
+      setAiImages([]);
+      setAiGeneratedHtml('');
+      setAiError(null);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (block) {
@@ -120,7 +142,235 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
 
   const showTypePicker = isOpen && !block && onSelectType;
 
-  /** Type picker view (Apple Arcade–style): when adding new block, show choice in same sheet. */
+  const handleAiImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const urls: string[] = [];
+    for (let i = 0; i < files.length && urls.length < MAX_IMAGES; i++) {
+      const file = files[i];
+      if (file?.type.startsWith('image/')) urls.push(URL.createObjectURL(file));
+    }
+    setAiImages((prev) => [...prev, ...urls].slice(0, MAX_IMAGES));
+    e.target.value = '';
+  }, []);
+
+  const handleGenerateSection = useCallback(async () => {
+    if (!aiPrompt.trim()) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiGeneratedHtml('');
+    try {
+      const body: { prompt: string; images?: string[] } = { prompt: aiPrompt.trim() };
+      if (aiImages.length > 0) {
+        const dataUrls = await Promise.all(
+          aiImages.map((url) =>
+            fetch(url)
+              .then((r) => r.blob())
+              .then(
+                (blob) =>
+                  new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                  })
+              )
+          )
+        );
+        body.images = dataUrls;
+      }
+      const res = await fetch('/api/generate-section', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '生成失败');
+      if (!data.html) throw new Error('未返回内容');
+      setAiGeneratedHtml(data.html);
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : '生成失败，请重试');
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiPrompt, aiImages]);
+
+  const handleInsertGenerated = useCallback(() => {
+    if (!aiGeneratedHtml.trim() || !onInsertGeneratedContent) return;
+    onInsertGeneratedContent(aiGeneratedHtml.trim());
+    setAiGeneratedHtml('');
+  }, [aiGeneratedHtml, onInsertGeneratedContent]);
+
+  /** Template panel: 模版 (待开发) + AI (prompt → preview → 插入) */
+  if (showTypePicker && templatePanelOpen) {
+    return (
+      <>
+        <div
+          className={`fixed inset-0 z-40 backdrop-blur-md transition-opacity duration-300 bg-black/25 ${isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+          onClick={onClose}
+          aria-hidden
+        />
+        <div
+          className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[70vh] flex-col rounded-t-[32px] bg-[#fbfbfd] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] ${
+            isOpen ? 'translate-y-0 animate-sheetSlideUp' : 'translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]'
+          }`}
+        >
+          <div className="flex items-center justify-center pt-3 pb-2">
+            <div className="h-1 w-10 rounded-full bg-[#d2d2d7]" />
+          </div>
+          <div className="grid grid-cols-3 items-center px-4 pb-2">
+            <button
+              type="button"
+              onClick={() => setTemplatePanelOpen(false)}
+              className="justify-self-start rounded-full p-2.5 text-[#1d1d1f] hover:bg-[#f5f5f7] active:scale-95"
+              aria-label="返回"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <h3 className="text-center text-[17px] font-semibold text-[#1d1d1f]">模版</h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-[#f5f5f7] active:scale-95"
+              aria-label="关闭"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <div className="flex border-b border-black/[0.06] px-4">
+            <button
+              type="button"
+              onClick={() => setTemplateTab('template')}
+              className={`flex items-center gap-1.5 px-4 py-3 text-[14px] font-semibold border-b-2 transition-colors ${
+                templateTab === 'template'
+                  ? 'border-[#1d1d1f] text-[#1d1d1f]'
+                  : 'border-transparent text-[#6e6e73] hover:text-[#1d1d1f]'
+              }`}
+            >
+              <LayoutTemplate size={16} />
+              模版
+            </button>
+            <button
+              type="button"
+              onClick={() => setTemplateTab('ai')}
+              className={`flex items-center gap-1.5 px-4 py-3 text-[14px] font-semibold border-b-2 transition-colors ${
+                templateTab === 'ai'
+                  ? 'border-[#1d1d1f] text-[#1d1d1f]'
+                  : 'border-transparent text-[#6e6e73] hover:text-[#1d1d1f]'
+              }`}
+            >
+              <Sparkles size={16} />
+              AI
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            {templateTab === 'template' && (
+              <div className="py-8 text-center text-[15px] text-[#6e6e73]">待开发</div>
+            )}
+            {templateTab === 'ai' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-[13px] font-medium text-[#6e6e73]">可选：上传图片（多模态生成）</label>
+                  <input
+                    ref={aiImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleAiImageSelect}
+                    className="hidden"
+                  />
+                  {aiImages.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {aiImages.map((url, idx) => (
+                        <div key={url} className="relative">
+                          <img src={url} alt="" className="h-16 w-16 rounded-xl object-cover border border-black/[0.08]" />
+                          <button
+                            type="button"
+                            onClick={() => setAiImages((p) => p.filter((_, i) => i !== idx))}
+                            className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center"
+                            aria-label="移除"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                      {aiImages.length < MAX_IMAGES && (
+                        <button
+                          type="button"
+                          onClick={() => aiImageInputRef.current?.click()}
+                          className="h-16 w-16 rounded-xl border border-dashed border-black/[0.2] flex items-center justify-center text-[#6e6e73] hover:bg-[#f5f5f7]"
+                        >
+                          <Upload size={20} />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => aiImageInputRef.current?.click()}
+                      className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.12] py-3 text-[14px] text-[#6e6e73] hover:bg-[#f5f5f7]"
+                    >
+                      <ImageIcon size={18} />
+                      添加图片（最多 {MAX_IMAGES} 张，与描述一起生成多模态内容）
+                    </button>
+                  )}
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[13px] font-medium text-[#6e6e73]">心境故事</label>
+                  <textarea
+                    value={aiPrompt}
+                    onChange={(e) => { setAiPrompt(e.target.value); setAiError(null); }}
+                    placeholder={aiImages.length > 0 ? '写几句当时的心情或场景，AI 会结合图片生成杂志感排版' : '例如：那天到东京已经很晚，恍然一抬头，看到了东京独有的普鲁士蓝…'}
+                    className="w-full min-h-[88px] rounded-2xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-2 focus:ring-black/10"
+                    rows={3}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGenerateSection}
+                  disabled={aiLoading || !aiPrompt.trim()}
+                  className="flex w-full items-center justify-center gap-2 rounded-[14px] py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98]"
+                >
+                  {aiLoading ? (
+                    <>
+                      <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      生成中…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={18} />
+                      生成
+                    </>
+                  )}
+                </button>
+                {aiError && <p className="text-[13px] text-[#ff3b30]">{aiError}</p>}
+                {aiGeneratedHtml && (
+                  <>
+                    <div>
+                      <p className="mb-1.5 text-[13px] font-medium text-[#6e6e73]">预览</p>
+                      <div
+                        className="rounded-2xl border border-black/[0.08] bg-[#fafafa] p-4 text-[15px] text-[#1d1d1f] leading-relaxed prose prose-neutral max-w-none [&_a]:text-[#007aff] [&_a]:underline [&_h2]:text-lg [&_h3]:text-base"
+                        dangerouslySetInnerHTML={{ __html: typeof document !== 'undefined' ? sanitizeBlockHtml(aiGeneratedHtml) : aiGeneratedHtml }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleInsertGenerated}
+                      className="w-full rounded-[14px] py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] active:scale-[0.98]"
+                    >
+                      插入到正文
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  /** Type picker view (Apple Arcade–style): 模版 first, then block types. */
   if (showTypePicker) {
     return (
       <>
@@ -160,11 +410,21 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
               选择要添加的内容类型
             </p>
             <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setTemplatePanelOpen(true)}
+                className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white p-6 text-[#1d1d1f] border border-black/[0.06] shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:bg-[#fafafa] transition-all active:scale-[0.98]"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5f5f7]">
+                  <LayoutTemplate size={24} strokeWidth={2} className="text-[#6e6e73]" />
+                </div>
+                <span className="text-[15px] font-semibold">模版</span>
+              </button>
               {BLOCK_TYPES.map(({ type, icon: Icon, label }) => (
                 <button
                   key={type}
                   type="button"
-                  onClick={() => onSelectType(type)}
+                  onClick={() => onSelectType!(type)}
                   className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white p-6 text-[#1d1d1f] border border-black/[0.06] shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:bg-[#fafafa] transition-all active:scale-[0.98]"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5f5f7]">
