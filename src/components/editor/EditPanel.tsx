@@ -890,11 +890,11 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                   <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">横幅文案</label>
                   <input
                     type="text"
-                    value={sectionData.ribbon.text}
+                    value={sectionData.ribbon.message}
                     onChange={(e) =>
                       setSectionData((prev) => ({
                         ...prev,
-                        ribbon: prev.ribbon ? { ...prev.ribbon, text: e.target.value } : { text: e.target.value, cta: { label: '' } },
+                        ribbon: prev.ribbon ? { ...prev.ribbon, message: e.target.value } : { message: e.target.value, ctaLabel: '' },
                       }))
                     }
                     className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
@@ -905,11 +905,11 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                   <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">按钮文案</label>
                   <input
                     type="text"
-                    value={sectionData.ribbon.cta?.label ?? ''}
+                    value={sectionData.ribbon.ctaLabel ?? ''}
                     onChange={(e) =>
                       setSectionData((prev) => ({
                         ...prev,
-                        ribbon: prev.ribbon ? { ...prev.ribbon, cta: { label: e.target.value } } : { text: '', cta: { label: e.target.value } },
+                        ribbon: prev.ribbon ? { ...prev.ribbon, ctaLabel: e.target.value } : { message: '', ctaLabel: e.target.value },
                       }))
                     }
                     className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"

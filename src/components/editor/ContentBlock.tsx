@@ -228,8 +228,6 @@ export function ContentBlock({
             )}
           </div>
         );
-      case 'section':
-        return null; // handled above
       case 'audio':
         return (
           <div className="w-full" role="region" aria-label={block.content ? '音频播放' : '添加音频'}>
