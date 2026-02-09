@@ -14,6 +14,15 @@ import { CinematicTemplatePreview } from '@/components/editor/CinematicTemplateP
 
 const MAX_IMAGES = 6;
 
+/** 统一模板列表：杂志风与宣传区块合并为同一类 item，不区分 iOS/杂志风 */
+const UNIFIED_TEMPLATES: Array<
+  | { kind: 'cinematic'; layout: LayoutType; label: string }
+  | { kind: 'section'; id: SectionTemplateId; label: string }
+> = [
+  ...CINEMATIC_TEMPLATES.map((t) => ({ kind: 'cinematic' as const, layout: t.layout, label: t.label })),
+  ...SECTION_TEMPLATES.map((t) => ({ kind: 'section' as const, id: t.id, label: t.label })),
+];
+
 /** Returns true if the block has meaningful content (no empty blocks). */
 function blockHasContent(b: ContentBlock): boolean {
   switch (b.type) {
@@ -80,9 +89,12 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
   const [aiError, setAiError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const aiImageInputRef = useRef<HTMLInputElement>(null);
+  const sectionImageInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  /** 当前正在替换的 section 图片槽位，用于统一 file input 回调 */
+  const [sectionImageTarget, setSectionImageTarget] = useState<{ key: string } | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -102,6 +114,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
 
   useEffect(() => {
     if (block) {
+      setSectionImageTarget(null);
       setContent(block.content);
       setFileName(block.metadata?.fileName || '');
       setIsRecording(false);
@@ -300,19 +313,19 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-5">
             {templateTab === 'template' && (
-              <div className="space-y-5">
-                <div>
-                  <p className="text-[13px] text-[#6e6e73] mb-3">杂志风区块（选布局即插入）</p>
-                  {CINEMATIC_TEMPLATES.map((t) => (
+              <div className="space-y-2">
+                <p className="text-[13px] text-[#6e6e73] mb-3">选择布局即插入</p>
+                {UNIFIED_TEMPLATES.map((t) =>
+                  t.kind === 'cinematic' ? (
                     <button
-                      key={t.layout}
+                      key={`c-${t.layout}`}
                       type="button"
                       onClick={() => {
                         onSelectCinematicTemplate?.(t.layout);
                         setTemplatePanelOpen(false);
                         onClose();
                       }}
-                      className="w-full flex items-center gap-4 rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99] mb-2"
+                      className="w-full flex items-center gap-4 rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99]"
                     >
                       <div className="flex-shrink-0 w-20 h-[52px] rounded-xl overflow-hidden bg-[#f5f5f7]">
                         <CinematicTemplatePreview layout={t.layout} className="h-full w-full" />
@@ -320,29 +333,24 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                       <span className="flex-1">{t.label}</span>
                       <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
                     </button>
-                  ))}
-                </div>
-                {onSelectSectionTemplate && (
-                  <div>
-                    <p className="text-[13px] text-[#6e6e73] mb-3">宣传区块（Apple 风格）</p>
-                    <div className="grid grid-cols-1 gap-2">
-                      {SECTION_TEMPLATES.map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => {
-                            onSelectSectionTemplate(t.id);
-                            setTemplatePanelOpen(false);
-                            onClose();
-                          }}
-                          className="w-full flex items-center justify-between rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99]"
-                        >
-                          <span>{t.label}</span>
-                          <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  ) : onSelectSectionTemplate ? (
+                    <button
+                      key={`s-${t.id}`}
+                      type="button"
+                      onClick={() => {
+                        onSelectSectionTemplate(t.id);
+                        setTemplatePanelOpen(false);
+                        onClose();
+                      }}
+                      className="w-full flex items-center gap-4 rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99]"
+                    >
+                      <div className="flex-shrink-0 w-20 h-[52px] rounded-xl bg-[#f5f5f7] flex items-center justify-center">
+                        <LayoutTemplate size={24} strokeWidth={2} className="text-[#86868b]" />
+                      </div>
+                      <span className="flex-1">{t.label}</span>
+                      <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
+                    </button>
+                  ) : null
                 )}
               </div>
             )}
@@ -582,6 +590,46 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     fileInputRef.current?.click();
   };
 
+  const handleSectionImageSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !sectionImageTarget) return;
+      const url = URL.createObjectURL(file);
+      setSectionData((prev) => {
+        const next = { ...prev };
+        const [part, sub] = sectionImageTarget.key.split('.');
+        if (part === 'hero_cta' && next.hero_cta) {
+          next.hero_cta = { ...next.hero_cta, backgroundImage: url };
+        } else if (part === 'feature_card' && next.feature_card) {
+          next.feature_card = { ...next.feature_card, image: url };
+        } else if (part === 'two_column_router' && next.two_column_router) {
+          if (sub === 'left' && next.two_column_router.left) {
+            next.two_column_router = {
+              ...next.two_column_router,
+              left: { ...next.two_column_router.left, image: url },
+            };
+          } else if (sub === 'right' && next.two_column_router.right) {
+            next.two_column_router = {
+              ...next.two_column_router,
+              right: { ...next.two_column_router.right, image: url },
+            };
+          }
+        } else if (part === 'marquee' && next.marquee?.items) {
+          const idx = parseInt(sub, 10);
+          if (!Number.isNaN(idx) && next.marquee.items[idx]) {
+            const items = [...next.marquee.items];
+            items[idx] = { ...items[idx], image: url };
+            next.marquee = { ...next.marquee, items };
+          }
+        }
+        return next;
+      });
+      setSectionImageTarget(null);
+      e.target.value = '';
+    },
+    [sectionImageTarget]
+  );
+
   const renderEditor = () => {
     switch (block.type) {
       case 'text':
@@ -792,6 +840,13 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
       case 'section':
         return (
           <div className="flex-1 px-4 space-y-4">
+            <input
+              ref={sectionImageInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleSectionImageSelect}
+              className="hidden"
+            />
             <p className="text-[13px] text-[#6e6e73]">
               {SECTION_TEMPLATES.find((t) => t.id === sectionTemplateId)?.label ?? sectionTemplateId}
             </p>
@@ -866,21 +921,41 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">背景图 URL（可选）</label>
-                  <input
-                    type="text"
-                    value={sectionData.hero_cta.backgroundImage ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        hero_cta: prev.hero_cta
-                          ? { ...prev.hero_cta, backgroundImage: e.target.value || undefined }
-                          : { headline: '', primaryCta: { label: '' }, subline: '', backgroundImage: e.target.value || undefined },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="https://..."
-                  />
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">背景图</label>
+                  {sectionData.hero_cta.backgroundImage ? (
+                    <div className="space-y-2">
+                      <img src={sectionData.hero_cta.backgroundImage} alt="" className="w-full rounded-xl object-cover max-h-32" />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => { setSectionImageTarget({ key: 'hero_cta.backgroundImage' }); sectionImageInputRef.current?.click(); }}
+                          className="flex-1 rounded-full py-2 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
+                        >
+                          更换图片
+                        </button>
+                        <input
+                          type="text"
+                          value={sectionData.hero_cta.backgroundImage ?? ''}
+                          onChange={(e) =>
+                            setSectionData((prev) => ({
+                              ...prev,
+                              hero_cta: prev.hero_cta ? { ...prev.hero_cta, backgroundImage: e.target.value || undefined } : { headline: '', primaryCta: { label: '' }, subline: '', backgroundImage: e.target.value },
+                            }))
+                          }
+                          className="flex-1 rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-[13px]"
+                          placeholder="或粘贴 URL"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { setSectionImageTarget({ key: 'hero_cta.backgroundImage' }); sectionImageInputRef.current?.click(); }}
+                      className="w-full rounded-xl border border-dashed border-black/[0.1] py-3 text-[13px] text-[#6e6e73]"
+                    >
+                      上传图片
+                    </button>
+                  )}
                 </div>
               </>
             )}
@@ -935,8 +1010,353 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                 />
               </div>
             )}
-            {!['hero_cta', 'ribbon', 'value_props'].includes(sectionTemplateId) && (
-              <p className="text-[13px] text-[#86868b]">该模板内容已在画布中展示，后续可在此扩展编辑。</p>
+            {sectionTemplateId === 'tile_gallery' && sectionData.tile_gallery && (
+              <>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">区块标题</label>
+                  <input
+                    type="text"
+                    value={sectionData.tile_gallery.sectionHeadline ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        tile_gallery: prev.tile_gallery ? { ...prev.tile_gallery, sectionHeadline: e.target.value } : { sectionHeadline: e.target.value, tiles: [] },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="标题"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">卡片（每行：眉标|标题|描述|按钮文案）</label>
+                  <textarea
+                    value={sectionData.tile_gallery.tiles.map((t) => [t.eyebrow ?? '', t.title ?? '', t.copy ?? '', t.ctaLabel ?? ''].join('|')).join('\n')}
+                    onChange={(e) => {
+                      const lines = e.target.value.split('\n').filter(Boolean);
+                      setSectionData((prev) => ({
+                        ...prev,
+                        tile_gallery: {
+                          ...prev.tile_gallery!,
+                          tiles: lines.map((line) => {
+                            const [eyebrow, title, copy, ctaLabel] = line.split('|');
+                            return { eyebrow: eyebrow?.trim(), title: title?.trim() ?? '', copy: copy?.trim() ?? '', ctaLabel: ctaLabel?.trim() ?? '' };
+                          }),
+                        },
+                      }));
+                    }}
+                    rows={6}
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
+                    placeholder="方案 A|标题|说明|立即开始"
+                  />
+                </div>
+              </>
+            )}
+            {sectionTemplateId === 'feature_card' && sectionData.feature_card && (
+              <>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">眉标（可选）</label>
+                  <input
+                    type="text"
+                    value={sectionData.feature_card.eyebrow ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        feature_card: prev.feature_card ? { ...prev.feature_card, eyebrow: e.target.value } : { title: '', ctaLabel: '', eyebrow: e.target.value },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="推荐"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">标题</label>
+                  <input
+                    type="text"
+                    value={sectionData.feature_card.title ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        feature_card: prev.feature_card ? { ...prev.feature_card, title: e.target.value } : { title: e.target.value, ctaLabel: '' },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="特色标题"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">副标题（可选）</label>
+                  <input
+                    type="text"
+                    value={sectionData.feature_card.subtitle ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        feature_card: prev.feature_card ? { ...prev.feature_card, subtitle: e.target.value } : { title: '', ctaLabel: '', subtitle: e.target.value },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="一句话描述"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">主图</label>
+                  {sectionData.feature_card.image ? (
+                    <div className="space-y-2">
+                      <img src={sectionData.feature_card.image} alt="" className="w-full rounded-xl object-cover max-h-32" />
+                      <button
+                        type="button"
+                        onClick={() => { setSectionImageTarget({ key: 'feature_card.image' }); sectionImageInputRef.current?.click(); }}
+                        className="w-full rounded-full py-2 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
+                      >
+                        更换图片
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { setSectionImageTarget({ key: 'feature_card.image' }); sectionImageInputRef.current?.click(); }}
+                      className="w-full rounded-xl border border-dashed border-black/[0.1] py-3 text-[13px] text-[#6e6e73]"
+                    >
+                      上传图片
+                    </button>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">按钮文案</label>
+                  <input
+                    type="text"
+                    value={sectionData.feature_card.ctaLabel ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        feature_card: prev.feature_card ? { ...prev.feature_card, ctaLabel: e.target.value } : { title: '', ctaLabel: e.target.value },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="查看详情"
+                  />
+                </div>
+              </>
+            )}
+            {sectionTemplateId === 'marquee' && sectionData.marquee && (
+              <>
+                <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">横向滚动项（每项可换图）</label>
+                {sectionData.marquee.items.map((item, idx) => (
+                  <div key={idx} className="rounded-xl border border-black/[0.08] p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] text-[#6e6e73]">项 {idx + 1}</span>
+                    </div>
+                    {item.image ? (
+                      <div className="space-y-2">
+                        <img src={item.image} alt="" className="w-full rounded-lg object-cover h-20" />
+                        <button
+                          type="button"
+                          onClick={() => { setSectionImageTarget({ key: `marquee.${idx}` }); sectionImageInputRef.current?.click(); }}
+                          className="w-full rounded-full py-1.5 text-[12px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
+                        >
+                          更换图片
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setSectionImageTarget({ key: `marquee.${idx}` }); sectionImageInputRef.current?.click(); }}
+                        className="w-full rounded-lg border border-dashed border-black/[0.1] py-2 text-[12px] text-[#6e6e73]"
+                      >
+                        上传图片
+                      </button>
+                    )}
+                    <input
+                      type="text"
+                      value={item.title ?? ''}
+                      onChange={(e) => {
+                        const items = [...sectionData.marquee!.items];
+                        items[idx] = { ...items[idx], title: e.target.value };
+                        setSectionData((prev) => ({ ...prev, marquee: { ...prev.marquee!, items } }));
+                      }}
+                      className="w-full rounded-lg border border-black/[0.08] bg-white px-3 py-2 text-[14px]"
+                      placeholder="标题"
+                    />
+                  </div>
+                ))}
+              </>
+            )}
+            {sectionTemplateId === 'headline_grid' && sectionData.headline_grid && (
+              <>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">标题</label>
+                  <input
+                    type="text"
+                    value={sectionData.headline_grid.headline ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        headline_grid: prev.headline_grid ? { ...prev.headline_grid, headline: e.target.value } : { headline: e.target.value, items: [] },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="标题"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">副标题（可选）</label>
+                  <input
+                    type="text"
+                    value={sectionData.headline_grid.subline ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        headline_grid: prev.headline_grid ? { ...prev.headline_grid, subline: e.target.value } : { headline: '', items: [], subline: e.target.value },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="副标题"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">选项（每行一个）</label>
+                  <textarea
+                    value={(sectionData.headline_grid.items ?? []).map((i) => i.label ?? '').join('\n')}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        headline_grid: {
+                          ...prev.headline_grid!,
+                          items: e.target.value.split('\n').filter(Boolean).map((label) => ({ label })),
+                        },
+                      }))
+                    }
+                    rows={4}
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
+                    placeholder="选项一&#10;选项二"
+                  />
+                </div>
+              </>
+            )}
+            {sectionTemplateId === 'accordion' && sectionData.accordion && (
+              <>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">区块标题</label>
+                  <input
+                    type="text"
+                    value={sectionData.accordion.headline ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        accordion: prev.accordion ? { ...prev.accordion, headline: e.target.value } : { headline: e.target.value, items: [] },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="常见问题"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">问答（每两行：问题 + 回答）</label>
+                  <textarea
+                    value={(sectionData.accordion.items ?? []).map((i) => `${i.question}\n${i.answer}`).join('\n\n')}
+                    onChange={(e) => {
+                      const blocks = e.target.value.split('\n\n').filter(Boolean);
+                      setSectionData((prev) => ({
+                        ...prev,
+                        accordion: {
+                          ...prev.accordion!,
+                          items: blocks.map((block) => {
+                            const [q, ...rest] = block.split('\n');
+                            return { question: q ?? '', answer: rest.join('\n').trim() };
+                          }),
+                        },
+                      }));
+                    }}
+                    rows={8}
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
+                    placeholder="第一个问题？&#10;第一个问题的回答。"
+                  />
+                </div>
+              </>
+            )}
+            {sectionTemplateId === 'two_column_router' && sectionData.two_column_router && (
+              <>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">左侧</label>
+                  <div className="rounded-xl border border-black/[0.08] p-3 space-y-2">
+                    {sectionData.two_column_router.left?.image ? (
+                      <>
+                        <img src={sectionData.two_column_router.left.image} alt="" className="w-full rounded-lg object-cover h-24" />
+                        <button
+                          type="button"
+                          onClick={() => { setSectionImageTarget({ key: 'two_column_router.left' }); sectionImageInputRef.current?.click(); }}
+                          className="w-full rounded-full py-2 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
+                        >
+                          更换图片
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setSectionImageTarget({ key: 'two_column_router.left' }); sectionImageInputRef.current?.click(); }}
+                        className="w-full rounded-lg border border-dashed border-black/[0.1] py-3 text-[13px] text-[#6e6e73]"
+                      >
+                        上传图片
+                      </button>
+                    )}
+                    <input
+                      type="text"
+                      value={sectionData.two_column_router.left?.headline ?? ''}
+                      onChange={(e) =>
+                        setSectionData((prev) => ({
+                          ...prev,
+                          two_column_router: {
+                            ...prev.two_column_router!,
+                            left: { ...prev.two_column_router!.left!, headline: e.target.value, ctas: prev.two_column_router!.left?.ctas ?? [] },
+                          },
+                        }))
+                      }
+                      className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-[15px]"
+                      placeholder="左侧标题"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">右侧</label>
+                  <div className="rounded-xl border border-black/[0.08] p-3 space-y-2">
+                    {sectionData.two_column_router.right?.image ? (
+                      <>
+                        <img src={sectionData.two_column_router.right.image} alt="" className="w-full rounded-lg object-cover h-24" />
+                        <button
+                          type="button"
+                          onClick={() => { setSectionImageTarget({ key: 'two_column_router.right' }); sectionImageInputRef.current?.click(); }}
+                          className="w-full rounded-full py-2 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
+                        >
+                          更换图片
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setSectionImageTarget({ key: 'two_column_router.right' }); sectionImageInputRef.current?.click(); }}
+                        className="w-full rounded-lg border border-dashed border-black/[0.1] py-3 text-[13px] text-[#6e6e73]"
+                      >
+                        上传图片
+                      </button>
+                    )}
+                    <input
+                      type="text"
+                      value={sectionData.two_column_router.right?.headline ?? ''}
+                      onChange={(e) =>
+                        setSectionData((prev) => ({
+                          ...prev,
+                          two_column_router: {
+                            ...prev.two_column_router!,
+                            right: { ...prev.two_column_router!.right!, headline: e.target.value, ctas: prev.two_column_router!.right?.ctas ?? [] },
+                          },
+                        }))
+                      }
+                      className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-[15px]"
+                      placeholder="右侧标题"
+                    />
+                  </div>
+                </div>
+              </>
             )}
           </div>
         );
@@ -1060,8 +1480,8 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             {block.type === 'image' && '图片'}
             {block.type === 'video' && '视频'}
             {block.type === 'audio' && '音频'}
-            {block.type === 'cinematic' && (ALL_CINEMATIC_LAYOUTS.find((t) => t.layout === block.metadata?.cinematicLayout)?.label ?? '杂志风区块')}
-            {block.type === 'section' && (SECTION_TEMPLATES.find((t) => t.id === sectionTemplateId)?.label ?? '宣传区块')}
+            {block.type === 'cinematic' && (ALL_CINEMATIC_LAYOUTS.find((t) => t.layout === block.metadata?.cinematicLayout)?.label ?? '区块')}
+            {block.type === 'section' && (SECTION_TEMPLATES.find((t) => t.id === sectionTemplateId)?.label ?? '区块')}
           </h3>
           <button
             type="button"

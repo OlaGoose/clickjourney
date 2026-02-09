@@ -96,7 +96,7 @@ export function SectionBlockRenderer({
           {d.sectionHeadline && (
             <h3 className="text-xl font-semibold tracking-tight mb-4">{d.sectionHeadline}</h3>
           )}
-          <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+          <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-2 no-scrollbar scroll-smooth">
             {d.tiles.map((tile, i) => (
               <div
                 key={i}
@@ -146,7 +146,7 @@ export function SectionBlockRenderer({
       if (!d?.items?.length) return <SectionPlaceholder label="横向滚动条" className={base} />;
       return (
         <section className={`${base} py-4 ${className}`}>
-          <div className="flex gap-4 overflow-x-auto px-4 no-scrollbar">
+          <div className="flex gap-4 overflow-x-auto overflow-y-hidden px-4 no-scrollbar scroll-smooth">
             {d.items.map((item, i) => (
               <div key={i} className="flex-shrink-0 w-[140px]">
                 <div
