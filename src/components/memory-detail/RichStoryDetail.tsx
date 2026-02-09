@@ -187,7 +187,7 @@ export function RichStoryDetail({ memory, onBack }: RichStoryDetailProps) {
       {/* Content: same layout as editor — title, description, blocks */}
       <div className="no-scrollbar flex-1 overflow-y-auto pb-24 pt-4">
         <div className="px-8 pt-4 space-y-4 max-w-2xl mx-auto">
-          <div className="pt-1">
+          <div className="pt-2">
             <h1 className="text-2xl font-bold text-[#1d1d1f]">{title || '无标题'}</h1>
           </div>
           {description ? (

@@ -3,7 +3,7 @@
  * Types for the travel content editor
  */
 
-export type ContentBlockType = 'text' | 'image' | 'video' | 'audio';
+export type ContentBlockType = 'text' | 'image' | 'video' | 'audio' | 'richtext';
 
 export interface ContentBlock {
   id: string;

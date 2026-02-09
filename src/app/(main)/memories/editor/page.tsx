@@ -286,7 +286,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
       >
         <div className="px-8 pt-4 space-y-4 max-w-2xl mx-auto">
           {/* Title Input — Apple-style minimal, light mode only */}
-          <div className="pt-1">
+          <div className="pt-2">
             <input
               type="text"
               value={editorData.title}
@@ -368,6 +368,11 @@ function generateRichContent(data: TravelEditorData): string {
     switch (block.type) {
       case 'text':
         html += `<p>${escapeHtml(block.content)}</p>`;
+        break;
+      case 'richtext':
+        if (block.content) {
+          html += block.content;
+        }
         break;
       case 'image':
         if (block.content) {

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Edit2, Image, Video, Music, Type } from 'lucide-react';
+import { Edit2, Image, Video, Music, Type, FileText } from 'lucide-react';
 import PhotoGrid from '@/components/PhotoGrid';
 import GalleryModal from '@/components/GalleryModal';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
+import { sanitizeBlockHtml } from '@/lib/sanitize-block-html';
 import type { ContentBlock as ContentBlockType, ImageDisplayMode } from '@/types/editor';
 
 interface ContentBlockProps {
@@ -79,6 +80,26 @@ export function ContentBlock({
             aria-label="文本内容"
           />
         );
+      case 'richtext': {
+        const richHtml = block.content || '';
+        const safeHtml = typeof document !== 'undefined' ? sanitizeBlockHtml(richHtml) : richHtml;
+        const hasContent = richHtml.replace(/<[^>]+>/g, '').trim().length > 0;
+        return (
+          <div
+            className="w-full py-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {hasContent ? (
+              <div
+                className="prose prose-neutral max-w-none w-full text-base text-[#1d1d1f] leading-relaxed [&_a]:text-[#007aff] [&_a]:underline [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_ul]:list-disc [&_ol]:list-decimal [&_blockquote]:border-l-[3px] [&_blockquote]:border-[#86868b] [&_blockquote]:pl-3 [&_blockquote]:italic [&_p]:text-[#1d1d1f] [&_li]:text-[#1d1d1f]"
+                dangerouslySetInnerHTML={{ __html: safeHtml }}
+              />
+            ) : (
+              <p className="text-[#86868b] text-sm">点击编辑添加富文本</p>
+            )}
+          </div>
+        );
+      }
       case 'image': {
         // Ensure images are correctly extracted from metadata
         const images = block.metadata?.images?.length
@@ -171,6 +192,8 @@ export function ContentBlock({
     switch (block.type) {
       case 'text':
         return <Type size={14} />;
+      case 'richtext':
+        return <FileText size={14} />;
       case 'image':
         return <Image size={14} />;
       case 'video':
@@ -193,7 +216,7 @@ export function ContentBlock({
           : 'overflow-hidden'
       }`}
     >
-      <div className="py-4 md:py-5">
+      <div className="py-2 md:py-3">
         {renderContent()}
       </div>
 

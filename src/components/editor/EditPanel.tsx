@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, LayoutGrid, Images, Mic, Square, Type } from 'lucide-react';
+import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, LayoutGrid, Images, Mic, Square, Type, FileText } from 'lucide-react';
 import PhotoGrid from '@/components/PhotoGrid';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
+import BlockRichTextEditor from '@/components/editor/BlockRichTextEditor';
 import type { ContentBlock, ContentBlockType, ImageDisplayMode } from '@/types/editor';
 
 const MAX_IMAGES = 6;
@@ -13,6 +14,8 @@ function blockHasContent(b: ContentBlock): boolean {
   switch (b.type) {
     case 'text':
       return (b.content ?? '').trim().length > 0;
+    case 'richtext':
+      return (b.content ?? '').replace(/<[^>]+>/g, '').trim().length > 0;
     case 'image':
       const imgs = b.metadata?.images?.length ? b.metadata.images : b.content ? [b.content] : [];
       return imgs.length > 0;
@@ -38,6 +41,7 @@ interface EditPanelProps {
 
 const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[] = [
   { type: 'text', icon: Type, label: '文本' },
+  { type: 'richtext', icon: FileText, label: '富文本' },
   { type: 'image', icon: ImageIcon, label: '图片' },
   { type: 'video', icon: VideoIcon, label: '视频' },
   { type: 'audio', icon: MusicIcon, label: '音频' },
@@ -249,6 +253,17 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
               placeholder="输入文本内容..."
               className="h-full w-full resize-none bg-transparent px-4 py-3 text-sm leading-relaxed rounded-2xl focus:outline-none text-[#1d1d1f] placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80"
               rows={8}
+            />
+          </div>
+        );
+
+      case 'richtext':
+        return (
+          <div className="flex-1 px-2 min-h-[200px]">
+            <BlockRichTextEditor
+              content={content}
+              onChange={setContent}
+              placeholder="输入富文本内容…"
             />
           </div>
         );
@@ -496,6 +511,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           </button>
           <h3 className="justify-self-center text-[17px] font-semibold text-[#1d1d1f]">
             {block.type === 'text' && '编辑文本'}
+            {block.type === 'richtext' && '编辑富文本'}
             {block.type === 'image' && '编辑图片'}
             {block.type === 'video' && '编辑视频'}
             {block.type === 'audio' && '编辑音频'}
