@@ -5,10 +5,11 @@ import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as Mus
 import PhotoGrid from '@/components/PhotoGrid';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
 import BlockRichTextEditor from '@/components/editor/BlockRichTextEditor';
-import type { ContentBlock, ContentBlockType, ImageDisplayMode } from '@/types/editor';
+import type { ContentBlock, ContentBlockType, ImageDisplayMode, SectionBlockData, SectionTemplateId } from '@/types/editor';
 import type { AIGeneratedDocBlock } from '@/types/ai-document-blocks';
 import type { LayoutType } from '@/types/cinematic';
 import { CINEMATIC_TEMPLATES, ALL_CINEMATIC_LAYOUTS } from '@/lib/editor-cinematic-templates';
+import { SECTION_TEMPLATES, getDefaultSectionData } from '@/lib/editor-section-templates';
 import { CinematicTemplatePreview } from '@/components/editor/CinematicTemplatePreview';
 
 const MAX_IMAGES = 6;
@@ -25,6 +26,8 @@ function blockHasContent(b: ContentBlock): boolean {
       return imgs.length > 0;
     case 'cinematic':
       return !!(b.metadata?.cinematicImage || (b.content ?? '').trim());
+    case 'section':
+      return !!(b.metadata?.sectionTemplateId && b.metadata?.sectionData);
     case 'video':
     case 'audio':
       return (b.content ?? '').length > 0;
@@ -49,6 +52,8 @@ interface EditPanelProps {
   onInsertGeneratedContent?: (html: string) => void;
   /** When user inserts AI-generated document blocks (richtext/text/image), this is called. imageUrls 与生成时上传顺序一致，用于解析 imageIndex。 */
   onInsertGeneratedBlocks?: (blocks: AIGeneratedDocBlock[], imageUrls: string[]) => void;
+  /** When user selects an Apple-style section template, this is called with the template id. */
+  onSelectSectionTemplate?: (templateId: SectionTemplateId) => void;
 }
 
 const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[] = [
@@ -60,7 +65,7 @@ const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[
 ];
 
 /** Apple light mode only: white panel, gray controls, #1d1d1f text. Apple Arcade–inspired layout. */
-export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, onSelectType, onSelectCinematicTemplate, onInsertGeneratedContent, onInsertGeneratedBlocks }: EditPanelProps) {
+export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, onSelectType, onSelectCinematicTemplate, onSelectSectionTemplate, onInsertGeneratedContent, onInsertGeneratedBlocks }: EditPanelProps) {
   const [content, setContent] = useState('');
   const [fileName, setFileName] = useState('');
   const [images, setImages] = useState<string[]>([]);
@@ -92,6 +97,8 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
 
   const [cinematicImage, setCinematicImage] = useState('');
   const [cinematicLayout, setCinematicLayout] = useState<LayoutType>('full_bleed');
+  const [sectionTemplateId, setSectionTemplateId] = useState<SectionTemplateId>('hero_cta');
+  const [sectionData, setSectionData] = useState<SectionBlockData>({});
 
   useEffect(() => {
     if (block) {
@@ -110,6 +117,11 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
       if (block.type === 'cinematic') {
         setCinematicImage(block.metadata?.cinematicImage ?? '');
         setCinematicLayout(block.metadata?.cinematicLayout ?? 'full_bleed');
+      }
+      if (block.type === 'section') {
+        const tid = block.metadata?.sectionTemplateId ?? 'hero_cta';
+        setSectionTemplateId(tid);
+        setSectionData(block.metadata?.sectionData ?? getDefaultSectionData(tid));
       }
     }
   }, [block]);
@@ -288,26 +300,50 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-5">
             {templateTab === 'template' && (
-              <div className="space-y-3">
-                <p className="text-[13px] text-[#6e6e73] mb-3">杂志风区块（选布局即插入）</p>
-                {CINEMATIC_TEMPLATES.map((t) => (
-                  <button
-                    key={t.layout}
-                    type="button"
-                    onClick={() => {
-                      onSelectCinematicTemplate?.(t.layout);
-                      setTemplatePanelOpen(false);
-                      onClose();
-                    }}
-                    className="w-full flex items-center gap-4 rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99]"
-                  >
-                    <div className="flex-shrink-0 w-20 h-[52px] rounded-xl overflow-hidden bg-[#f5f5f7]">
-                      <CinematicTemplatePreview layout={t.layout} className="h-full w-full" />
+              <div className="space-y-5">
+                <div>
+                  <p className="text-[13px] text-[#6e6e73] mb-3">杂志风区块（选布局即插入）</p>
+                  {CINEMATIC_TEMPLATES.map((t) => (
+                    <button
+                      key={t.layout}
+                      type="button"
+                      onClick={() => {
+                        onSelectCinematicTemplate?.(t.layout);
+                        setTemplatePanelOpen(false);
+                        onClose();
+                      }}
+                      className="w-full flex items-center gap-4 rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99] mb-2"
+                    >
+                      <div className="flex-shrink-0 w-20 h-[52px] rounded-xl overflow-hidden bg-[#f5f5f7]">
+                        <CinematicTemplatePreview layout={t.layout} className="h-full w-full" />
+                      </div>
+                      <span className="flex-1">{t.label}</span>
+                      <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+                {onSelectSectionTemplate && (
+                  <div>
+                    <p className="text-[13px] text-[#6e6e73] mb-3">宣传区块（Apple 风格）</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {SECTION_TEMPLATES.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            onSelectSectionTemplate(t.id);
+                            setTemplatePanelOpen(false);
+                            onClose();
+                          }}
+                          className="w-full flex items-center justify-between rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99]"
+                        >
+                          <span>{t.label}</span>
+                          <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
+                        </button>
+                      ))}
                     </div>
-                    <span className="flex-1">{t.label}</span>
-                    <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
-                  </button>
-                ))}
+                  </div>
+                )}
               </div>
             )}
             {templateTab === 'ai' && (
@@ -487,6 +523,16 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           ...block.metadata,
           cinematicLayout: cinematicLayout,
           cinematicImage: cinematicImage || block.metadata?.cinematicImage,
+        },
+      };
+    }
+    if (block.type === 'section') {
+      return {
+        ...block,
+        metadata: {
+          ...block.metadata,
+          sectionTemplateId,
+          sectionData,
         },
       };
     }
@@ -743,6 +789,158 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           </div>
         );
 
+      case 'section':
+        return (
+          <div className="flex-1 px-4 space-y-4">
+            <p className="text-[13px] text-[#6e6e73]">
+              {SECTION_TEMPLATES.find((t) => t.id === sectionTemplateId)?.label ?? sectionTemplateId}
+            </p>
+            {sectionTemplateId === 'hero_cta' && sectionData.hero_cta && (
+              <>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">主标题</label>
+                  <input
+                    type="text"
+                    value={sectionData.hero_cta.headline}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        hero_cta: prev.hero_cta
+                          ? { ...prev.hero_cta, headline: e.target.value }
+                          : { headline: e.target.value, primaryCta: { label: '' }, subline: '' },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="主标题"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">副标题</label>
+                  <input
+                    type="text"
+                    value={sectionData.hero_cta.subline}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        hero_cta: prev.hero_cta
+                          ? { ...prev.hero_cta, subline: e.target.value }
+                          : { headline: '', primaryCta: { label: '' }, subline: e.target.value },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="副标题"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">主按钮文案</label>
+                  <input
+                    type="text"
+                    value={sectionData.hero_cta.primaryCta?.label ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        hero_cta: prev.hero_cta
+                          ? { ...prev.hero_cta, primaryCta: { ...prev.hero_cta.primaryCta, label: e.target.value } }
+                          : { headline: '', primaryCta: { label: e.target.value }, subline: '' },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="主按钮"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">次按钮文案（可选）</label>
+                  <input
+                    type="text"
+                    value={sectionData.hero_cta.secondaryCta?.label ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        hero_cta: prev.hero_cta
+                          ? { ...prev.hero_cta, secondaryCta: { label: e.target.value } }
+                          : { headline: '', primaryCta: { label: '' }, subline: '', secondaryCta: { label: e.target.value } },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="次按钮"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">背景图 URL（可选）</label>
+                  <input
+                    type="text"
+                    value={sectionData.hero_cta.backgroundImage ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        hero_cta: prev.hero_cta
+                          ? { ...prev.hero_cta, backgroundImage: e.target.value || undefined }
+                          : { headline: '', primaryCta: { label: '' }, subline: '', backgroundImage: e.target.value || undefined },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="https://..."
+                  />
+                </div>
+              </>
+            )}
+            {sectionTemplateId === 'ribbon' && sectionData.ribbon && (
+              <>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">横幅文案</label>
+                  <input
+                    type="text"
+                    value={sectionData.ribbon.text}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        ribbon: prev.ribbon ? { ...prev.ribbon, text: e.target.value } : { text: e.target.value, cta: { label: '' } },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="横幅文案"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">按钮文案</label>
+                  <input
+                    type="text"
+                    value={sectionData.ribbon.cta?.label ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        ribbon: prev.ribbon ? { ...prev.ribbon, cta: { label: e.target.value } } : { text: '', cta: { label: e.target.value } },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                    placeholder="按钮"
+                  />
+                </div>
+              </>
+            )}
+            {sectionTemplateId === 'value_props' && sectionData.value_props && (
+              <div>
+                <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">要点列表（每行一条）</label>
+                <textarea
+                  value={sectionData.value_props.items.join('\n')}
+                  onChange={(e) =>
+                    setSectionData((prev) => ({
+                      ...prev,
+                      value_props: { items: e.target.value.split('\n').filter(Boolean) },
+                    }))
+                  }
+                  rows={5}
+                  className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
+                  placeholder="要点一&#10;要点二"
+                />
+              </div>
+            )}
+            {!['hero_cta', 'ribbon', 'value_props'].includes(sectionTemplateId) && (
+              <p className="text-[13px] text-[#86868b]">该模板内容已在画布中展示，后续可在此扩展编辑。</p>
+            )}
+          </div>
+        );
+
       case 'audio':
         return (
           <div className="flex-1 px-4 space-y-4">
@@ -863,6 +1061,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             {block.type === 'video' && '视频'}
             {block.type === 'audio' && '音频'}
             {block.type === 'cinematic' && (ALL_CINEMATIC_LAYOUTS.find((t) => t.layout === block.metadata?.cinematicLayout)?.label ?? '杂志风区块')}
+            {block.type === 'section' && (SECTION_TEMPLATES.find((t) => t.id === sectionTemplateId)?.label ?? '宣传区块')}
           </h3>
           <button
             type="button"

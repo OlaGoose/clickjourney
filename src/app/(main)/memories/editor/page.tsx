@@ -6,10 +6,11 @@ import { EditorHeader } from '@/components/editor/EditorHeader';
 import { ContentBlock } from '@/components/editor/ContentBlock';
 import { EditPanel } from '@/components/editor/EditPanel';
 import { AddBlockButton } from '@/components/editor/AddBlockButton';
-import type { TravelEditorData, ContentBlock as ContentBlockType } from '@/types/editor';
+import type { TravelEditorData, ContentBlock as ContentBlockType, SectionBlockData, SectionTemplateId } from '@/types/editor';
 import type { AIGeneratedDocBlock } from '@/types/ai-document-blocks';
 import type { LayoutType, StoryBlock } from '@/types/cinematic';
 import { getCinematicPlaceholderImage } from '@/lib/editor-cinematic-templates';
+import { getDefaultSectionData } from '@/lib/editor-section-templates';
 import { saveMemory, updateMemory } from '@/lib/storage';
 import { useOptionalAuth } from '@/lib/auth';
 import { MemoryService } from '@/lib/db/services/memory-service';
@@ -179,11 +180,24 @@ function TravelEditorContent() {
     }
   }, [editorData, userId, router, editId]);
 
-/** Collect all image URLs from image and cinematic blocks. */
+/** Collect all image URLs from image, cinematic, and section blocks. */
 function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
   const fromImage = blocks.filter((b) => b.type === 'image').flatMap((b) => (b.metadata?.images?.length ? b.metadata.images : b.content ? [b.content] : []));
   const fromCinematic = blocks.filter((b) => b.type === 'cinematic').map((b) => b.metadata?.cinematicImage).filter(Boolean) as string[];
-  return [...fromImage, ...fromCinematic];
+  const fromSection = blocks
+    .filter((b) => b.type === 'section' && b.metadata?.sectionData)
+    .flatMap((b) => collectSectionImages(b.metadata!.sectionData!));
+  return [...fromImage, ...fromCinematic, ...fromSection];
+}
+
+function collectSectionImages(data: SectionBlockData): string[] {
+  const urls: string[] = [];
+  if (data.hero_cta?.backgroundImage) urls.push(data.hero_cta.backgroundImage);
+  if (data.feature_card?.image) urls.push(data.feature_card.image);
+  if (data.marquee?.items) data.marquee.items.forEach((i) => i.image && urls.push(i.image));
+  if (data.two_column_router?.left?.image) urls.push(data.two_column_router.left.image);
+  if (data.two_column_router?.right?.image) urls.push(data.two_column_router.right.image);
+  return urls;
 }
 
   const handleOpenAddPanel = useCallback(() => {
@@ -228,6 +242,26 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
     }));
     setEditingBlock(newBlock);
     setSelectedBlockId(newBlock.id);
+  }, [editorData.blocks.length]);
+
+  const handleSelectSectionTemplate = useCallback((templateId: SectionTemplateId) => {
+    const newBlock: ContentBlockType = {
+      id: generateId(),
+      type: 'section',
+      content: '',
+      order: editorData.blocks.length,
+      metadata: {
+        sectionTemplateId: templateId,
+        sectionData: getDefaultSectionData(templateId),
+      },
+    };
+    setEditorData(prev => ({
+      ...prev,
+      blocks: [...prev.blocks, newBlock],
+    }));
+    setEditingBlock(newBlock);
+    setSelectedBlockId(newBlock.id);
+    setIsEditPanelOpen(true);
   }, [editorData.blocks.length]);
 
   const handleInsertGeneratedContent = useCallback((html: string) => {
@@ -440,6 +474,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
         onDiscard={handleDiscardBlock}
         onSelectType={handleSelectType}
         onSelectCinematicTemplate={handleSelectCinematicTemplate}
+        onSelectSectionTemplate={handleSelectSectionTemplate}
         onInsertGeneratedContent={handleInsertGeneratedContent}
         onInsertGeneratedBlocks={handleInsertGeneratedBlocks}
       />
@@ -455,6 +490,83 @@ function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/** Emit semantic HTML for a section block (for rich story / saved memory). */
+function sectionBlockToHtml(
+  templateId: SectionTemplateId | undefined,
+  data: SectionBlockData | undefined
+): string {
+  if (!templateId || !data) return '';
+  const wrap = (inner: string) => `<section class="editor-section" data-template="${escapeHtml(templateId)}">${inner}</section>`;
+  switch (templateId) {
+    case 'hero_cta': {
+      const d = data.hero_cta;
+      if (!d) return '';
+      let inner = `<h2 class="section-headline">${escapeHtml(d.headline)}</h2>`;
+      if (d.subline) inner += `<p class="section-subline">${escapeHtml(d.subline)}</p>`;
+      if (d.primaryCta?.label) inner += `<p><a href="${d.primaryCta.href ? escapeHtml(d.primaryCta.href) : '#'}">${escapeHtml(d.primaryCta.label)}</a></p>`;
+      if (d.secondaryCta?.label) inner += `<p><a href="${d.secondaryCta.href ? escapeHtml(d.secondaryCta.href) : '#'}">${escapeHtml(d.secondaryCta.label)}</a></p>`;
+      if (d.backgroundImage) inner = `<img src="${escapeHtml(d.backgroundImage)}" alt="" class="section-bg" />` + inner;
+      return wrap(inner);
+    }
+    case 'ribbon': {
+      const d = data.ribbon;
+      if (!d) return '';
+      return wrap(`<p>${escapeHtml(d.message)}</p>${d.ctaLabel ? `<a href="#">${escapeHtml(d.ctaLabel)}</a>` : ''}`);
+    }
+    case 'value_props': {
+      const d = data.value_props;
+      if (!d?.items?.length) return '';
+      return wrap('<ul>' + d.items.map((i) => `<li>${escapeHtml(i)}</li>`).join('') + '</ul>');
+    }
+    case 'tile_gallery': {
+      const d = data.tile_gallery;
+      if (!d?.tiles?.length) return '';
+      let inner = d.sectionHeadline ? `<h2>${escapeHtml(d.sectionHeadline)}</h2>` : '';
+      inner += '<ul class="tile-list">' + d.tiles.map((t) => `<li><strong>${escapeHtml(t.title)}</strong><p>${escapeHtml(t.copy)}</p>${t.ctaLabel ? `<a href="${t.ctaHref ? escapeHtml(t.ctaHref) : '#'}">${escapeHtml(t.ctaLabel)}</a>` : ''}</li>`).join('') + '</ul>';
+      return wrap(inner);
+    }
+    case 'feature_card': {
+      const d = data.feature_card;
+      if (!d) return '';
+      let inner = d.image ? `<img src="${escapeHtml(d.image)}" alt="" />` : '';
+      inner += `<h3>${escapeHtml(d.title)}</h3>`;
+      if (d.subtitle) inner += `<p>${escapeHtml(d.subtitle)}</p>`;
+      if (d.ctaLabel) inner += `<a href="${d.ctaHref ? escapeHtml(d.ctaHref) : '#'}">${escapeHtml(d.ctaLabel)}</a>`;
+      return wrap(inner);
+    }
+    case 'marquee': {
+      const d = data.marquee;
+      if (!d?.items?.length) return '';
+      const list = d.items.map((i) => `<li>${i.image ? `<img src="${escapeHtml(i.image)}" alt="" />` : ''}<span>${escapeHtml(i.title)}</span>${i.ctaLabel ? `<a href="${i.href ? escapeHtml(i.href) : '#'}">${escapeHtml(i.ctaLabel)}</a>` : ''}</li>`).join('');
+      return wrap('<ul class="marquee-list">' + list + '</ul>');
+    }
+    case 'headline_grid': {
+      const d = data.headline_grid;
+      if (!d) return '';
+      let inner = `<h2>${escapeHtml(d.headline)}</h2>`;
+      if (d.subline) inner += `<p>${escapeHtml(d.subline)}</p>`;
+      if (d.items?.length) inner += '<ul>' + d.items.map((i) => `<li>${escapeHtml(i.label)}</li>`).join('') + '</ul>';
+      return wrap(inner);
+    }
+    case 'accordion': {
+      const d = data.accordion;
+      if (!d) return '';
+      let inner = `<h2>${escapeHtml(d.headline)}</h2>`;
+      if (d.items?.length) inner += '<dl>' + d.items.map((i) => `<dt>${escapeHtml(i.question)}</dt><dd>${escapeHtml(i.answer)}</dd>`).join('') + '</dl>';
+      return wrap(inner);
+    }
+    case 'two_column_router': {
+      const d = data.two_column_router;
+      if (!d) return '';
+      const col = (c: { image?: string; headline: string; ctas: { label: string; href?: string }[] }) =>
+        `<div class="section-column">${c.image ? `<img src="${escapeHtml(c.image)}" alt="" />` : ''}<h3>${escapeHtml(c.headline)}</h3>${c.ctas?.length ? c.ctas.map((a) => `<a href="${a.href ? escapeHtml(a.href) : '#'}">${escapeHtml(a.label)}</a>`).join('') : ''}</div>`;
+      return wrap((d.left ? col(d.left) : '') + (d.right ? col(d.right) : ''));
+    }
+    default:
+      return '';
+  }
 }
 
 function generateRichContent(data: TravelEditorData): string {
@@ -479,6 +591,10 @@ function generateRichContent(data: TravelEditorData): string {
         const img = block.metadata?.cinematicImage;
         if (img) html += `<img src="${escapeHtml(img)}" alt="Story moment" />`;
         if (block.content) html += `<p>${escapeHtml(block.content)}</p>`;
+        break;
+      }
+      case 'section': {
+        html += sectionBlockToHtml(block.metadata?.sectionTemplateId, block.metadata?.sectionData);
         break;
       }
       case 'video':

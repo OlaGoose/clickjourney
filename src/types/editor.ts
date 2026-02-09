@@ -5,7 +5,83 @@
 
 import type { LayoutType } from './cinematic';
 
-export type ContentBlockType = 'text' | 'image' | 'video' | 'audio' | 'richtext' | 'cinematic';
+export type ContentBlockType = 'text' | 'image' | 'video' | 'audio' | 'richtext' | 'cinematic' | 'section';
+
+/** Apple-style section template IDs (promotional/section blocks). */
+export type SectionTemplateId =
+  | 'hero_cta'
+  | 'ribbon'
+  | 'value_props'
+  | 'tile_gallery'
+  | 'feature_card'
+  | 'marquee'
+  | 'headline_grid'
+  | 'accordion'
+  | 'two_column_router';
+
+/** CTA link for section blocks. */
+export interface SectionCta {
+  label: string;
+  href?: string;
+}
+
+/** Dynamic content for section blocks (per-template shapes). */
+export interface SectionBlockData {
+  hero_cta?: {
+    headline: string;
+    subline?: string;
+    primaryCta: SectionCta;
+    secondaryCta?: SectionCta;
+    backgroundImage?: string;
+  };
+  ribbon?: {
+    message: string;
+    ctaLabel: string;
+    ctaHref?: string;
+  };
+  value_props?: {
+    items: string[];
+  };
+  tile_gallery?: {
+    sectionHeadline?: string;
+    tiles: Array<{
+      eyebrow?: string;
+      title: string;
+      copy: string;
+      ctaLabel: string;
+      ctaHref?: string;
+    }>;
+  };
+  feature_card?: {
+    eyebrow?: string;
+    title: string;
+    subtitle?: string;
+    image?: string;
+    ctaLabel: string;
+    ctaHref?: string;
+  };
+  marquee?: {
+    items: Array<{
+      image: string;
+      title: string;
+      ctaLabel?: string;
+      href?: string;
+    }>;
+  };
+  headline_grid?: {
+    headline: string;
+    subline?: string;
+    items: Array<{ label: string; icon?: string }>;
+  };
+  accordion?: {
+    headline: string;
+    items: Array<{ question: string; answer: string }>;
+  };
+  two_column_router?: {
+    left: { image?: string; headline: string; ctas: SectionCta[] };
+    right: { image?: string; headline: string; ctas: SectionCta[] };
+  };
+}
 
 export interface ContentBlock {
   id: string;
@@ -28,6 +104,10 @@ export interface ContentBlock {
     imageFilter?: 'none' | 'grayscale' | 'warm' | 'cool' | 'vibrant' | 'muted';
     /** Cinematic block: optional mood label. */
     mood?: string;
+    /** Section block: template id (hero_cta, ribbon, value_props, etc.). */
+    sectionTemplateId?: SectionTemplateId;
+    /** Section block: dynamic content for the chosen template. */
+    sectionData?: SectionBlockData;
   };
 }
 

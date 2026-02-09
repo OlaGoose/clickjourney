@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { MapPin, Calendar, Edit2, ArrowLeft, Share2, Download, Save, Check, MoreHorizontal } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { MapPin, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { CarouselItem } from '@/types/memory';
 import type { DirectorScript, StoryBlock } from '@/types/cinematic';
 import { StaticBlockRenderer } from '@/components/cinematic/StaticBlockRenderer';
+import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { useDayNightTheme } from '@/hooks/useDayNightTheme';
 import { useOptionalAuth } from '@/lib/auth';
 import { saveMemory } from '@/lib/storage';
@@ -42,13 +43,38 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
   const [script, setScript] = useState<DirectorScript>(initialScript || DEFAULT_SCRIPT);
   const [isEditMode, setIsEditMode] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [moreOpen, setMoreOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const moreRef = useRef<HTMLDivElement>(null);
 
   const auth = useOptionalAuth();
   const userId = auth?.user?.id ?? null;
   const isDark = useDayNightTheme() === 'dark';
+
+  const getShareUrl = useCallback(() => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/memories/${memory.id}?share=1`;
+  }, [memory.id]);
+
+  const handleShare = useCallback(async () => {
+    const shareUrl = getShareUrl();
+    const shareTitle = script.title || '回忆';
+    const shareData = { title: shareTitle, url: shareUrl };
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      const canShare = typeof navigator.canShare === 'function' ? navigator.canShare(shareData) : true;
+      if (canShare) {
+        try {
+          await navigator.share(shareData);
+          return;
+        } catch (err) {
+          if ((err as Error).name === 'AbortError') return;
+        }
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      if (typeof window !== 'undefined' && window.open) window.open(shareUrl, '_blank', 'noopener');
+    }
+  }, [getShareUrl, script.title]);
 
   const handleUpdateBlock = (id: string, updates: Partial<StoryBlock>) => {
     setScript(prev => ({
@@ -88,20 +114,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
     });
   };
 
-  useEffect(() => {
-    if (!moreOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
-        setMoreOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [moreOpen]);
-
   const handleDelete = async () => {
-    setMoreOpen(false);
-    
     const confirmed = confirm('确定要删除这个回忆吗？此操作无法撤销。');
     if (!confirmed) return;
 
@@ -122,102 +135,44 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
     }
   };
 
+  const moreMenuClass = 'w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100';
+  const moreMenuClassDanger = 'w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed';
+
   return (
-    <div className={`fixed inset-0 z-50 overflow-hidden font-sans transition-colors duration-300 ${
+    <div className={`fixed inset-0 z-50 overflow-hidden font-sans transition-colors duration-300 flex flex-col ${
       isDark ? 'bg-[#0a0a0a] text-white' : 'bg-white text-black'
     }`}>
-      {/* Header */}
-      <div className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 transition-colors ${
-        isDark ? 'bg-black/80 backdrop-blur-xl' : 'bg-white/80 backdrop-blur-xl border-b border-gray-100'
-      }`}>
-        <button
-          type="button"
-          onClick={onBack}
-          className={`flex items-center gap-2 rounded-full px-3 py-2 transition-colors ${
-            isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'
-          }`}
-          aria-label="返回"
-        >
-          <ArrowLeft size={18} />
-          <span className="text-sm font-medium">返回</span>
-        </button>
-
-        <div className="flex items-center gap-2">
-          {!isEditMode && (
-            <button
-              type="button"
-              onClick={() => setIsEditMode(true)}
-              className={`flex items-center gap-1 rounded-full px-3 py-2 text-sm transition-colors ${
-                isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'
-              }`}
-              aria-label="编辑"
-            >
-              <Edit2 size={16} />
-              <span>编辑</span>
-            </button>
-          )}
-          {isEditMode && (
+      <MemoryDetailHeader
+        onBack={onBack}
+        onShare={handleShare}
+        moreMenu={
+          <>
+            <button type="button" onClick={() => setIsEditMode(true)} className={moreMenuClass} role="menuitem">编辑</button>
             <button
               type="button"
               onClick={handleSaveToMemory}
               disabled={saveStatus === 'saving'}
-              className={`flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                saveStatus === 'saved'
-                  ? 'bg-green-500 text-white'
-                  : isDark
-                    ? 'bg-white text-black hover:bg-gray-200'
-                    : 'bg-black text-white hover:bg-gray-800'
-              }`}
-              aria-label="保存到回忆"
+              className={moreMenuClass}
+              role="menuitem"
             >
-              {saveStatus === 'saving' && <Save size={16} className="animate-pulse" />}
-              {saveStatus === 'saved' && <Check size={16} />}
-              {saveStatus === 'idle' && <Save size={16} />}
-              <span>{saveStatus === 'saved' ? '已保存' : '保存'}</span>
+              {saveStatus === 'saving' ? '保存中...' : saveStatus === 'saved' ? '已保存' : '保存'}
             </button>
-          )}
-          <button className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`} aria-label="分享">
-            <Share2 size={18} />
-          </button>
-          <button className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`} aria-label="下载">
-            <Download size={18} />
-          </button>
-          <div className="relative" ref={moreRef}>
+            <button type="button" className={moreMenuClass} role="menuitem">下载</button>
             <button
               type="button"
-              onClick={() => setMoreOpen((v) => !v)}
-              className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
-              aria-label="更多操作"
-              aria-expanded={moreOpen}
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className={moreMenuClassDanger}
+              role="menuitem"
             >
-              <MoreHorizontal size={18} />
+              {isDeleting ? '删除中...' : '删除'}
             </button>
-            {moreOpen && (
-              <div
-                className={`absolute right-0 top-full mt-1 min-w-[140px] rounded-lg py-1 shadow-lg border text-left z-50 ${
-                  isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-gray-200'
-                }`}
-                role="menu"
-              >
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className={`w-full px-4 py-2 text-left text-[13px] text-red-600 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isDark ? 'hover:bg-white/5' : 'hover:bg-red-50'
-                  }`}
-                  role="menuitem"
-                >
-                  {isDeleting ? '删除中...' : '删除'}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Meta Info */}
-      <div className="pt-16 px-4 pb-4">
+      <div className="pt-4 px-4 pb-4 flex-shrink-0">
         {isEditMode ? (
           <div className="space-y-2">
             <input
@@ -253,7 +208,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
       </div>
 
       {/* Story Blocks */}
-      <div className="no-scrollbar h-[calc(100vh-140px)] overflow-y-auto">
+      <div className="no-scrollbar flex-1 min-h-0 overflow-y-auto">
         {script.blocks.map((block, index) => (
           <StaticBlockRenderer
             key={block.id}

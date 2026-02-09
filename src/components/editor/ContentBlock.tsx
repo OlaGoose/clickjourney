@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Edit2, Image, Video, Music, Type, FileText } from 'lucide-react';
+import { Edit2, Image, Video, Music, Type, FileText, LayoutTemplate } from 'lucide-react';
 import PhotoGrid from '@/components/PhotoGrid';
 import GalleryModal from '@/components/GalleryModal';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
 import { StaticBlockRenderer } from '@/components/cinematic/StaticBlockRenderer';
+import { SectionBlockRenderer } from '@/components/editor/SectionBlockRenderer';
 import { getCinematicPlaceholderImage } from '@/lib/editor-cinematic-templates';
 import { sanitizeBlockHtml } from '@/lib/sanitize-block-html';
 import type { ContentBlock as ContentBlockType, ImageDisplayMode } from '@/types/editor';
@@ -73,6 +74,19 @@ export function ContentBlock({
   const { ref: textareaRef, syncHeight } = useAutoHeightTextarea(block.type === 'text' ? block.content : '');
 
   const renderContent = () => {
+    if (block.type === 'section') {
+      return (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!readOnly) onClick?.();
+          }}
+          className="w-full"
+        >
+          <SectionBlockRenderer block={block} isEditMode={!readOnly} />
+        </div>
+      );
+    }
     if (block.type === 'cinematic') {
       const storyBlock = contentBlockToStoryBlock(block);
       return (
@@ -214,6 +228,8 @@ export function ContentBlock({
             )}
           </div>
         );
+      case 'section':
+        return null; // handled above
       case 'audio':
         return (
           <div className="w-full" role="region" aria-label={block.content ? '音频播放' : '添加音频'}>
@@ -254,6 +270,8 @@ export function ContentBlock({
         return <Video size={14} />;
       case 'audio':
         return <Music size={14} />;
+      case 'section':
+        return <LayoutTemplate size={14} />;
       default:
         return null;
     }

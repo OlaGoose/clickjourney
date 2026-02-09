@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ContentBlock } from '@/components/editor/ContentBlock';
+import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { MemoryService } from '@/lib/db/services/memory-service';
 import type { CarouselItem } from '@/types/memory';
 
@@ -18,29 +19,15 @@ interface RichStoryDetailProps {
 /** Renders rich-story memory with same layout as memories/editor (read-only). Header has Share and "..." menu (Edit, Delete). */
 export function RichStoryDetail({ memory, onBack, shareView = false }: RichStoryDetailProps) {
   const router = useRouter();
-  const [moreOpen, setMoreOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<'idle' | 'copied' | 'shared'>('idle');
   const shareFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const moreRef = useRef<HTMLDivElement>(null);
 
-  const category = memory.category ?? '故事回忆';
   const title = memory.detailTitle ?? memory.title ?? '';
   const description = memory.description ?? '';
   const blocks = (memory.editorBlocks ?? []).slice().sort((a, b) => a.order - b.order);
   const hasBlocks = blocks.length > 0;
   const richContent = memory.richContent ?? '';
-
-  useEffect(() => {
-    if (!moreOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
-        setMoreOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [moreOpen]);
 
   useEffect(() => {
     return () => {
@@ -94,13 +81,10 @@ export function RichStoryDetail({ memory, onBack, shareView = false }: RichStory
   }, [getShareUrl, title, description, clearShareFeedback]);
 
   const handleEdit = () => {
-    setMoreOpen(false);
     router.push(`/memories/editor?id=${memory.id}`);
   };
 
   const handleDelete = async () => {
-    setMoreOpen(false);
-
     const confirmed = confirm('确定要删除这个回忆吗？此操作无法撤销。');
     if (!confirmed) return;
 
@@ -160,123 +144,32 @@ export function RichStoryDetail({ memory, onBack, shareView = false }: RichStory
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col animate-fadeIn font-sans bg-[#fbfbfd] text-[#1d1d1f]">
-      <div className="sticky top-0 z-10 relative flex items-center justify-between h-11 px-4 bg-[#1d1d1f] text-white">
-        <button
-          type="button"
-          onClick={onBack}
-          className="-ml-2 rounded-md p-1.5 transition-colors hover:bg-white/[0.08]"
-          aria-label="返回"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="19" y1="12" x2="5" y2="12" />
-            <polyline points="12 19 5 12 12 5" />
-          </svg>
-        </button>
-        <span className="text-[13px] font-medium truncate">{category}</span>
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={handleShare}
-            className="rounded-md p-1.5 hover:bg-white/[0.08] relative"
-            aria-label="分享"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-              <polyline points="16 6 12 2 8 6" />
-              <line x1="12" y1="2" x2="12" y2="15" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            className="rounded-md p-1.5 hover:bg-white/[0.08]"
-            aria-label="Like"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-          </button>
-          <div className="relative" ref={moreRef}>
+    <div className="fixed inset-0 z-50 flex flex-col animate-fadeIn font-sans bg-[#fbfbfd] text-[#1d1d1f] relative">
+      <MemoryDetailHeader
+        onBack={onBack}
+        onShare={handleShare}
+        moreMenu={
+          <>
             <button
               type="button"
-              onClick={() => setMoreOpen((v) => !v)}
-              className="rounded-md p-1.5 hover:bg-white/[0.08]"
-              aria-label="更多"
-              aria-expanded={moreOpen}
+              onClick={handleEdit}
+              className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100"
+              role="menuitem"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="1" />
-                <circle cx="19" cy="12" r="1" />
-                <circle cx="5" cy="12" r="1" />
-              </svg>
+              编辑
             </button>
-            {moreOpen && (
-              <div
-                className="absolute right-0 top-full mt-1 min-w-[140px] rounded-lg bg-white py-1 shadow-lg border border-black/8 text-left z-50"
-                role="menu"
-              >
-                <button
-                  type="button"
-                  onClick={handleEdit}
-                  className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100"
-                  role="menuitem"
-                >
-                  编辑
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  role="menuitem"
-                >
-                  {isDeleting ? '删除中...' : '删除'}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              role="menuitem"
+            >
+              {isDeleting ? '删除中...' : '删除'}
+            </button>
+          </>
+        }
+      />
       {shareFeedback !== 'idle' && (
         <div
           className="absolute left-1/2 -translate-x-1/2 top-12 z-20 px-3 py-1.5 rounded-full bg-white/95 text-[#1d1d1f] text-[13px] font-medium shadow-lg animate-fadeIn pointer-events-none"
