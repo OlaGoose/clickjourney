@@ -342,7 +342,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
               onChange={(e) =>
                 setEditorData(prev => ({ ...prev, title: e.target.value }))
               }
-              placeholder="输入标题..."
+              placeholder="标题"
               className="w-full text-2xl font-bold focus:outline-none bg-transparent text-[#1d1d1f] placeholder:text-[#86868b]"
               maxLength={100}
             />
@@ -355,7 +355,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
               onChange={(e) =>
                 setEditorData(prev => ({ ...prev, description: e.target.value }))
               }
-              placeholder="添加描述..."
+              placeholder="描述"
               className="w-full resize-none text-base focus:outline-none bg-transparent rounded-xl py-3 text-[#1d1d1f] placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80"
               rows={1}
               style={{ minHeight: 72 }}

@@ -72,7 +72,7 @@ export function ContentBlock({
             }}
             onInput={syncHeight}
             onClick={(e) => e.stopPropagation()}
-            placeholder="添加描述..."
+            placeholder="描述"
             rows={1}
             maxLength={500}
             style={{ minHeight: TEXTAREA_MIN_HEIGHT_PX }}
@@ -98,7 +98,7 @@ export function ContentBlock({
                 dangerouslySetInnerHTML={{ __html: safeHtml }}
               />
             ) : (
-              <p className="text-[#86868b] text-sm">点击编辑添加富文本</p>
+              <p className="text-[#86868b] text-[13px]">富文本</p>
             )}
           </div>
         );
@@ -174,18 +174,22 @@ export function ContentBlock({
         );
       case 'audio':
         return (
-          <div className="flex items-center gap-3 rounded-2xl p-4 bg-[#f5f5f7]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/[0.06]">
-              <Music size={20} className="text-[#6e6e73]" />
-            </div>
+          <div className="w-full" role="region" aria-label={block.content ? '音频播放' : '添加音频'}>
             {block.content ? (
-              <audio src={block.content} controls className="flex-1">
-                Your browser does not support the audio tag.
-              </audio>
+              <div className="rounded-2xl bg-black/[0.04] ring-1 ring-black/[0.06] overflow-hidden">
+                <audio
+                  src={block.content}
+                  controls
+                  className="w-full h-10 [&::-webkit-media-controls-panel]:bg-transparent"
+                >
+                  Your browser does not support the audio tag.
+                </audio>
+              </div>
             ) : (
-              <span className="flex-1 text-sm text-[#86868b]">
-                点击上传音频...
-              </span>
+              <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.1] py-3.5 text-[#86868b] hover:border-black/[0.14] hover:bg-black/[0.02] transition-colors">
+                <Music size={16} strokeWidth={2} aria-hidden />
+                <span className="text-[13px] font-medium">添加音频</span>
+              </div>
             )}
           </div>
         );
@@ -233,10 +237,10 @@ export function ContentBlock({
             e.stopPropagation();
             onEdit();
           }}
-          className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all active:scale-95"
+          className="absolute top-2 right-2 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
           aria-label="编辑内容块"
         >
-          <Edit2 size={12} strokeWidth={2.5} />
+          <Edit2 size={10} strokeWidth={2.5} />
           <span>编辑</span>
         </button>
       )}

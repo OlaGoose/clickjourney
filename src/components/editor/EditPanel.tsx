@@ -210,76 +210,75 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     onClose();
   }, [aiGeneratedBlocks, aiImages, onInsertGeneratedBlocks, onClose]);
 
-  /** Template panel: 模版 (待开发) + AI (prompt → preview → 插入) */
+  /** Template panel: 模版 (待开发) + AI (prompt → preview → 插入) — Apple TV style */
   if (showTypePicker && templatePanelOpen) {
     return (
       <>
         <div
-          className={`fixed inset-0 z-40 backdrop-blur-md transition-opacity duration-300 bg-black/25 ${isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+          className={`fixed inset-0 z-40 backdrop-blur-sm transition-opacity duration-300 bg-black/20 ${isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
           onClick={onClose}
           aria-hidden
         />
         <div
-          className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[70vh] flex-col rounded-t-[32px] bg-[#fbfbfd] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] ${
+          className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[70vh] flex-col rounded-t-[28px] bg-[#fbfbfd] shadow-[0_-4px_24px_rgba(0,0,0,0.08)] ${
             isOpen ? 'translate-y-0 animate-sheetSlideUp' : 'translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]'
           }`}
         >
-          <div className="flex items-center justify-center pt-3 pb-2">
-            <div className="h-1 w-10 rounded-full bg-[#d2d2d7]" />
+          <div className="flex items-center justify-center pt-3 pb-1">
+            <div className="h-0.5 w-9 rounded-full bg-black/[0.12]" />
           </div>
-          <div className="grid grid-cols-3 items-center px-4 pb-2">
+          <div className="grid grid-cols-3 items-center px-5 pb-2">
             <button
               type="button"
               onClick={() => setTemplatePanelOpen(false)}
-              className="justify-self-start rounded-full p-2.5 text-[#1d1d1f] hover:bg-[#f5f5f7] active:scale-95"
+              className="justify-self-start rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] active:scale-95 transition-all duration-200"
               aria-label="返回"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={20} strokeWidth={2} />
             </button>
-            <h3 className="text-center text-[17px] font-semibold text-[#1d1d1f]">模版</h3>
+            <h3 className="text-center text-[17px] font-semibold text-[#1d1d1f] tracking-tight">模板</h3>
             <button
               type="button"
               onClick={onClose}
-              className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-[#f5f5f7] active:scale-95"
+              className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] active:scale-95 transition-all duration-200"
               aria-label="关闭"
             >
-              <X size={18} />
+              <X size={18} strokeWidth={2} />
             </button>
           </div>
-          <div className="flex border-b border-black/[0.06] px-4">
+          <div className="flex gap-1 mx-4 p-1 rounded-2xl bg-black/[0.04]">
             <button
               type="button"
               onClick={() => setTemplateTab('template')}
-              className={`flex items-center gap-1.5 px-4 py-3 text-[14px] font-semibold border-b-2 transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[14px] font-semibold transition-all duration-200 ${
                 templateTab === 'template'
-                  ? 'border-[#1d1d1f] text-[#1d1d1f]'
-                  : 'border-transparent text-[#6e6e73] hover:text-[#1d1d1f]'
+                  ? 'bg-white text-[#1d1d1f] shadow-sm'
+                  : 'text-[#6e6e73] hover:text-[#1d1d1f]'
               }`}
             >
-              <LayoutTemplate size={16} />
-              模版
+              <LayoutTemplate size={16} strokeWidth={2} />
+              模板
             </button>
             <button
               type="button"
               onClick={() => setTemplateTab('ai')}
-              className={`flex items-center gap-1.5 px-4 py-3 text-[14px] font-semibold border-b-2 transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[14px] font-semibold transition-all duration-200 ${
                 templateTab === 'ai'
-                  ? 'border-[#1d1d1f] text-[#1d1d1f]'
-                  : 'border-transparent text-[#6e6e73] hover:text-[#1d1d1f]'
+                  ? 'bg-white text-[#1d1d1f] shadow-sm'
+                  : 'text-[#6e6e73] hover:text-[#1d1d1f]'
               }`}
             >
-              <Sparkles size={16} />
+              <Sparkles size={16} strokeWidth={2} />
               AI
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="flex-1 overflow-y-auto px-5 py-5">
             {templateTab === 'template' && (
-              <div className="py-8 text-center text-[15px] text-[#6e6e73]">待开发</div>
+              <div className="py-16 text-center text-[13px] text-[#86868b]">—</div>
             )}
             {templateTab === 'ai' && (
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-[#6e6e73]">可选：上传图片（多模态生成）</label>
                   <input
                     ref={aiImageInputRef}
                     type="file"
@@ -292,14 +291,14 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                     <div className="flex flex-wrap gap-2">
                       {aiImages.map((url, idx) => (
                         <div key={url} className="relative">
-                          <img src={url} alt="" className="h-16 w-16 rounded-xl object-cover border border-black/[0.08]" />
+                          <img src={url} alt="" className="h-14 w-14 rounded-xl object-cover ring-1 ring-black/[0.06]" />
                           <button
                             type="button"
                             onClick={() => setAiImages((p) => p.filter((_, i) => i !== idx))}
-                            className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center"
+                            className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center hover:bg-[#424245] transition-colors"
                             aria-label="移除"
                           >
-                            <X size={12} />
+                            <X size={10} strokeWidth={2.5} />
                           </button>
                         </div>
                       ))}
@@ -307,9 +306,9 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                         <button
                           type="button"
                           onClick={() => aiImageInputRef.current?.click()}
-                          className="h-16 w-16 rounded-xl border border-dashed border-black/[0.2] flex items-center justify-center text-[#6e6e73] hover:bg-[#f5f5f7]"
+                          className="h-14 w-14 rounded-xl border border-dashed border-black/[0.12] flex items-center justify-center text-[#86868b] hover:bg-black/[0.03] transition-colors"
                         >
-                          <Upload size={20} />
+                          <Upload size={18} strokeWidth={2} />
                         </button>
                       )}
                     </div>
@@ -317,55 +316,44 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                     <button
                       type="button"
                       onClick={() => aiImageInputRef.current?.click()}
-                      className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.12] py-3 text-[14px] text-[#6e6e73] hover:bg-[#f5f5f7]"
+                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-black/[0.1] py-3 text-[13px] text-[#6e6e73] hover:bg-black/[0.02] transition-colors"
                     >
-                      <ImageIcon size={18} />
-                      添加图片（最多 {MAX_IMAGES} 张，与描述一起生成多模态内容）
+                      <ImageIcon size={16} strokeWidth={2} />
+                      图片（最多 {MAX_IMAGES} 张）
                     </button>
                   )}
                 </div>
-                <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-[#6e6e73]">心境故事</label>
-                  <textarea
-                    value={aiPrompt}
-                    onChange={(e) => { setAiPrompt(e.target.value); setAiError(null); }}
-                    placeholder={aiImages.length > 0 ? '写几句当时的心情或场景，AI 会结合图片生成杂志感排版' : '例如：那天到东京已经很晚，恍然一抬头，看到了东京独有的普鲁士蓝…'}
-                    className="w-full min-h-[88px] rounded-2xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-2 focus:ring-black/10"
-                    rows={3}
-                  />
-                </div>
+                <textarea
+                  value={aiPrompt}
+                  onChange={(e) => { setAiPrompt(e.target.value); setAiError(null); }}
+                  placeholder="描述场景或心情…"
+                  className="w-full min-h-[80px] rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08] focus:border-transparent transition-shadow"
+                  rows={3}
+                />
                 <button
                   type="button"
                   onClick={handleGenerateSection}
                   disabled={aiLoading || !aiPrompt.trim()}
-                  className="flex w-full items-center justify-center gap-2 rounded-[14px] py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98]"
+                  className="w-full rounded-full py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] transition-all"
                 >
                   {aiLoading ? (
-                    <>
-                      <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                      生成中…
-                    </>
+                    <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin inline-block align-middle" />
                   ) : (
                     <>
-                      <Sparkles size={18} />
+                      <Sparkles size={16} strokeWidth={2} className="inline-block align-middle mr-1.5" />
                       生成
                     </>
                   )}
                 </button>
-                {aiError && <p className="text-[13px] text-[#ff3b30]">{aiError}</p>}
+                {aiError && <p className="text-[12px] text-[#ff3b30]">{aiError}</p>}
                 {aiGeneratedBlocks.length > 0 && (
-                  <>
-                    <p className="text-[13px] text-[#6e6e73]">
-                      已生成 {aiGeneratedBlocks.length} 个内容块，将按顺序插入文档。
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleInsertAsBlocks}
-                      className="w-full rounded-[14px] py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] active:scale-[0.98] flex items-center justify-center gap-2"
-                    >
-                      插入文档
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={handleInsertAsBlocks}
+                    className="w-full rounded-full py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] active:scale-[0.98] flex items-center justify-center gap-2 transition-all"
+                  >
+                    插入（{aiGeneratedBlocks.length}）
+                  </button>
                 )}
               </div>
             )}
@@ -375,65 +363,62 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     );
   }
 
-  /** Type picker view (Apple Arcade–style): 模版 first, then block types. */
+  /** Type picker view — Apple TV style: pill handle, soft cards, rounded CTAs */
   if (showTypePicker) {
     return (
       <>
         <div
-          className={`fixed inset-0 z-40 backdrop-blur-md transition-opacity duration-300 bg-black/25 ${
+          className={`fixed inset-0 z-40 backdrop-blur-sm transition-opacity duration-300 bg-black/20 ${
             isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}
           onClick={onClose}
           aria-hidden
         />
         <div
-          className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[70vh] flex-col rounded-t-[32px] bg-[#fbfbfd] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] ${
+          className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[70vh] flex-col rounded-t-[28px] bg-[#fbfbfd] shadow-[0_-4px_24px_rgba(0,0,0,0.08)] ${
             isOpen
               ? 'translate-y-0 animate-sheetSlideUp'
               : 'translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]'
           }`}
         >
-          <div className="flex items-center justify-center pt-3 pb-2">
-            <div className="h-1 w-10 rounded-full bg-[#d2d2d7]" />
+          <div className="flex items-center justify-center pt-3 pb-1">
+            <div className="h-0.5 w-9 rounded-full bg-black/[0.12]" />
           </div>
-          <div className="grid grid-cols-3 items-center px-4 pb-2">
+          <div className="grid grid-cols-3 items-center px-5 pb-2">
             <div />
-            <h3 className="text-center text-[17px] font-semibold text-[#1d1d1f]">
+            <h3 className="text-center text-[17px] font-semibold text-[#1d1d1f] tracking-tight">
               添加内容
             </h3>
             <button
               type="button"
               onClick={onClose}
-              className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-[#f5f5f7] transition-all active:scale-95"
+              className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] transition-all duration-200 active:scale-95"
               aria-label="关闭"
             >
-              <X size={18} />
+              <X size={18} strokeWidth={2} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2">
-            <p className="mb-4 text-[13px] text-[#6e6e73]">
-              选择要添加的内容类型
-            </p>
+          <div className="flex-1 overflow-y-auto px-5 pb-8 pt-4">
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setTemplatePanelOpen(true)}
-                className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white p-6 text-[#1d1d1f] border border-black/[0.06] shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:bg-[#fafafa] transition-all active:scale-[0.98]"
+                className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-white p-6 text-[#1d1d1f] shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:bg-[#fafafa] transition-all duration-200 active:scale-[0.98]"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5f5f7]">
-                  <LayoutTemplate size={24} strokeWidth={2} className="text-[#6e6e73]" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f5f5f7]">
+                  <LayoutTemplate size={26} strokeWidth={2} className="text-[#6e6e73]" />
                 </div>
-                <span className="text-[15px] font-semibold">模版</span>
+                <span className="text-[15px] font-semibold">模板</span>
               </button>
               {BLOCK_TYPES.map(({ type, icon: Icon, label }) => (
                 <button
                   key={type}
                   type="button"
                   onClick={() => onSelectType!(type)}
-                  className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white p-6 text-[#1d1d1f] border border-black/[0.06] shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:bg-[#fafafa] transition-all active:scale-[0.98]"
+                  className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-white p-6 text-[#1d1d1f] shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:bg-[#fafafa] transition-all duration-200 active:scale-[0.98]"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5f5f7]">
-                    <Icon size={24} strokeWidth={2} className="text-[#6e6e73]" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f5f5f7]">
+                    <Icon size={26} strokeWidth={2} className="text-[#6e6e73]" />
                   </div>
                   <span className="text-[15px] font-semibold">{label}</span>
                 </button>
@@ -510,13 +495,13 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     switch (block.type) {
       case 'text':
         return (
-          <div className="flex-1">
+          <div className="flex-1 px-2">
             <textarea
               ref={textareaRef}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="输入文本内容..."
-              className="h-full w-full resize-none bg-transparent px-4 py-3 text-sm leading-relaxed rounded-2xl focus:outline-none text-[#1d1d1f] placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80"
+              placeholder=""
+              className="h-full w-full resize-none bg-transparent px-4 py-3.5 text-[15px] leading-relaxed rounded-xl focus:outline-none text-[#1d1d1f] placeholder:text-[#86868b] focus:bg-black/[0.02] transition-colors"
               rows={8}
             />
           </div>
@@ -528,7 +513,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             <BlockRichTextEditor
               content={content}
               onChange={setContent}
-              placeholder="输入富文本内容…"
+              placeholder="内容"
             />
           </div>
         );
@@ -544,36 +529,32 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
               onChange={handleFileSelect}
               className="hidden"
             />
-            {/* 呈现形式：网格 / 相册 — pill toggle Apple-style */}
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-[#6e6e73]">
-                呈现形式
-              </span>
-              <div className="flex rounded-full p-0.5 bg-[#e8e8ed]">
+              <div className="flex rounded-full p-0.5 bg-black/[0.06]">
                 <button
                   type="button"
                   onClick={() => setImageDisplayMode('grid')}
-                  className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-all active:scale-95 ${
+                  className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200 active:scale-95 ${
                     imageDisplayMode === 'grid'
                       ? 'bg-white text-[#1d1d1f] shadow-sm'
                       : 'text-[#6e6e73] hover:text-[#1d1d1f]'
                   }`}
                   aria-pressed={imageDisplayMode === 'grid'}
                 >
-                  <LayoutGrid size={14} />
+                  <LayoutGrid size={14} strokeWidth={2} />
                   网格
                 </button>
                 <button
                   type="button"
                   onClick={() => setImageDisplayMode('gallery')}
-                  className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-all active:scale-95 ${
+                  className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200 active:scale-95 ${
                     imageDisplayMode === 'gallery'
                       ? 'bg-white text-[#1d1d1f] shadow-sm'
                       : 'text-[#6e6e73] hover:text-[#1d1d1f]'
                   }`}
                   aria-pressed={imageDisplayMode === 'gallery'}
                 >
-                  <Images size={14} />
+                  <Images size={14} strokeWidth={2} />
                   相册
                 </button>
               </div>
@@ -598,10 +579,10 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                   <button
                     type="button"
                     onClick={handleUploadClick}
-                    className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold bg-[#e8e8ed] text-[#1d1d1f] hover:bg-[#d2d2d7] transition-all active:scale-95"
+                    className="flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] transition-colors"
                   >
-                    <Upload size={16} />
-                    添加图片（{images.length}/{MAX_IMAGES}）
+                    <Upload size={14} strokeWidth={2} />
+                    添加（{images.length}/{MAX_IMAGES}）
                   </button>
                 )}
               </div>
@@ -609,12 +590,10 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
               <button
                 type="button"
                 onClick={handleUploadClick}
-                className="flex h-48 w-full flex-col items-center justify-center gap-2 rounded-2xl bg-[#f5f5f7] hover:bg-[#e8e8ed] transition-all hover:opacity-90 active:scale-[0.99]"
+                className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.1] hover:bg-black/[0.02] transition-colors active:scale-[0.99]"
               >
-                <ImageIcon size={32} className="text-[#86868b]" />
-                <span className="text-sm font-medium text-[#6e6e73]">
-                  点击上传图片（可多选，最多 {MAX_IMAGES} 张）
-                </span>
+                <ImageIcon size={28} className="text-[#86868b]" strokeWidth={1.5} />
+                <span className="text-[13px] text-[#6e6e73]">添加图片</span>
               </button>
             )}
           </div>
@@ -640,9 +619,9 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                 <button
                   type="button"
                   onClick={handleUploadClick}
-                  className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold bg-[#e8e8ed] text-[#1d1d1f] hover:bg-[#d2d2d7] transition-all active:scale-95"
+                  className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-[14px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] transition-all duration-200 active:scale-[0.98]"
                 >
-                  <Upload size={16} />
+                  <Upload size={16} strokeWidth={2} />
                   替换视频
                 </button>
               </div>
@@ -650,12 +629,10 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
               <button
                 type="button"
                 onClick={handleUploadClick}
-                className="flex h-48 w-full flex-col items-center justify-center gap-2 rounded-2xl bg-[#f5f5f7] hover:bg-[#e8e8ed] transition-all hover:opacity-90 active:scale-[0.99]"
+                className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.1] hover:bg-black/[0.02] transition-colors active:scale-[0.99]"
               >
-                <VideoIcon size={32} className="text-[#86868b]" />
-                <span className="text-sm font-medium text-[#6e6e73]">
-                  点击上传视频
-                </span>
+                <VideoIcon size={28} className="text-[#86868b]" strokeWidth={1.5} />
+                <span className="text-[13px] text-[#6e6e73]">添加视频</span>
               </button>
             )}
           </div>
@@ -673,65 +650,65 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             />
             {content ? (
               <>
-                <div className="rounded-2xl p-4 bg-[#f5f5f7]">
-                  <audio src={content} controls className="w-full">
+                <div className="rounded-2xl bg-black/[0.04] ring-1 ring-black/[0.06] overflow-hidden" role="region" aria-label="音频播放">
+                  <audio
+                    src={content}
+                    controls
+                    className="w-full h-10 [&::-webkit-media-controls-panel]:bg-transparent"
+                  >
                     Your browser does not support the audio tag.
                   </audio>
-                  {fileName && (
-                    <p className="mt-2 text-xs truncate text-[#86868b]">
-                      {fileName}
-                    </p>
-                  )}
                 </div>
+                {fileName && (
+                  <p className="text-[11px] truncate text-[#86868b] px-0.5" title={fileName}>
+                    {fileName}
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={handleUploadClick}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold bg-[#e8e8ed] text-[#1d1d1f] hover:bg-[#d2d2d7] transition-all active:scale-95"
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] transition-colors active:scale-[0.98]"
                   >
-                    <Upload size={16} />
-                    替换音频
+                    <Upload size={14} strokeWidth={2} aria-hidden />
+                    替换
                   </button>
                   <button
                     type="button"
                     onClick={startRecording}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold bg-[#e8e8ed] text-[#1d1d1f] hover:bg-[#d2d2d7] transition-all active:scale-95"
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] transition-colors active:scale-[0.98]"
                   >
-                    <Mic size={16} />
-                    重新录制
+                    <Mic size={14} strokeWidth={2} aria-hidden />
+                    重录
                   </button>
                 </div>
               </>
             ) : (
-              <div className="grid grid-cols-1 gap-3">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   type="button"
                   onClick={handleUploadClick}
-                  className="flex h-24 w-full items-center justify-center gap-3 rounded-2xl bg-[#f5f5f7] hover:bg-[#e8e8ed] transition-all hover:opacity-90 active:scale-[0.99]"
+                  className="flex-1 flex items-center justify-center gap-2 rounded-full py-3.5 text-[14px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] transition-all duration-200 active:scale-[0.98]"
                 >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e8e8ed]">
-                    <Upload size={22} className="text-[#6e6e73]" />
-                  </div>
-                  <span className="text-[15px] font-semibold text-[#1d1d1f]">
-                    上传音频
-                  </span>
+                  <Upload size={18} strokeWidth={2} />
+                  上传音频
                 </button>
                 <button
                   type="button"
                   onClick={isRecording ? stopRecording : startRecording}
                   disabled={false}
-                  className="flex h-24 w-full items-center justify-center gap-3 rounded-2xl bg-[#f5f5f7] hover:bg-[#e8e8ed] transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-70"
+                  className={`flex-1 flex items-center justify-center gap-2 rounded-full py-3.5 text-[14px] font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-70 ${
+                    isRecording
+                      ? 'bg-[#ff3b30]/12 text-[#ff3b30] hover:bg-[#ff3b30]/18'
+                      : 'bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09]'
+                  }`}
                 >
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${isRecording ? 'bg-[#ff3b30]/15' : 'bg-[#e8e8ed]'}`}>
-                    {isRecording ? (
-                      <Square size={20} className="text-[#ff3b30]" fill="currentColor" />
-                    ) : (
-                      <Mic size={22} className="text-[#6e6e73]" />
-                    )}
-                  </div>
-                  <span className="text-[15px] font-semibold text-[#1d1d1f]">
-                    {isRecording ? '停止录制' : '麦克风录制'}
-                  </span>
+                  {isRecording ? (
+                    <Square size={18} fill="currentColor" className="text-[#ff3b30]" />
+                  ) : (
+                    <Mic size={18} strokeWidth={2} />
+                  )}
+                  {isRecording ? '停止' : '录制'}
                 </button>
               </div>
             )}
@@ -745,59 +722,59 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
 
   return (
     <>
-      {/* Backdrop — 与面板同步淡入；关闭时先收再淡出 */}
+      {/* Backdrop — Apple TV: softer blur, lighter overlay */}
       <div
-        className={`fixed inset-0 z-40 backdrop-blur-md transition-opacity duration-300 bg-black/25 ${
+        className={`fixed inset-0 z-40 backdrop-blur-sm transition-opacity duration-300 bg-black/20 ${
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={handleClose}
         aria-hidden
       />
 
-      {/* Panel — Apple Arcade–inspired: light gray sheet, rounded corners, clear sections */}
+      {/* Panel — Apple TV: pill handle, soft shadow, pill CTA */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[82vh] flex-col rounded-t-[28px] bg-[#fbfbfd] shadow-[0_-8px_32px_rgba(0,0,0,0.1)] ${
+        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[82vh] flex-col rounded-t-[28px] bg-[#fbfbfd] shadow-[0_-4px_24px_rgba(0,0,0,0.08)] ${
           isOpen
             ? 'translate-y-0 animate-sheetSlideUp'
             : 'translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]'
         }`}
       >
-        <div className="flex items-center justify-center pt-3 pb-2">
-          <div className="h-1 w-10 rounded-full bg-[#d2d2d7]" />
+        <div className="flex items-center justify-center pt-3 pb-1">
+          <div className="h-0.5 w-9 rounded-full bg-black/[0.12]" />
         </div>
-        <div className="grid grid-cols-3 items-center px-4 pb-3">
+        <div className="grid grid-cols-3 items-center px-5 pb-3">
           <button
             type="button"
             onClick={onDelete}
-            className="justify-self-start flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-all active:scale-95"
+            className="justify-self-start flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-all duration-200 active:scale-95"
           >
-            <Trash2 size={14} />
+            <Trash2 size={14} strokeWidth={2} />
             删除
           </button>
-          <h3 className="justify-self-center text-[17px] font-semibold text-[#1d1d1f]">
-            {block.type === 'text' && '编辑文本'}
-            {block.type === 'richtext' && '编辑富文本'}
-            {block.type === 'image' && '编辑图片'}
-            {block.type === 'video' && '编辑视频'}
-            {block.type === 'audio' && '编辑音频'}
+          <h3 className="justify-self-center text-[17px] font-semibold text-[#1d1d1f] tracking-tight">
+            {block.type === 'text' && '文本'}
+            {block.type === 'richtext' && '富文本'}
+            {block.type === 'image' && '图片'}
+            {block.type === 'video' && '视频'}
+            {block.type === 'audio' && '音频'}
           </h3>
           <button
             type="button"
             onClick={handleClose}
-            className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-[#f5f5f7] transition-all active:scale-95"
+            className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] transition-all duration-200 active:scale-95"
             aria-label="关闭"
           >
-            <X size={18} />
+            <X size={18} strokeWidth={2} />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto py-2 px-1">
+        <div className="flex-1 overflow-y-auto py-2 px-2">
           {renderEditor()}
         </div>
-        <div className="p-4 pt-2 bg-[#fbfbfd]">
+        <div className="p-5 pt-2 bg-[#fbfbfd]">
           <button
             type="button"
             onClick={handleSave}
-            className="w-full rounded-[14px] py-3.5 text-[16px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_12px_rgba(0,0,0,0.08)] transition-all active:scale-[0.98]"
+            className="w-full rounded-full py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] transition-colors active:scale-[0.98]"
           >
             完成
           </button>
