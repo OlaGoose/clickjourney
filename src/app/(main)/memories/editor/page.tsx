@@ -181,7 +181,12 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
   return blocks.filter((b) => b.type === 'image').flatMap((b) => (b.metadata?.images?.length ? b.metadata.images : b.content ? [b.content] : []));
 }
 
-  const handleAddBlock = useCallback((type: ContentBlockType['type']) => {
+  const handleOpenAddPanel = useCallback(() => {
+    setEditingBlock(null);
+    setIsEditPanelOpen(true);
+  }, []);
+
+  const handleSelectType = useCallback((type: ContentBlockType['type']) => {
     const newBlock: ContentBlockType = {
       id: generateId(),
       type,
@@ -194,12 +199,11 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
       blocks: [...prev.blocks, newBlock],
     }));
 
-    // Only open edit panel for non-text blocks; text is edited inline
-    if (type !== 'text') {
-      setEditingBlock(newBlock);
-      setIsEditPanelOpen(true);
-    }
+    setEditingBlock(newBlock);
     setSelectedBlockId(newBlock.id);
+    if (type === 'text') {
+      setIsEditPanelOpen(false);
+    }
   }, [editorData.blocks.length]);
 
   const handleTextBlockChange = useCallback((blockId: string, content: string) => {
@@ -295,7 +299,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
             />
           </div>
 
-          {/* Description Input */}
+          {/* Description Input — same height as text block (min 72px) */}
           <div>
             <textarea
               value={editorData.description}
@@ -304,7 +308,8 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
               }
               placeholder="添加描述..."
               className="w-full resize-none text-base focus:outline-none bg-transparent rounded-xl py-3 text-[#1d1d1f] placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80"
-              rows={3}
+              rows={1}
+              style={{ minHeight: 72 }}
               maxLength={500}
             />
           </div>
@@ -325,14 +330,14 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
               ))}
           </div>
 
-          {/* Add Block Button */}
+          {/* Add Block Zone — rounded rectangle, opens edit panel type picker */}
           <div className="py-6">
-            <AddBlockButton onAddBlock={handleAddBlock} />
+            <AddBlockButton onAddClick={handleOpenAddPanel} />
           </div>
         </div>
       </div>
 
-      {/* Edit Panel */}
+      {/* Edit Panel — type picker when block is null, block editor otherwise */}
       <EditPanel
         isOpen={isEditPanelOpen}
         onClose={handleCloseEditPanel}
@@ -340,6 +345,7 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
         onSave={handleSaveBlock}
         onDelete={handleDeleteBlock}
         onDiscard={handleDiscardBlock}
+        onSelectType={handleSelectType}
       />
     </div>
   );

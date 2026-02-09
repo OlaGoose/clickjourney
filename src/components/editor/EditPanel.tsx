@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, LayoutGrid, Images } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, LayoutGrid, Images, Mic, Square, Type } from 'lucide-react';
 import PhotoGrid from '@/components/PhotoGrid';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
-import type { ContentBlock, ImageDisplayMode } from '@/types/editor';
+import type { ContentBlock, ContentBlockType, ImageDisplayMode } from '@/types/editor';
 
 const MAX_IMAGES = 6;
 
@@ -32,21 +32,34 @@ interface EditPanelProps {
   onDelete: () => void;
   /** Called when panel is closed with no content, so parent can remove the block. */
   onDiscard?: () => void;
+  /** When set and block is null, panel shows type picker; when user selects type, this is called. */
+  onSelectType?: (type: ContentBlockType) => void;
 }
 
-/** Apple light mode only: white panel, gray controls, #1d1d1f text. */
-export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard }: EditPanelProps) {
+const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[] = [
+  { type: 'text', icon: Type, label: '文本' },
+  { type: 'image', icon: ImageIcon, label: '图片' },
+  { type: 'video', icon: VideoIcon, label: '视频' },
+  { type: 'audio', icon: MusicIcon, label: '音频' },
+];
+
+/** Apple light mode only: white panel, gray controls, #1d1d1f text. Apple Arcade–inspired layout. */
+export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, onSelectType }: EditPanelProps) {
   const [content, setContent] = useState('');
   const [fileName, setFileName] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [imageDisplayMode, setImageDisplayMode] = useState<ImageDisplayMode>('grid');
+  const [isRecording, setIsRecording] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     if (block) {
       setContent(block.content);
       setFileName(block.metadata?.fileName || '');
+      setIsRecording(false);
       if (block.type === 'image') {
         const list = block.metadata?.images?.length
           ? block.metadata.images
@@ -64,6 +77,104 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard 
       textareaRef.current.focus();
     }
   }, [isOpen, block?.type]);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      chunksRef.current = [];
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        setContent(url);
+        setFileName(`录制_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '').slice(0, 14)}.webm`);
+      };
+      recorder.start(200);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Microphone access failed:', err);
+      alert('无法访问麦克风，请检查权限后重试。');
+    }
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+      mediaRecorderRef.current = null;
+    }
+    setIsRecording(false);
+  }, []);
+
+  const showTypePicker = isOpen && !block && onSelectType;
+
+  /** Type picker view (Apple Arcade–style): when adding new block, show choice in same sheet. */
+  if (showTypePicker) {
+    return (
+      <>
+        <div
+          className={`fixed inset-0 z-40 backdrop-blur-md transition-opacity duration-300 bg-black/25 ${
+            isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+          onClick={onClose}
+          aria-hidden
+        />
+        <div
+          className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[70vh] flex-col rounded-t-[32px] bg-[#fbfbfd] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] ${
+            isOpen
+              ? 'translate-y-0 animate-sheetSlideUp'
+              : 'translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]'
+          }`}
+        >
+          <div className="flex items-center justify-center pt-3 pb-2">
+            <div className="h-1 w-10 rounded-full bg-[#d2d2d7]" />
+          </div>
+          <div className="grid grid-cols-3 items-center px-4 pb-2">
+            <div />
+            <h3 className="text-center text-[17px] font-semibold text-[#1d1d1f]">
+              添加内容
+            </h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-[#f5f5f7] transition-all active:scale-95"
+              aria-label="关闭"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2">
+            <p className="mb-4 text-[13px] text-[#6e6e73]">
+              选择要添加的内容类型
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {BLOCK_TYPES.map(({ type, icon: Icon, label }) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => onSelectType(type)}
+                  className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white p-6 text-[#1d1d1f] border border-black/[0.06] shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:bg-[#fafafa] transition-all active:scale-[0.98]"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5f5f7]">
+                    <Icon size={24} strokeWidth={2} className="text-[#6e6e73]" />
+                  </div>
+                  <span className="text-[15px] font-semibold">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   if (!block) return null;
 
@@ -272,7 +383,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard 
 
       case 'audio':
         return (
-          <div className="flex-1 px-4">
+          <div className="flex-1 px-4 space-y-4">
             <input
               ref={fileInputRef}
               type="file"
@@ -281,7 +392,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard 
               className="hidden"
             />
             {content ? (
-              <div className="space-y-3">
+              <>
                 <div className="rounded-2xl p-4 bg-[#f5f5f7]">
                   <audio src={content} controls className="w-full">
                     Your browser does not support the audio tag.
@@ -292,26 +403,57 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard 
                     </p>
                   )}
                 </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleUploadClick}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold bg-[#e8e8ed] text-[#1d1d1f] hover:bg-[#d2d2d7] transition-all active:scale-95"
+                  >
+                    <Upload size={16} />
+                    替换音频
+                  </button>
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold bg-[#e8e8ed] text-[#1d1d1f] hover:bg-[#d2d2d7] transition-all active:scale-95"
+                  >
+                    <Mic size={16} />
+                    重新录制
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="grid grid-cols-1 gap-3">
                 <button
                   type="button"
                   onClick={handleUploadClick}
-                  className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold bg-[#e8e8ed] text-[#1d1d1f] hover:bg-[#d2d2d7] transition-all active:scale-95"
+                  className="flex h-24 w-full items-center justify-center gap-3 rounded-2xl bg-[#f5f5f7] hover:bg-[#e8e8ed] transition-all hover:opacity-90 active:scale-[0.99]"
                 >
-                  <Upload size={16} />
-                  替换音频
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e8e8ed]">
+                    <Upload size={22} className="text-[#6e6e73]" />
+                  </div>
+                  <span className="text-[15px] font-semibold text-[#1d1d1f]">
+                    上传音频
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={false}
+                  className="flex h-24 w-full items-center justify-center gap-3 rounded-2xl bg-[#f5f5f7] hover:bg-[#e8e8ed] transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-70"
+                >
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${isRecording ? 'bg-[#ff3b30]/15' : 'bg-[#e8e8ed]'}`}>
+                    {isRecording ? (
+                      <Square size={20} className="text-[#ff3b30]" fill="currentColor" />
+                    ) : (
+                      <Mic size={22} className="text-[#6e6e73]" />
+                    )}
+                  </div>
+                  <span className="text-[15px] font-semibold text-[#1d1d1f]">
+                    {isRecording ? '停止录制' : '麦克风录制'}
+                  </span>
                 </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleUploadClick}
-                className="flex h-48 w-full flex-col items-center justify-center gap-2 rounded-2xl bg-[#f5f5f7] hover:bg-[#e8e8ed] transition-all hover:opacity-90 active:scale-[0.99]"
-              >
-                <MusicIcon size={32} className="text-[#86868b]" />
-                <span className="text-sm font-medium text-[#6e6e73]">
-                  点击上传音频
-                </span>
-              </button>
             )}
           </div>
         );
@@ -332,20 +474,17 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard 
         aria-hidden
       />
 
-      {/* Panel — Apple light: white sheet, soft shadow */}
+      {/* Panel — Apple Arcade–inspired: light gray sheet, rounded corners, clear sections */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[80vh] flex-col rounded-t-[32px] bg-white shadow-[0_-8px_32px_rgba(0,0,0,0.12)] ${
+        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[82vh] flex-col rounded-t-[28px] bg-[#fbfbfd] shadow-[0_-8px_32px_rgba(0,0,0,0.1)] ${
           isOpen
             ? 'translate-y-0 animate-sheetSlideUp'
             : 'translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]'
         }`}
       >
-        {/* Drag Handle */}
         <div className="flex items-center justify-center pt-3 pb-2">
           <div className="h-1 w-10 rounded-full bg-[#d2d2d7]" />
         </div>
-
-        {/* Header — 标题水平居中，左右对称布局 */}
         <div className="grid grid-cols-3 items-center px-4 pb-3">
           <button
             type="button"
@@ -355,7 +494,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard 
             <Trash2 size={14} />
             删除
           </button>
-          <h3 className="justify-self-center text-sm font-semibold text-[#1d1d1f]">
+          <h3 className="justify-self-center text-[17px] font-semibold text-[#1d1d1f]">
             {block.type === 'text' && '编辑文本'}
             {block.type === 'image' && '编辑图片'}
             {block.type === 'video' && '编辑视频'}
@@ -370,18 +509,14 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard 
             <X size={18} />
           </button>
         </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto py-4">
+        <div className="flex-1 overflow-y-auto py-2 px-1">
           {renderEditor()}
         </div>
-
-        {/* Footer — 无边框 */}
-        <div className="p-4">
+        <div className="p-4 pt-2 bg-[#fbfbfd]">
           <button
             type="button"
             onClick={handleSave}
-            className="w-full rounded-full py-3.5 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all active:scale-95"
+            className="w-full rounded-[14px] py-3.5 text-[16px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_12px_rgba(0,0,0,0.08)] transition-all active:scale-[0.98]"
           >
             完成
           </button>
