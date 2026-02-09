@@ -9,12 +9,39 @@ const ALLOWED_TAGS = new Set([
 const ALLOWED_ATTRS: Record<string, Set<string>> = {
   a: new Set(['href', 'target', 'rel']),
   span: new Set(['style']), // for color
+  p: new Set(['style']), // for text-align from editor
+  div: new Set(['style']),
+  h1: new Set(['style']),
+  h2: new Set(['style']),
+  h3: new Set(['style']),
+  h4: new Set(['style']),
+  h5: new Set(['style']),
+  h6: new Set(['style']),
   img: new Set(['src', 'alt']),
 };
 
 function isSafeImgSrc(src: string): boolean {
   const s = src.trim();
   return s.startsWith('data:image/') || s.startsWith('https://');
+}
+
+/** Allow only text-align and color in style to prevent XSS while preserving editor formatting. */
+function sanitizeStyle(style: string): string {
+  if (!style || typeof style !== 'string') return '';
+  const allowed: string[] = [];
+  const parts = style.split(';').map((s) => s.trim()).filter(Boolean);
+  for (const part of parts) {
+    const [prop, ...valueParts] = part.split(':').map((s) => s.trim());
+    const value = valueParts.join(':').trim().toLowerCase();
+    if (!prop || !value) continue;
+    const propLower = prop.toLowerCase();
+    if (propLower === 'text-align' && /^(left|right|center|justify)$/.test(value)) {
+      allowed.push(`text-align: ${value}`);
+    } else if (propLower === 'color' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value)) {
+      allowed.push(`color: ${value}`);
+    }
+  }
+  return allowed.join('; ');
 }
 
 /** Strip script/iframe and on* attributes when DOM is not available (e.g. SSR). */
@@ -51,8 +78,11 @@ export function sanitizeBlockHtml(html: string): string {
       for (let i = 0; i < el.attributes.length; i++) {
         const a = el.attributes[i];
         if (attrs.has(a.name.toLowerCase())) {
-          const v = a.value.replace(/"/g, '&quot;').replace(/</g, '&lt;');
-          out += ` ${a.name}="${v}"`;
+          const v =
+            a.name.toLowerCase() === 'style'
+              ? sanitizeStyle(a.value)
+              : a.value.replace(/"/g, '&quot;').replace(/</g, '&lt;');
+          if (v) out += ` ${a.name}="${v.replace(/"/g, '&quot;')}"`;
         }
       }
     }

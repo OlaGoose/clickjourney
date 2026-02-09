@@ -110,20 +110,24 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunksRef.current = [];
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
+      // Safari/iOS only supports audio/mp4; Chrome/Firefox support webm. Try mp4 first for mobile.
+      const mimeType = MediaRecorder.isTypeSupported('audio/mp4')
+        ? 'audio/mp4'
+        : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : 'audio/webm';
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
+      const ext = mimeType.startsWith('audio/mp4') ? 'mp4' : 'webm';
       recorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunksRef.current, { type: mimeType });
         const url = URL.createObjectURL(blob);
         setContent(url);
-        setFileName(`录制_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '').slice(0, 14)}.webm`);
+        setFileName(`录制_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '').slice(0, 14)}.${ext}`);
       };
       recorder.start(200);
       setIsRecording(true);

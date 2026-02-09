@@ -29,10 +29,16 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  // 测试阶段：若设置 SKIP_AUTH_FOR_API，则对 /api/* 请求跳过 session 检测，不再调用 getSession
+  const skipAuthForApi = process.env.SKIP_AUTH_FOR_API === 'true';
+  if (skipAuthForApi && path.startsWith('/api/')) {
+    return NextResponse.next({ request: { headers: request.headers } });
+  }
+
   // Refresh Supabase session for all requests
   // This ensures the session is always up to date and automatically refreshes tokens
   const { response } = await updateSession(request);
-  
+
   return response;
 }
 

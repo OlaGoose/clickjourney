@@ -226,7 +226,7 @@ export function ContentBlock({
         {renderContent()}
       </div>
 
-      {!readOnly && isSelected && block.type !== 'text' && onEdit && (
+      {!readOnly && isSelected && onEdit && (
         <button
           type="button"
           onClick={(e) => {

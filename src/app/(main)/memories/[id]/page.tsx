@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { MemoryService } from '@/lib/db/services/memory-service';
 import { getScriptForCard } from '@/lib/cinematic-storage';
@@ -15,6 +15,8 @@ import { VideoDetail } from '@/components/memory-detail/VideoDetail';
 export default function MemoryPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const shareView = searchParams.get('share') === '1';
 
   const [memory, setMemory] = useState<CarouselItem | null>(null);
   const [script, setScript] = useState<DirectorScript | null>(null);
@@ -90,7 +92,7 @@ export default function MemoryPage() {
     case 'cinematic':
       return <CinematicDetail memory={memory} script={script} onBack={handleBack} />;
     case 'rich-story':
-      return <RichStoryDetail memory={memory} onBack={handleBack} />;
+      return <RichStoryDetail memory={memory} onBack={handleBack} shareView={shareView} />;
     case 'video':
       return <VideoDetail memory={memory} onBack={handleBack} />;
     case 'photo-gallery':

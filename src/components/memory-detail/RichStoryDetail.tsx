@@ -1,21 +1,27 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ContentBlock } from '@/components/editor/ContentBlock';
 import { MemoryService } from '@/lib/db/services/memory-service';
 import type { CarouselItem } from '@/types/memory';
 
+const SHARE_FEEDBACK_MS = 2200;
+
 interface RichStoryDetailProps {
   memory: CarouselItem;
   onBack: () => void;
+  /** When true, only the content area is shown (no header). Used for shared links. */
+  shareView?: boolean;
 }
 
-/** Renders rich-story memory with same layout as memories/editor (read-only). Header "..." menu includes Edit and Delete. */
-export function RichStoryDetail({ memory, onBack }: RichStoryDetailProps) {
+/** Renders rich-story memory with same layout as memories/editor (read-only). Header has Share and "..." menu (Edit, Delete). */
+export function RichStoryDetail({ memory, onBack, shareView = false }: RichStoryDetailProps) {
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<'idle' | 'copied' | 'shared'>('idle');
+  const shareFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const moreRef = useRef<HTMLDivElement>(null);
 
   const category = memory.category ?? '故事回忆';
@@ -36,6 +42,57 @@ export function RichStoryDetail({ memory, onBack }: RichStoryDetailProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [moreOpen]);
 
+  useEffect(() => {
+    return () => {
+      if (shareFeedbackTimerRef.current) clearTimeout(shareFeedbackTimerRef.current);
+    };
+  }, []);
+
+  const clearShareFeedback = useCallback(() => {
+    if (shareFeedbackTimerRef.current) {
+      clearTimeout(shareFeedbackTimerRef.current);
+      shareFeedbackTimerRef.current = null;
+    }
+    setShareFeedback('idle');
+  }, []);
+
+  const getShareUrl = useCallback(() => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/memories/${memory.id}?share=1`;
+  }, [memory.id]);
+
+  const handleShare = useCallback(async () => {
+    const shareUrl = getShareUrl();
+    const shareTitle = title || '回忆';
+    const shareText = description ? description.slice(0, 120) : shareTitle;
+
+    const shareData = { title: shareTitle, text: shareText, url: shareUrl };
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      const canShare = typeof navigator.canShare === 'function' ? navigator.canShare(shareData) : true;
+      if (canShare) {
+        try {
+          await navigator.share(shareData);
+          setShareFeedback('shared');
+          shareFeedbackTimerRef.current = setTimeout(clearShareFeedback, SHARE_FEEDBACK_MS);
+          return;
+        } catch (err) {
+          if ((err as Error).name === 'AbortError') return;
+        }
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareFeedback('copied');
+      shareFeedbackTimerRef.current = setTimeout(clearShareFeedback, SHARE_FEEDBACK_MS);
+    } catch {
+      if (typeof window !== 'undefined' && window.open) {
+        window.open(shareUrl, '_blank', 'noopener');
+      }
+    }
+  }, [getShareUrl, title, description, clearShareFeedback]);
+
   const handleEdit = () => {
     setMoreOpen(false);
     router.push(`/memories/editor?id=${memory.id}`);
@@ -43,7 +100,7 @@ export function RichStoryDetail({ memory, onBack }: RichStoryDetailProps) {
 
   const handleDelete = async () => {
     setMoreOpen(false);
-    
+
     const confirmed = confirm('确定要删除这个回忆吗？此操作无法撤销。');
     if (!confirmed) return;
 
@@ -55,8 +112,7 @@ export function RichStoryDetail({ memory, onBack }: RichStoryDetailProps) {
         setIsDeleting(false);
         return;
       }
-      
-      // Successfully deleted, navigate back to home
+
       router.push('/');
     } catch (e) {
       console.error('Failed to delete memory:', e);
@@ -65,15 +121,52 @@ export function RichStoryDetail({ memory, onBack }: RichStoryDetailProps) {
     }
   };
 
+  const contentBody = (
+    <div className="no-scrollbar flex-1 overflow-y-auto pb-24 pt-4">
+      <div className="px-8 pt-4 space-y-4 max-w-2xl mx-auto">
+        <div className="pt-2">
+          <h1 className="text-2xl font-bold text-[#1d1d1f]">{title || '无标题'}</h1>
+        </div>
+        {description ? (
+          <div>
+            <p className="w-full resize-none text-base text-[#1d1d1f] leading-relaxed whitespace-pre-wrap">
+              {description}
+            </p>
+          </div>
+        ) : null}
+
+        {hasBlocks ? (
+          <div className="space-y-3 pt-2">
+            {blocks.map((block) => (
+              <ContentBlock key={block.id} block={block} readOnly />
+            ))}
+          </div>
+        ) : richContent ? (
+          <div
+            className="prose prose-sm max-w-none text-gray-800 [&_p]:my-2 [&_img]:rounded-lg [&_img]:my-4"
+            dangerouslySetInnerHTML={{ __html: richContent }}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+
+  if (shareView) {
+    return (
+      <div className="min-h-screen flex flex-col font-sans bg-[#fbfbfd] text-[#1d1d1f]">
+        {contentBody}
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col animate-fadeIn font-sans bg-[#fbfbfd] text-[#1d1d1f]">
-      {/* Header: same structure as editor (Notion-style), with ... menu that includes Edit */}
-      <div className="sticky top-0 z-10 flex items-center justify-between h-11 px-4 bg-[#1d1d1f] text-white">
+      <div className="sticky top-0 z-10 relative flex items-center justify-between h-11 px-4 bg-[#1d1d1f] text-white">
         <button
           type="button"
           onClick={onBack}
           className="-ml-2 rounded-md p-1.5 transition-colors hover:bg-white/[0.08]"
-          aria-label="Back"
+          aria-label="返回"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -94,8 +187,9 @@ export function RichStoryDetail({ memory, onBack }: RichStoryDetailProps) {
         <div className="flex items-center gap-0.5">
           <button
             type="button"
-            className="rounded-md p-1.5 hover:bg-white/[0.08]"
-            aria-label="Share"
+            onClick={handleShare}
+            className="rounded-md p-1.5 hover:bg-white/[0.08] relative"
+            aria-label="分享"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -137,7 +231,7 @@ export function RichStoryDetail({ memory, onBack }: RichStoryDetailProps) {
               type="button"
               onClick={() => setMoreOpen((v) => !v)}
               className="rounded-md p-1.5 hover:bg-white/[0.08]"
-              aria-label="More actions"
+              aria-label="更多"
               aria-expanded={moreOpen}
             >
               <svg
@@ -183,35 +277,17 @@ export function RichStoryDetail({ memory, onBack }: RichStoryDetailProps) {
           </div>
         </div>
       </div>
-
-      {/* Content: same layout as editor — title, description, blocks */}
-      <div className="no-scrollbar flex-1 overflow-y-auto pb-24 pt-4">
-        <div className="px-8 pt-4 space-y-4 max-w-2xl mx-auto">
-          <div className="pt-2">
-            <h1 className="text-2xl font-bold text-[#1d1d1f]">{title || '无标题'}</h1>
-          </div>
-          {description ? (
-            <div>
-              <p className="w-full resize-none text-base text-[#1d1d1f] leading-relaxed whitespace-pre-wrap">
-                {description}
-              </p>
-            </div>
-          ) : null}
-
-          {hasBlocks ? (
-            <div className="space-y-3 pt-2">
-              {blocks.map((block) => (
-                <ContentBlock key={block.id} block={block} readOnly />
-              ))}
-            </div>
-          ) : richContent ? (
-            <div
-              className="prose prose-sm max-w-none text-gray-800 [&_p]:my-2 [&_img]:rounded-lg [&_img]:my-4"
-              dangerouslySetInnerHTML={{ __html: richContent }}
-            />
-          ) : null}
+      {shareFeedback !== 'idle' && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 top-12 z-20 px-3 py-1.5 rounded-full bg-white/95 text-[#1d1d1f] text-[13px] font-medium shadow-lg animate-fadeIn pointer-events-none"
+          role="status"
+          aria-live="polite"
+        >
+          {shareFeedback === 'copied' ? '链接已复制' : '已分享'}
         </div>
-      </div>
+      )}
+
+      {contentBody}
     </div>
   );
 }
