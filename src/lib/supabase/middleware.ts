@@ -1,20 +1,21 @@
 /**
- * Supabase client for middleware
- * Handles session refresh and cookie management
+ * Supabase client for middleware.
+ * Handles session refresh and cookie persistence so login is kept (e.g. 30 days)
+ * until the user explicitly signs out.
+ *
+ * Best practice: call getSession() only. It reads from cookies and triggers
+ * token refresh when needed; the refreshed session is written back via setAll.
+ * Do NOT call getUser() before getSession() — validating an expired JWT can
+ * cause unexpected logouts before refresh runs.
  */
 
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/types/database';
 
-/**
- * Creates a Supabase client for middleware with cookie handling
- */
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+  const response = NextResponse.next({
+    request: { headers: request.headers },
   });
 
   const supabase = createServerClient<Database>(
@@ -35,17 +36,9 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Refresh session if expired - required for Server Components
-  // https://supabase.com/docs/guides/auth/server-side/nextjs
+  // Refresh session if needed (uses refresh token; updates cookies).
+  // Session persists per Supabase project settings (e.g. 30 days) until sign out.
   await supabase.auth.getSession();
 
-  return { response, user };
+  return { response };
 }

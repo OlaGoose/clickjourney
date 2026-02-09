@@ -82,20 +82,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     init();
     
-    // Listen for auth state changes
+    // Listen for auth state changes (e.g. TOKEN_REFRESHED, SIGNED_OUT).
+    // Only clear state on explicit SIGNED_OUT so session is kept until user logs out.
     const { data: { subscription } } = SupabaseAuthService.onAuthStateChange((event, newSession) => {
       if (!mounted) return;
-      
+
       setSession(newSession);
       setUser(newSession?.user ?? null);
-      
+
       if (newSession?.user) {
         loadUserProfile(newSession.user.id).catch(() => {});
       } else {
         setProfile(null);
       }
-      
-      // Handle sign out
+
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
