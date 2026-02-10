@@ -14,10 +14,7 @@ export type SectionTemplateId =
   | 'value_props'
   | 'tile_gallery'
   | 'feature_card'
-  | 'marquee'
-  | 'headline_grid'
-  | 'accordion'
-  | 'two_column_router';
+  | 'marquee';
 
 /** CTA link for section blocks. */
 export interface SectionCta {
@@ -68,19 +65,6 @@ export interface SectionBlockData {
       href?: string;
     }>;
   };
-  headline_grid?: {
-    headline: string;
-    subline?: string;
-    items: Array<{ label: string; icon?: string }>;
-  };
-  accordion?: {
-    headline: string;
-    items: Array<{ question: string; answer: string }>;
-  };
-  two_column_router?: {
-    left: { image?: string; headline: string; ctas: SectionCta[] };
-    right: { image?: string; headline: string; ctas: SectionCta[] };
-  };
 }
 
 export interface ContentBlock {
@@ -108,6 +92,8 @@ export interface ContentBlock {
     sectionTemplateId?: SectionTemplateId;
     /** Section block: dynamic content for the chosen template. */
     sectionData?: SectionBlockData;
+    /** When true, render the block with a visible border (all block types). */
+    showBorder?: boolean;
   };
 }
 

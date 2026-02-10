@@ -20,7 +20,8 @@ export function SectionBlockRenderer({
   const templateId = (block.metadata?.sectionTemplateId ?? 'hero_cta') as SectionTemplateId;
   const data = block.metadata?.sectionData ?? {};
 
-  const base = 'rounded-2xl overflow-hidden bg-[#fbfbfd] text-[#1d1d1f] border border-black/[0.06]';
+  const showBorder = !!block.metadata?.showBorder;
+  const base = `rounded-2xl overflow-hidden bg-[#fbfbfd] text-[#1d1d1f] ${showBorder ? 'border border-black/[0.06]' : ''}`;
   const linkClass = isEditMode
     ? 'pointer-events-none'
     : 'text-[#007aff] hover:underline';
@@ -161,81 +162,6 @@ export function SectionBlockRenderer({
                 )}
               </div>
             ))}
-          </div>
-        </section>
-      );
-    }
-
-    case 'headline_grid': {
-      const d = data.headline_grid;
-      if (!d) return <SectionPlaceholder label="标题 + 图标网格" className={base} />;
-      return (
-        <section className={`${base} px-6 py-6 ${className}`}>
-          <h3 className="text-xl font-semibold tracking-tight">{d.headline || '标题'}</h3>
-          {d.subline && <p className="mt-1 text-[15px] text-[#6e6e73]">{d.subline}</p>}
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {(d.items ?? []).map((item, i) => (
-              <div key={i} className="flex flex-col items-center text-center p-3 rounded-xl bg-white border border-black/[0.06]">
-                <span className="text-[13px] font-medium text-[#1d1d1f]">{item.label || '—'}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      );
-    }
-
-    case 'accordion': {
-      const d = data.accordion;
-      if (!d?.items?.length) return <SectionPlaceholder label="手风琴 FAQ" className={base} />;
-      return (
-        <section className={`${base} px-6 py-5 ${className}`}>
-          <h3 className="text-xl font-semibold tracking-tight mb-4">{d.headline || '常见问题'}</h3>
-          <ul className="space-y-3 list-none">
-            {d.items.map((item, i) => (
-              <li key={i} className="border-b border-black/[0.08] pb-3 last:border-0">
-                <p className="text-[15px] font-semibold text-[#1d1d1f]">{item.question || '问题'}</p>
-                <p className="mt-1 text-[14px] text-[#6e6e73] leading-relaxed">{item.answer || '回答'}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      );
-    }
-
-    case 'two_column_router': {
-      const d = data.two_column_router;
-      if (!d) return <SectionPlaceholder label="双栏导流" className={base} />;
-      const leftImg = d.left?.image || getSectionPlaceholderImage();
-      const rightImg = d.right?.image || getSectionPlaceholderImage();
-      return (
-        <section className={`${base} p-4 ${className}`}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="rounded-xl overflow-hidden border border-black/[0.08] bg-white">
-              <div className="aspect-video bg-black/5">
-                <img src={leftImg} alt="" className="w-full h-full object-cover" />
-              </div>
-              <div className="p-4">
-                <h4 className="text-[17px] font-semibold">{d.left?.headline ?? '左侧标题'}</h4>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(d.left?.ctas ?? []).map((cta, j) => (
-                    <span key={j} className={`text-[14px] font-medium ${linkClass}`}>{cta.label}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl overflow-hidden border border-black/[0.08] bg-white">
-              <div className="aspect-video bg-black/5">
-                <img src={rightImg} alt="" className="w-full h-full object-cover" />
-              </div>
-              <div className="p-4">
-                <h4 className="text-[17px] font-semibold">{d.right?.headline ?? '右侧标题'}</h4>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(d.right?.ctas ?? []).map((cta, j) => (
-                    <span key={j} className={`text-[14px] font-medium ${linkClass}`}>{cta.label}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
         </section>
       );

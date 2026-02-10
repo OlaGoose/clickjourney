@@ -6,8 +6,7 @@ export type LayoutType =
   | 'magazine_spread'      // Two-page magazine style
   | 'portrait_feature'     // Vertical portrait emphasis
   | 'minimal_caption'      // Large image, minimal text
-  | 'text_overlay'         // Text directly on image
-  | 'reflection_end';      // Ending screen
+  | 'text_overlay';        // Text directly on image
 
 export interface StoryBlock {
   id: string;

@@ -195,8 +195,6 @@ function collectSectionImages(data: SectionBlockData): string[] {
   if (data.hero_cta?.backgroundImage) urls.push(data.hero_cta.backgroundImage);
   if (data.feature_card?.image) urls.push(data.feature_card.image);
   if (data.marquee?.items) data.marquee.items.forEach((i) => i.image && urls.push(i.image));
-  if (data.two_column_router?.left?.image) urls.push(data.two_column_router.left.image);
-  if (data.two_column_router?.right?.image) urls.push(data.two_column_router.right.image);
   return urls;
 }
 
@@ -541,28 +539,6 @@ function sectionBlockToHtml(
       if (!d?.items?.length) return '';
       const list = d.items.map((i) => `<li>${i.image ? `<img src="${escapeHtml(i.image)}" alt="" />` : ''}<span>${escapeHtml(i.title)}</span>${i.ctaLabel ? `<a href="${i.href ? escapeHtml(i.href) : '#'}">${escapeHtml(i.ctaLabel)}</a>` : ''}</li>`).join('');
       return wrap('<ul class="marquee-list">' + list + '</ul>');
-    }
-    case 'headline_grid': {
-      const d = data.headline_grid;
-      if (!d) return '';
-      let inner = `<h2>${escapeHtml(d.headline)}</h2>`;
-      if (d.subline) inner += `<p>${escapeHtml(d.subline)}</p>`;
-      if (d.items?.length) inner += '<ul>' + d.items.map((i) => `<li>${escapeHtml(i.label)}</li>`).join('') + '</ul>';
-      return wrap(inner);
-    }
-    case 'accordion': {
-      const d = data.accordion;
-      if (!d) return '';
-      let inner = `<h2>${escapeHtml(d.headline)}</h2>`;
-      if (d.items?.length) inner += '<dl>' + d.items.map((i) => `<dt>${escapeHtml(i.question)}</dt><dd>${escapeHtml(i.answer)}</dd>`).join('') + '</dl>';
-      return wrap(inner);
-    }
-    case 'two_column_router': {
-      const d = data.two_column_router;
-      if (!d) return '';
-      const col = (c: { image?: string; headline: string; ctas: { label: string; href?: string }[] }) =>
-        `<div class="section-column">${c.image ? `<img src="${escapeHtml(c.image)}" alt="" />` : ''}<h3>${escapeHtml(c.headline)}</h3>${c.ctas?.length ? c.ctas.map((a) => `<a href="${a.href ? escapeHtml(a.href) : '#'}">${escapeHtml(a.label)}</a>`).join('') : ''}</div>`;
-      return wrap((d.left ? col(d.left) : '') + (d.right ? col(d.right) : ''));
     }
     default:
       return '';

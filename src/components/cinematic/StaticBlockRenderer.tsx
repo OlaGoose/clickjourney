@@ -2,7 +2,6 @@
 
 import { StoryBlock } from '@/types/cinematic';
 import { ImageUploader } from './ImageUploader';
-import { ReflectionEndLayout } from './ReflectionEndLayout';
 import { useState, useRef, useEffect } from 'react';
 
 /** No height limit: view mode shows full text in a div; edit mode uses auto-resizing textarea so content is always fully visible. */
@@ -327,33 +326,6 @@ export const StaticBlockRenderer = ({ block, index, isEditMode, onUpdate, isDark
               isDark={isDark}
             />
           </div>
-        </div>
-      );
-
-    case 'reflection_end':
-      if (isEditMode) {
-        return (
-          <div className={`rounded-2xl overflow-hidden border ${t('border-black/[0.06]', 'border-white/10')} ${t('bg-neutral-900', 'bg-neutral-900')}`}>
-            <div className="px-6 py-8 md:py-12 text-center">
-              <p className="font-serif text-4xl md:text-5xl text-white/90 tracking-wider font-light mb-6">Fin.</p>
-              <div className="w-16 h-px bg-white/20 mx-auto mb-6" />
-              <BlockTextArea
-                value={block.text}
-                onUpdate={onUpdate}
-                blockId={block.id}
-                placeholder="写下结尾语，留空则使用默认英文句"
-                className="font-serif text-base md:text-lg text-white/80 font-light tracking-wide leading-relaxed text-center max-w-xl mx-auto"
-                isEditMode={true}
-                isDark={true}
-              />
-              <div className="w-16 h-px bg-white/20 mx-auto mt-6" />
-            </div>
-          </div>
-        );
-      }
-      return (
-        <div className="rounded-2xl overflow-hidden border border-black/[0.06]">
-          <ReflectionEndLayout onReplay={() => {}} closingText={block.text} />
         </div>
       );
 

@@ -9,5 +9,4 @@ export { MagazineSpreadLayout } from './MagazineSpreadLayout';
 export { MinimalCaptionLayout } from './MinimalCaptionLayout';
 export { PortraitFeatureLayout } from './PortraitFeatureLayout';
 export { TextOverlayLayout } from './TextOverlayLayout';
-export { ReflectionEndLayout } from './ReflectionEndLayout';
 export { AIDirectorPanel } from './AIDirectorPanel';

@@ -22,9 +22,6 @@ export const SECTION_TEMPLATES: SectionTemplateDef[] = [
   { id: 'tile_gallery', label: '横向卡片组', description: '多张圆角卡片，每张有标题/描述/CTA' },
   { id: 'feature_card', label: '大图特色卡', description: '单张主图、标题、副标题、CTA' },
   { id: 'marquee', label: '横向滚动条', description: '小图 + 标题横向滚动' },
-  { id: 'headline_grid', label: '标题 + 图标网格', description: '标题下多列图标+文字' },
-  { id: 'accordion', label: '手风琴 FAQ', description: '问与答折叠列表' },
-  { id: 'two_column_router', label: '双栏导流', description: '左右两栏，每栏图+标题+CTA' },
 ];
 
 /** Default section data for each template (dynamic content). */
@@ -85,43 +82,6 @@ export function getDefaultSectionData(templateId: SectionTemplateId): SectionBlo
             { image: PLACEHOLDER_IMAGE, title: '项目 2' },
             { image: PLACEHOLDER_IMAGE, title: '项目 3' },
           ],
-        },
-      };
-    case 'headline_grid':
-      return {
-        headline_grid: {
-          headline: '支持多种方式',
-          subline: '可选副标题',
-          items: [
-            { label: '选项一' },
-            { label: '选项二' },
-            { label: '选项三' },
-          ],
-        },
-      };
-    case 'accordion':
-      return {
-        accordion: {
-          headline: '常见问题',
-          items: [
-            { question: '第一个问题？', answer: '第一个问题的回答。' },
-            { question: '第二个问题？', answer: '第二个问题的回答。' },
-          ],
-        },
-      };
-    case 'two_column_router':
-      return {
-        two_column_router: {
-          left: {
-            image: PLACEHOLDER_IMAGE,
-            headline: '左侧标题',
-            ctas: [{ label: '主 CTA' }, { label: '了解更多' }],
-          },
-          right: {
-            image: PLACEHOLDER_IMAGE,
-            headline: '右侧标题',
-            ctas: [{ label: '主 CTA' }],
-          },
         },
       };
     default:

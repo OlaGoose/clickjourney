@@ -111,6 +111,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
   const [cinematicLayout, setCinematicLayout] = useState<LayoutType>('full_bleed');
   const [sectionTemplateId, setSectionTemplateId] = useState<SectionTemplateId>('hero_cta');
   const [sectionData, setSectionData] = useState<SectionBlockData>({});
+  const [showBorder, setShowBorder] = useState(false);
 
   useEffect(() => {
     if (block) {
@@ -136,6 +137,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
         setSectionTemplateId(tid);
         setSectionData(block.metadata?.sectionData ?? getDefaultSectionData(tid));
       }
+      setShowBorder(!!block.metadata?.showBorder);
     }
   }, [block]);
 
@@ -248,6 +250,37 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     setAiGeneratedBlocks([]);
     onClose();
   }, [aiGeneratedBlocks, aiImages, onInsertGeneratedBlocks, onClose]);
+
+  const handleSectionImageSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setSectionImageTarget((current) => {
+        if (!current) return null;
+        const url = URL.createObjectURL(file);
+        setSectionData((prev) => {
+          const next = { ...prev };
+          const [part, sub] = current.key.split('.');
+          if (part === 'hero_cta' && next.hero_cta) {
+            next.hero_cta = { ...next.hero_cta, backgroundImage: url };
+          } else if (part === 'feature_card' && next.feature_card) {
+            next.feature_card = { ...next.feature_card, image: url };
+          } else if (part === 'marquee' && next.marquee?.items) {
+            const idx = parseInt(sub, 10);
+            if (!Number.isNaN(idx) && next.marquee.items[idx]) {
+              const items = [...next.marquee.items];
+              items[idx] = { ...items[idx], image: url };
+              next.marquee = { ...next.marquee, items };
+            }
+          }
+          return next;
+        });
+        return null;
+      });
+      e.target.value = '';
+    },
+    []
+  );
 
   /** Template panel: 模版 (待开发) + AI (prompt → preview → 插入) — Apple TV style */
   if (showTypePicker && templatePanelOpen) {
@@ -520,6 +553,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           ...block.metadata,
           images: images.length ? images : undefined,
           imageDisplayMode,
+          showBorder,
         },
       };
     }
@@ -531,6 +565,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           ...block.metadata,
           cinematicLayout: cinematicLayout,
           cinematicImage: cinematicImage || block.metadata?.cinematicImage,
+          showBorder,
         },
       };
     }
@@ -541,13 +576,14 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           ...block.metadata,
           sectionTemplateId,
           sectionData,
+          showBorder,
         },
       };
     }
     return {
       ...block,
       content,
-      metadata: { ...block.metadata, fileName: fileName || undefined },
+      metadata: { ...block.metadata, fileName: fileName || undefined, showBorder },
     };
   };
 
@@ -589,46 +625,6 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
-
-  const handleSectionImageSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file || !sectionImageTarget) return;
-      const url = URL.createObjectURL(file);
-      setSectionData((prev) => {
-        const next = { ...prev };
-        const [part, sub] = sectionImageTarget.key.split('.');
-        if (part === 'hero_cta' && next.hero_cta) {
-          next.hero_cta = { ...next.hero_cta, backgroundImage: url };
-        } else if (part === 'feature_card' && next.feature_card) {
-          next.feature_card = { ...next.feature_card, image: url };
-        } else if (part === 'two_column_router' && next.two_column_router) {
-          if (sub === 'left' && next.two_column_router.left) {
-            next.two_column_router = {
-              ...next.two_column_router,
-              left: { ...next.two_column_router.left, image: url },
-            };
-          } else if (sub === 'right' && next.two_column_router.right) {
-            next.two_column_router = {
-              ...next.two_column_router,
-              right: { ...next.two_column_router.right, image: url },
-            };
-          }
-        } else if (part === 'marquee' && next.marquee?.items) {
-          const idx = parseInt(sub, 10);
-          if (!Number.isNaN(idx) && next.marquee.items[idx]) {
-            const items = [...next.marquee.items];
-            items[idx] = { ...items[idx], image: url };
-            next.marquee = { ...next.marquee, items };
-          }
-        }
-        return next;
-      });
-      setSectionImageTarget(null);
-      e.target.value = '';
-    },
-    [sectionImageTarget]
-  );
 
   const renderEditor = () => {
     switch (block.type) {
@@ -1181,183 +1177,6 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                 ))}
               </>
             )}
-            {sectionTemplateId === 'headline_grid' && sectionData.headline_grid && (
-              <>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">标题</label>
-                  <input
-                    type="text"
-                    value={sectionData.headline_grid.headline ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        headline_grid: prev.headline_grid ? { ...prev.headline_grid, headline: e.target.value } : { headline: e.target.value, items: [] },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="标题"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">副标题（可选）</label>
-                  <input
-                    type="text"
-                    value={sectionData.headline_grid.subline ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        headline_grid: prev.headline_grid ? { ...prev.headline_grid, subline: e.target.value } : { headline: '', items: [], subline: e.target.value },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="副标题"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">选项（每行一个）</label>
-                  <textarea
-                    value={(sectionData.headline_grid.items ?? []).map((i) => i.label ?? '').join('\n')}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        headline_grid: {
-                          ...prev.headline_grid!,
-                          items: e.target.value.split('\n').filter(Boolean).map((label) => ({ label })),
-                        },
-                      }))
-                    }
-                    rows={4}
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
-                    placeholder="选项一&#10;选项二"
-                  />
-                </div>
-              </>
-            )}
-            {sectionTemplateId === 'accordion' && sectionData.accordion && (
-              <>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">区块标题</label>
-                  <input
-                    type="text"
-                    value={sectionData.accordion.headline ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        accordion: prev.accordion ? { ...prev.accordion, headline: e.target.value } : { headline: e.target.value, items: [] },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="常见问题"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">问答（每两行：问题 + 回答）</label>
-                  <textarea
-                    value={(sectionData.accordion.items ?? []).map((i) => `${i.question}\n${i.answer}`).join('\n\n')}
-                    onChange={(e) => {
-                      const blocks = e.target.value.split('\n\n').filter(Boolean);
-                      setSectionData((prev) => ({
-                        ...prev,
-                        accordion: {
-                          ...prev.accordion!,
-                          items: blocks.map((block) => {
-                            const [q, ...rest] = block.split('\n');
-                            return { question: q ?? '', answer: rest.join('\n').trim() };
-                          }),
-                        },
-                      }));
-                    }}
-                    rows={8}
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
-                    placeholder="第一个问题？&#10;第一个问题的回答。"
-                  />
-                </div>
-              </>
-            )}
-            {sectionTemplateId === 'two_column_router' && sectionData.two_column_router && (
-              <>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">左侧</label>
-                  <div className="rounded-xl border border-black/[0.08] p-3 space-y-2">
-                    {sectionData.two_column_router.left?.image ? (
-                      <>
-                        <img src={sectionData.two_column_router.left.image} alt="" className="w-full rounded-lg object-cover h-24" />
-                        <button
-                          type="button"
-                          onClick={() => { setSectionImageTarget({ key: 'two_column_router.left' }); sectionImageInputRef.current?.click(); }}
-                          className="w-full rounded-full py-2 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
-                        >
-                          更换图片
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => { setSectionImageTarget({ key: 'two_column_router.left' }); sectionImageInputRef.current?.click(); }}
-                        className="w-full rounded-lg border border-dashed border-black/[0.1] py-3 text-[13px] text-[#6e6e73]"
-                      >
-                        上传图片
-                      </button>
-                    )}
-                    <input
-                      type="text"
-                      value={sectionData.two_column_router.left?.headline ?? ''}
-                      onChange={(e) =>
-                        setSectionData((prev) => ({
-                          ...prev,
-                          two_column_router: {
-                            ...prev.two_column_router!,
-                            left: { ...prev.two_column_router!.left!, headline: e.target.value, ctas: prev.two_column_router!.left?.ctas ?? [] },
-                          },
-                        }))
-                      }
-                      className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-[15px]"
-                      placeholder="左侧标题"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">右侧</label>
-                  <div className="rounded-xl border border-black/[0.08] p-3 space-y-2">
-                    {sectionData.two_column_router.right?.image ? (
-                      <>
-                        <img src={sectionData.two_column_router.right.image} alt="" className="w-full rounded-lg object-cover h-24" />
-                        <button
-                          type="button"
-                          onClick={() => { setSectionImageTarget({ key: 'two_column_router.right' }); sectionImageInputRef.current?.click(); }}
-                          className="w-full rounded-full py-2 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
-                        >
-                          更换图片
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => { setSectionImageTarget({ key: 'two_column_router.right' }); sectionImageInputRef.current?.click(); }}
-                        className="w-full rounded-lg border border-dashed border-black/[0.1] py-3 text-[13px] text-[#6e6e73]"
-                      >
-                        上传图片
-                      </button>
-                    )}
-                    <input
-                      type="text"
-                      value={sectionData.two_column_router.right?.headline ?? ''}
-                      onChange={(e) =>
-                        setSectionData((prev) => ({
-                          ...prev,
-                          two_column_router: {
-                            ...prev.two_column_router!,
-                            right: { ...prev.two_column_router!.right!, headline: e.target.value, ctas: prev.two_column_router!.right?.ctas ?? [] },
-                          },
-                        }))
-                      }
-                      className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-[15px]"
-                      placeholder="右侧标题"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         );
 
@@ -1491,6 +1310,18 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           >
             <X size={18} strokeWidth={2} />
           </button>
+        </div>
+        <div className="px-5 py-2 flex items-center gap-2 border-b border-black/[0.06]">
+          <input
+            id="edit-panel-show-border"
+            type="checkbox"
+            checked={showBorder}
+            onChange={(e) => setShowBorder(e.target.checked)}
+            className="h-4 w-4 rounded border-black/[0.2] text-[#1d1d1f] focus:ring-black/[0.08]"
+          />
+          <label htmlFor="edit-panel-show-border" className="text-[14px] font-medium text-[#1d1d1f]">
+            显示边框
+          </label>
         </div>
         <div className="flex-1 overflow-y-auto py-2 px-2">
           {renderEditor()}

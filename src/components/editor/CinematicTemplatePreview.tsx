@@ -47,12 +47,6 @@ export function CinematicTemplatePreview({ layout, className }: { layout: Layout
           </div>
         </div>
       );
-    case 'reflection_end':
-      return (
-        <div className={`${root} w-full h-[56px] bg-neutral-800 flex items-center justify-center`}>
-          <div className="h-0.5 w-6 rounded-full bg-white/30" />
-        </div>
-      );
     default:
       return (
         <div className={`${root} w-full h-[56px]`}>
