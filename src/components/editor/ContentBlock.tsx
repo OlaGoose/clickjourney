@@ -284,7 +284,7 @@ export function ContentBlock({
         block.type === 'image' && block.metadata?.imageDisplayMode === 'gallery'
           ? 'overflow-visible'
           : 'overflow-hidden'
-      }`}
+      } ${block.metadata?.showBorder ? 'ring-2 ring-black/[0.12]' : ''}`}
     >
       <div className="py-2 md:py-3">
         {renderContent()}
