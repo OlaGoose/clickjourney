@@ -37,7 +37,10 @@ export function carouselItemToMemoryRecord(
     lat: item.coordinates?.lat ?? null,
     lng: item.coordinates?.lng ?? null,
     placeName: item.coordinates?.name ?? null,
-    placeAddress: item.coordinates?.address ?? null,
+    placeAddress:
+      item.coordinates?.address ??
+      [item.coordinates?.name, item.coordinates?.region, item.coordinates?.country].filter(Boolean).join(', ') ||
+      null,
     sortOrder: opts.sortOrder ?? 0,
     isJourneyStart: opts.isJourneyStart ?? false,
     isJourneyEnd: opts.isJourneyEnd ?? false,
@@ -103,10 +106,14 @@ export function carouselItemToUpdateInput(partial: Partial<CarouselItem>): Updat
   if (partial.audioUrls !== undefined) input.audioUrls = partial.audioUrls;
   if (partial.videoUrls !== undefined) input.videoUrls = partial.videoUrls;
   if (partial.coordinates !== undefined) {
-    input.lat = partial.coordinates?.lat ?? null;
-    input.lng = partial.coordinates?.lng ?? null;
-    input.placeName = partial.coordinates?.name ?? null;
-    input.placeAddress = partial.coordinates?.address ?? null;
+    const c = partial.coordinates;
+    input.lat = c?.lat ?? null;
+    input.lng = c?.lng ?? null;
+    input.placeName = c?.name ?? null;
+    input.placeAddress =
+      c?.address ??
+      [c?.name, c?.region, c?.country].filter(Boolean).join(', ') ||
+      null;
   }
   return input;
 }

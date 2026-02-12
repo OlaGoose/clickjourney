@@ -2,6 +2,21 @@
 
 本文档基于当前代码库，对数据流、环境区分和部署前检查做了整理，便于第一次后端构建与部署。
 
+**大白话部署步骤**：见 [部署说明.md](./部署说明.md)。
+
+---
+
+## 〇、数据与后端一致性检查结果（简要）
+
+- **前端类型**：`CarouselItem`、`ContentBlock`、`MemoryType`、`LocationData` 等（`src/types/`）。
+- **本地存储**：IndexedDB 使用 `MemoryRecord`（`lib/db/core/schema.ts`），与 Supabase 表字段一一对应。
+- **Supabase 表**：`travel_memories` 与迁移文件 `supabase/migrations/00000000000000_initial_schema.sql` 一致；`editor_blocks_json` 存 ContentBlock[] 的 JSON，后端可直接读。
+- **同步**：`SyncEngine` 的 `memoryRecordToRow` / `rowToMemoryRecord`、`MemoryService` 的 `carouselItemToMemoryRecord` / `memoryRecordToCarouselItem` 与 `lib/storage/types.ts` 的 `TravelMemoryRow` 对齐；仅 `userId != null` 的纪录会 push，Demo 数据不会推送到 Supabase。
+- **地点**：若前端只传 name/region/country，`place_address` 会在转换时用 `[name, region, country].filter(Boolean).join(', ')` 补全，保证后端有可读地址。
+- **媒体**：编辑器上传优先 Supabase Storage（桶名 `memories`），其次 `/api/upload-media`（GCS），最后 base64 入 `editor_blocks_json`；API 与类型均与当前模块一致。
+
+结论：**各模块数据结构与后端（Supabase + API）一致，数据在配置正确的前提下可用于部署。**
+
 ---
 
 ## 一、架构概览
@@ -179,3 +194,7 @@ NEXT_PUBLIC_GEMINI_API_KEY=...   # 或 NEXT_DOUBAO_* / NEXT_PUBLIC_OPENAI_*
 
 - 打开首页，登录（Supabase Auth）。
 - 新建一条记忆（含富文本 / editor blocks），保存后刷新或换设备，在 Supabase **Table Editor → travel_memories** 中确认该行存在，且 `type`、`editor_blocks_json` 有值、RLS 正常。
+
+---
+
+**大白话版部署步骤**：见 [部署说明.md](./部署说明.md)。
