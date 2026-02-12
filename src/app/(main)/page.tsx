@@ -10,7 +10,6 @@ import { UserAvatar } from '@/components/auth/UserAvatar';
 import { useOptionalAuth } from '@/lib/auth';
 import { useLocale } from '@/lib/i18n';
 import { getCarouselItems, buildCarouselItems } from '@/lib/storage';
-import { isDemoDataEnabled } from '@/lib/db/utils/environment';
 import type { LocationData, CarouselItem, GeminiResponse } from '@/types';
 
 const INITIAL_LOCATION: LocationData = {
@@ -24,16 +23,6 @@ const DEFAULT_AVATAR_SEEDS = ['Felix', 'Aneka', 'Mark', 'Sora'];
 
 const DEFAULT_CALLOUT_TEXT =
   'Orbit Journey turns every place you visit into a lasting memory. Track destinations, relive moments, and share your path with fellow travelers—all in one place.';
-
-/** Demo audio (only used when isDemoDataEnabled): public/audio */
-const DEMO_AUDIO_URLS = [
-  '/audio/Skyline_and_dim_sum__Hong_Kong.wav',
-  '/audio/Sunset_on_the_Pacific__palm_tr.wav',
-];
-
-function pickRandomDemoAudio(): string {
-  return DEMO_AUDIO_URLS[Math.floor(Math.random() * DEMO_AUDIO_URLS.length)]!;
-}
 
 function isContentCard(item: CarouselItem | null): boolean {
   return !!item && item.id !== 'start-card' && item.id !== 'end-card';
@@ -54,7 +43,6 @@ export default function HomePage() {
   const [infoModalLoading, setInfoModalLoading] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [calloutPlaying, setCalloutPlaying] = useState(false);
-  const [currentDemoAudioUrl, setCurrentDemoAudioUrl] = useState<string | null>(null);
   const calloutAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -117,23 +105,6 @@ export default function HomePage() {
       calloutAudioRef.current.pause();
       calloutAudioRef.current = null;
     }
-
-    if (isDemoDataEnabled()) {
-      const demoUrl = pickRandomDemoAudio();
-      setCurrentDemoAudioUrl(demoUrl);
-      if (isContentCard(item)) {
-        const audio = new Audio(demoUrl);
-        calloutAudioRef.current = audio;
-        audio.play().catch(() => {});
-        audio.onended = () => {
-          setCalloutPlaying(false);
-          calloutAudioRef.current = null;
-        };
-        setCalloutPlaying(true);
-      }
-    } else {
-      setCurrentDemoAudioUrl(null);
-    }
   }, [carouselItems]);
 
   const fetchLocationInfo = useCallback(async () => {
@@ -174,7 +145,7 @@ export default function HomePage() {
     );
   const avatarSeeds = (activeItem?.participants?.length ? activeItem.participants : DEFAULT_AVATAR_SEEDS) as string[];
   const calloutText = activeItem?.description ?? DEFAULT_CALLOUT_TEXT;
-  const effectiveAudioUrl = activeItem?.audioUrl ?? (isDemoDataEnabled() ? currentDemoAudioUrl : null);
+  const effectiveAudioUrl = activeItem?.audioUrl ?? null;
 
   const handleCalloutPlayPause = useCallback(() => {
     if (effectiveAudioUrl) {
