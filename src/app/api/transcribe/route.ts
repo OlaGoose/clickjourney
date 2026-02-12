@@ -11,7 +11,7 @@ import { GoogleGenAI } from '@google/genai';
 
 /** POST: transcribe audio (base64) to Chinese text via Gemini. */
 export async function POST(request: Request) {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
       { error: 'Transcription not configured (missing GEMINI_API_KEY)' },
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const model = process.env.NEXT_PUBLIC_GEMINI_MODEL_STT || 'gemini-2.5-flash';
+  const model = process.env.GEMINI_MODEL_STT || process.env.NEXT_PUBLIC_GEMINI_MODEL_STT || 'gemini-2.5-flash';
   
   console.log(`[Transcribe] Using model: ${model}`);
   console.log(`[Transcribe] Audio data length: ${base64.length} characters`);

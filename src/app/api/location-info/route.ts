@@ -18,22 +18,25 @@ export interface LocationInfoResponse {
 }
 
 function getProvider(): 'gemini' | 'doubao' | 'openai' | null {
-  const mode = (process.env.NEXT_PUBLIC_AI_PROVIDER || 'auto').toLowerCase();
+  const mode = (process.env.AI_PROVIDER || process.env.NEXT_PUBLIC_AI_PROVIDER || 'auto').toLowerCase();
+  const gemini = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const doubao = process.env.DOUBAO_API_KEY || process.env.NEXT_DOUBAO_API_KEY;
+  const openai = process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY;
   if (mode === 'auto') {
-    if (process.env.NEXT_PUBLIC_GEMINI_API_KEY) return 'gemini';
-    if (process.env.NEXT_DOUBAO_API_KEY) return 'doubao';
-    if (process.env.NEXT_PUBLIC_OPENAI_API_KEY) return 'openai';
+    if (gemini) return 'gemini';
+    if (doubao) return 'doubao';
+    if (openai) return 'openai';
     return null;
   }
-  if (mode === 'gemini' && process.env.NEXT_PUBLIC_GEMINI_API_KEY) return 'gemini';
-  if (mode === 'doubao' && process.env.NEXT_DOUBAO_API_KEY) return 'doubao';
-  if (mode === 'openai' && process.env.NEXT_PUBLIC_OPENAI_API_KEY) return 'openai';
+  if (mode === 'gemini' && gemini) return 'gemini';
+  if (mode === 'doubao' && doubao) return 'doubao';
+  if (mode === 'openai' && openai) return 'openai';
   return null;
 }
 
 async function fetchWithGemini(locationName: string, lat: number, lng: number): Promise<LocationInfoResponse> {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY!;
-  const model = process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-2.5-flash';
+  const apiKey = (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY)!;
+  const model = process.env.GEMINI_MODEL || process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-2.5-flash';
   const url = `${GEMINI_ENDPOINT}/models/${model}:generateContent`;
   const body: Record<string, unknown> = {
     contents: [
@@ -68,9 +71,9 @@ async function fetchWithGemini(locationName: string, lat: number, lng: number): 
 }
 
 async function fetchWithDoubao(locationName: string, lat: number, lng: number): Promise<LocationInfoResponse> {
-  const apiKey = process.env.NEXT_DOUBAO_API_KEY!;
-  const endpoint = process.env.NEXT_DOUBAO_CHAT_ENDPOINT!;
-  const model = process.env.NEXT_DOUBAO_CHAT_MODEL || 'doubao-seed-1-6-lite-251015';
+  const apiKey = (process.env.DOUBAO_API_KEY || process.env.NEXT_DOUBAO_API_KEY)!;
+  const endpoint = (process.env.DOUBAO_CHAT_ENDPOINT || process.env.NEXT_DOUBAO_CHAT_ENDPOINT)!;
+  const model = process.env.DOUBAO_CHAT_MODEL || process.env.NEXT_DOUBAO_CHAT_MODEL || 'doubao-seed-1-6-lite-251015';
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -97,8 +100,8 @@ async function fetchWithDoubao(locationName: string, lat: number, lng: number): 
 }
 
 async function fetchWithOpenAI(locationName: string, lat: number, lng: number): Promise<LocationInfoResponse> {
-  const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY!;
-  const model = process.env.NEXT_PUBLIC_OPENAI_MODEL || 'gpt-4o-mini';
+  const apiKey = (process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY)!;
+  const model = process.env.OPENAI_MODEL || process.env.NEXT_PUBLIC_OPENAI_MODEL || 'gpt-4o-mini';
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -133,7 +136,7 @@ export async function GET(request: NextRequest) {
   const provider = getProvider();
   if (!provider) {
     return NextResponse.json(
-      { text: 'AI provider not configured. Set NEXT_PUBLIC_AI_PROVIDER and API keys.' },
+      { text: 'AI provider not configured. Set AI_PROVIDER and API keys (server env).' },
       { status: 503 }
     );
   }

@@ -58,7 +58,7 @@ interface GeminiResponse {
  * a beautifully orchestrated story with Apple-level cinematography.
  */
 export async function POST(request: Request) {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
       { error: 'AI service not configured (missing GEMINI_API_KEY)' },
@@ -368,7 +368,7 @@ Now analyze the ${imageCount} images. Create a story that honors the user's auth
     console.log(`[AI Director] Content parts count: ${contentParts.length}`);
     console.log(`[AI Director] System prompt length: ${systemPrompt.length} characters`);
 
-    const model = process.env.NEXT_PUBLIC_GEMINI_MODEL_CINEMATIC || 'gemini-3-flash-preview';
+    const model = process.env.GEMINI_MODEL_CINEMATIC || process.env.NEXT_PUBLIC_GEMINI_MODEL_CINEMATIC || 'gemini-3-flash-preview';
     console.log(`[AI Director] Using model: ${model}`);
     
     try {

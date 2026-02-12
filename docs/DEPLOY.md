@@ -18,14 +18,20 @@
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 同上 | Supabase 的 anon 公钥 |
 | `NEXT_PUBLIC_ENABLE_MOCK_AUTH` | 生产别开 | 留空或 `false`，否则不会用真实 Supabase 登录 |
 | `NEXT_PUBLIC_ENABLE_DEMO_DATA` | 可选 | 只有做演示站时才设成 `true` |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | 可选 | 编辑器里选地点用 |
-| `NEXT_PUBLIC_GEMINI_API_KEY` 等 | 可选 | AI 功能（生成剧本、转录等） |
-| `GCS_BUCKET`、`GCS_SERVICE_ACCOUNT_JSON` | 可选 | 不用 Supabase 存文件时，用 Google 云存储上传媒体 |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | 可选 | 编辑器里选地点用（建议在 Google Cloud 限制 referrer） |
+| `GEMINI_API_KEY`、`OPENAI_API_KEY` 等 | 可选 | **仅服务端**，AI 功能（剧本、转录、地点信息、图片/TTS 等）；见下方安全说明 |
+| `GCS_BUCKET`、`GCS_SERVICE_ACCOUNT_JSON` | 可选 | 仅服务端，不用 Supabase 存文件时用 GCS 上传媒体 |
+
+**安全说明**：  
+- **不要**把 API 密钥放在 `NEXT_PUBLIC_*` 里。`NEXT_PUBLIC_*` 会打进前端代码，任何人打开网页都能看到。  
+- AI 密钥请用**仅服务端**变量：`GEMINI_API_KEY`、`OPENAI_API_KEY`、`DOUBAO_API_KEY` 等（无 `NEXT_PUBLIC_` 前缀）。  
+- Supabase 的 URL 和 anon key 设计上可公开，靠 RLS 和 Auth 做安全；其他密钥一律只放在服务端。  
+- 完整变量列表与说明见项目根目录 `.env.example`。
 
 **大白话**：  
 - 想用**真实登录 + 数据同步**：必须配好 Supabase 两个变量，并且**不要**开 Mock Auth。  
 - 想用**图片/音频/视频上传**：要么在 Supabase 建好 `memories` 公开桶，要么配 GCS。  
-- 其他（地图、AI）按需配置即可。
+- **AI 功能**：在部署平台配置 `GEMINI_API_KEY`（或 `OPENAI_API_KEY` 等），不要配成 `NEXT_PUBLIC_GEMINI_API_KEY`。
 
 ---
 

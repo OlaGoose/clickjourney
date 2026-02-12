@@ -65,7 +65,7 @@ const DOC_BLOCKS_JSON_SCHEMA = {
 /** POST: 根据心境故事（+ 可选图片）生成可直接插入文档的块列表。 */
 export async function POST(request: Request) {
   console.log('[generate-section] POST received');
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
       { error: 'AI 服务未配置 (缺少 GEMINI_API_KEY)' },
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
   const parsedImages = imageList.map((x) => x.parsed);
   const hasImages = parsedImages.length > 0;
 
-  const model = process.env.NEXT_PUBLIC_GEMINI_MODEL_SECTION || 'gemini-2.5-flash';
+  const model = process.env.GEMINI_MODEL_SECTION || process.env.NEXT_PUBLIC_GEMINI_MODEL_SECTION || 'gemini-2.5-flash';
   const useStructuredOutput = !hasImages;
 
   const componentsDesc = `
