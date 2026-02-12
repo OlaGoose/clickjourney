@@ -1,7 +1,6 @@
--- Orbit Journey - Initial Schema (merged, no history)
--- Run this on a fresh Supabase project. Creates: user_profiles, travel_memories, RLS, indexes.
+-- Orbit Journey - Initial Schema (single migration, pre-deploy)
+-- Run once on a fresh Supabase project. Creates: user_profiles, travel_memories, RLS, triggers.
 
--- Optional: enable UUID extension (Supabase has it by default)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- =============================================================================
@@ -17,7 +16,6 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
 COMMENT ON TABLE public.user_profiles IS 'User profile extended from auth.users';
 
 -- =============================================================================
@@ -26,6 +24,7 @@ COMMENT ON TABLE public.user_profiles IS 'User profile extended from auth.users'
 CREATE TABLE IF NOT EXISTS public.travel_memories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  type TEXT,
   title VARCHAR(200) NOT NULL,
   subtitle VARCHAR(200) NOT NULL,
   image_url TEXT NOT NULL,
@@ -36,6 +35,7 @@ CREATE TABLE IF NOT EXISTS public.travel_memories (
   gallery_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
   description TEXT,
   rich_content TEXT,
+  editor_blocks_json TEXT,
   audio_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
   video_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
   lat DOUBLE PRECISION,
@@ -48,14 +48,14 @@ CREATE TABLE IF NOT EXISTS public.travel_memories (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
 COMMENT ON TABLE public.travel_memories IS 'Travel memories; user_id NULL = demo data';
+COMMENT ON COLUMN public.travel_memories.type IS 'Memory type: photo-gallery | cinematic | rich-story | video';
+COMMENT ON COLUMN public.travel_memories.editor_blocks_json IS 'JSON of ContentBlock[] for rich-story editor';
 COMMENT ON COLUMN public.travel_memories.rich_content IS 'Rich text HTML content for the full memory story';
 COMMENT ON COLUMN public.travel_memories.audio_urls IS 'Array of audio file URLs';
 COMMENT ON COLUMN public.travel_memories.video_urls IS 'Array of video file URLs';
 COMMENT ON COLUMN public.travel_memories.place_address IS 'Full address from Google Maps';
 
--- Indexes for travel_memories
 CREATE INDEX IF NOT EXISTS idx_travel_memories_user_id ON public.travel_memories(user_id);
 CREATE INDEX IF NOT EXISTS idx_travel_memories_user_sort ON public.travel_memories(user_id, sort_order);
 CREATE INDEX IF NOT EXISTS idx_travel_memories_updated_at ON public.travel_memories(updated_at);
@@ -66,33 +66,24 @@ CREATE INDEX IF NOT EXISTS idx_travel_memories_updated_at ON public.travel_memor
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.travel_memories ENABLE ROW LEVEL SECURITY;
 
--- user_profiles: users can only read/update/insert their own row
 CREATE POLICY "user_profiles_select_own"
-  ON public.user_profiles FOR SELECT
-  USING (auth.uid() = id);
+  ON public.user_profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "user_profiles_update_own"
-  ON public.user_profiles FOR UPDATE
-  USING (auth.uid() = id);
+  ON public.user_profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "user_profiles_insert_own"
-  ON public.user_profiles FOR INSERT
-  WITH CHECK (auth.uid() = id);
+  ON public.user_profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
--- travel_memories: read own or demo (user_id IS NULL); write only own
 CREATE POLICY "travel_memories_select_own_or_demo"
-  ON public.travel_memories FOR SELECT
-  USING (user_id = auth.uid() OR user_id IS NULL);
+  ON public.travel_memories FOR SELECT USING (user_id = auth.uid() OR user_id IS NULL);
 CREATE POLICY "travel_memories_insert_own"
-  ON public.travel_memories FOR INSERT
-  WITH CHECK (user_id = auth.uid());
+  ON public.travel_memories FOR INSERT WITH CHECK (user_id = auth.uid());
 CREATE POLICY "travel_memories_update_own"
-  ON public.travel_memories FOR UPDATE
-  USING (user_id = auth.uid());
+  ON public.travel_memories FOR UPDATE USING (user_id = auth.uid());
 CREATE POLICY "travel_memories_delete_own"
-  ON public.travel_memories FOR DELETE
-  USING (user_id = auth.uid());
+  ON public.travel_memories FOR DELETE USING (user_id = auth.uid());
 
 -- =============================================================================
--- updated_at trigger (optional but recommended)
+-- updated_at trigger
 -- =============================================================================
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS TRIGGER AS $$

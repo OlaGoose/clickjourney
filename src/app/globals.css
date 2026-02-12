@@ -157,6 +157,24 @@
   }
 }
 
+/* Infinite marquee for tile_gallery (duplicated content, translate -50% loops) */
+@keyframes tile-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+.animate-tile-marquee {
+  animation: tile-marquee 35s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-tile-marquee {
+    animation: none;
+  }
+}
+
 /* Editor scroll area: child fills height so ProseMirror can be the scroll container */
 .editor-scroll-area {
   display: flex;

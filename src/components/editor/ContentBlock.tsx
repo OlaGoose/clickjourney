@@ -108,11 +108,18 @@ export function ContentBlock({
       );
     }
 
+    const textBlockAlign = block.metadata?.textAlign === 'center' ? 'text-center' : block.metadata?.textAlign === 'right' ? 'text-right' : 'text-left';
+    const textBlockSize = block.metadata?.fontSize === 'small' ? 'text-sm' : block.metadata?.fontSize === 'large' ? 'text-lg' : 'text-base';
+    const textBlockColor = block.metadata?.textColor || '#1d1d1f';
+
     switch (block.type) {
       case 'text':
         if (readOnly) {
           return (
-            <p className="w-full text-base text-[#1d1d1f] leading-relaxed whitespace-pre-wrap py-3">
+            <p
+              className={`w-full ${textBlockSize} leading-relaxed whitespace-pre-wrap py-3 ${textBlockAlign}`}
+              style={{ color: textBlockColor }}
+            >
               {block.content || ''}
             </p>
           );
@@ -131,8 +138,8 @@ export function ContentBlock({
             placeholder="描述"
             rows={1}
             maxLength={500}
-            style={{ minHeight: TEXTAREA_MIN_HEIGHT_PX }}
-            className="w-full resize-none overflow-hidden text-base focus:outline-none bg-transparent rounded-xl py-3 text-[#1d1d1f] placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80"
+            style={{ minHeight: TEXTAREA_MIN_HEIGHT_PX, color: textBlockColor }}
+            className={`w-full resize-none overflow-hidden focus:outline-none bg-transparent rounded-xl py-3 placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80 ${textBlockAlign} ${textBlockSize}`}
             aria-label="文本内容"
           />
         );
@@ -142,7 +149,8 @@ export function ContentBlock({
         const hasContent = richHtml.replace(/<[^>]+>/g, '').trim().length > 0;
         return (
           <div
-            className="w-full py-3"
+            className={`w-full py-3 ${textBlockAlign}`}
+            style={{ color: textBlockColor }}
             onClick={(e) => {
               e.stopPropagation();
               if (!readOnly) onClick?.();
@@ -150,7 +158,8 @@ export function ContentBlock({
           >
             {hasContent ? (
               <div
-                className="prose prose-neutral max-w-none w-full text-base text-[#1d1d1f] leading-relaxed [&_a]:text-[#007aff] [&_a]:underline [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_ul]:list-disc [&_ol]:list-decimal [&_blockquote]:border-l-[3px] [&_blockquote]:border-[#86868b] [&_blockquote]:pl-3 [&_blockquote]:italic [&_p]:text-[#1d1d1f] [&_li]:text-[#1d1d1f]"
+                className={`prose prose-neutral max-w-none w-full ${textBlockSize} leading-relaxed [&_a]:text-[#007aff] [&_a]:underline [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_ul]:list-disc [&_ol]:list-decimal [&_blockquote]:border-l-[3px] [&_blockquote]:border-[#86868b] [&_blockquote]:pl-3 [&_blockquote]:italic [&_p]:text-inherit [&_li]:text-inherit`}
+                style={{ color: textBlockColor }}
                 dangerouslySetInnerHTML={{ __html: safeHtml }}
               />
             ) : (
@@ -229,24 +238,26 @@ export function ContentBlock({
           </div>
         );
       case 'audio':
-        return (
-          <div className="w-full" role="region" aria-label={block.content ? '音频播放' : '添加音频'}>
-            {block.content ? (
-              <div className="rounded-2xl bg-black/[0.04] ring-1 ring-black/[0.06] overflow-hidden">
-                <audio
-                  src={block.content}
-                  controls
-                  className="w-full h-10 [&::-webkit-media-controls-panel]:bg-transparent"
-                >
-                  Your browser does not support the audio tag.
-                </audio>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.1] py-3.5 text-[#86868b] hover:border-black/[0.14] hover:bg-black/[0.02] transition-colors">
-                <Music size={16} strokeWidth={2} aria-hidden />
-                <span className="text-[13px] font-medium">添加音频</span>
-              </div>
-            )}
+        return block.content ? (
+          <div className="rounded-full overflow-hidden bg-black/[0.06] ring-1 ring-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-1.5 w-full max-w-sm">
+            <audio
+              src={block.content}
+              controls
+              className="w-full h-8 [&::-webkit-media-controls-panel]:bg-transparent"
+              aria-label="音频播放"
+            >
+              Your browser does not support the audio tag.
+            </audio>
+          </div>
+        ) : (
+          <div
+            className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.1] py-3.5 text-[#86868b] hover:border-black/[0.14] hover:bg-black/[0.02] transition-colors cursor-pointer"
+            onClick={(e) => { e.stopPropagation(); if (!readOnly) onClick?.(); }}
+            role="button"
+            aria-label="添加音频"
+          >
+            <Music size={16} strokeWidth={2} aria-hidden />
+            <span className="text-[13px] font-medium">添加音频</span>
           </div>
         );
       default:

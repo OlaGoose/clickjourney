@@ -3,7 +3,6 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CarouselItem } from '@/types/memory';
-import { getDemoGallerySlice } from '@/lib/storage/demo-gallery';
 import GalleryModal from '@/components/GalleryModal';
 import PhotoGrid from '@/components/PhotoGrid';
 import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
@@ -14,11 +13,9 @@ interface PhotoGalleryDetailProps {
   onBack: () => void;
 }
 
-const DEFAULT_GALLERY_LENGTH = 4;
-
 function getGalleryImages(item: CarouselItem): string[] {
   if (Array.isArray(item.gallery) && item.gallery.length > 0) return item.gallery;
-  return getDemoGallerySlice(DEFAULT_GALLERY_LENGTH);
+  return [];
 }
 
 export function PhotoGalleryDetail({ memory, onBack }: PhotoGalleryDetailProps) {
@@ -116,7 +113,7 @@ export function PhotoGalleryDetail({ memory, onBack }: PhotoGalleryDetailProps) 
             <h1 className="text-xl font-semibold text-black">{title}</h1>
             <p className="mt-3 whitespace-pre-wrap text-gray-800">{description}</p>
           </div>
-          {images.length > 0 && (
+          {images.length > 0 ? (
             <div className="px-4">
               <PhotoGrid
                 images={images}
@@ -126,6 +123,8 @@ export function PhotoGalleryDetail({ memory, onBack }: PhotoGalleryDetailProps) 
                 ariaLabel="Trip photos"
               />
             </div>
+          ) : (
+            <div className="px-4 py-8 text-center text-gray-500 text-sm">暂无图片</div>
           )}
         </div>
       </div>

@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, LayoutGrid, Images, Mic, Square, Type, FileText, LayoutTemplate, ChevronLeft, Sparkles } from 'lucide-react';
+import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, LayoutGrid, Images, Mic, Square, Type, FileText, LayoutTemplate, ChevronLeft, Sparkles, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { useOptionalAuth } from '@/lib/auth';
+import { fileToUrlOrDataUrl } from '@/lib/upload-media';
 import PhotoGrid from '@/components/PhotoGrid';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
 import BlockRichTextEditor from '@/components/editor/BlockRichTextEditor';
-import type { ContentBlock, ContentBlockType, ImageDisplayMode, SectionBlockData, SectionTemplateId } from '@/types/editor';
+import type { ContentBlock, ContentBlockType, ImageDisplayMode, SectionBlockData, SectionTemplateId, TitleStyle } from '@/types/editor';
 import type { AIGeneratedDocBlock } from '@/types/ai-document-blocks';
 import type { LayoutType } from '@/types/cinematic';
 import { CINEMATIC_TEMPLATES, ALL_CINEMATIC_LAYOUTS } from '@/lib/editor-cinematic-templates';
@@ -63,6 +65,12 @@ interface EditPanelProps {
   onInsertGeneratedBlocks?: (blocks: AIGeneratedDocBlock[], imageUrls: string[]) => void;
   /** When user selects an Apple-style section template, this is called with the template id. */
   onSelectSectionTemplate?: (templateId: SectionTemplateId) => void;
+  /** When 'title' or 'description', panel shows title/description editor instead of block or type picker. */
+  editingTarget?: 'title' | 'description' | null;
+  titleData?: { title: string; titleStyle?: TitleStyle };
+  descriptionData?: { description: string; descriptionStyle?: TitleStyle };
+  onSaveTitle?: (data: { title: string; titleStyle?: TitleStyle }) => void;
+  onSaveDescription?: (data: { description: string; descriptionStyle?: TitleStyle }) => void;
 }
 
 const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[] = [
@@ -74,7 +82,10 @@ const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[
 ];
 
 /** Apple light mode only: white panel, gray controls, #1d1d1f text. Apple Arcade–inspired layout. */
-export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, onSelectType, onSelectCinematicTemplate, onSelectSectionTemplate, onInsertGeneratedContent, onInsertGeneratedBlocks }: EditPanelProps) {
+export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, onSelectType, onSelectCinematicTemplate, onSelectSectionTemplate, onInsertGeneratedContent, onInsertGeneratedBlocks, editingTarget, titleData, descriptionData, onSaveTitle, onSaveDescription }: EditPanelProps) {
+  const auth = useOptionalAuth();
+  const userId = auth?.user?.id ?? null;
+
   const [content, setContent] = useState('');
   const [fileName, setFileName] = useState('');
   const [images, setImages] = useState<string[]>([]);
@@ -95,6 +106,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
   const chunksRef = useRef<Blob[]>([]);
   /** 当前正在替换的 section 图片槽位，用于统一 file input 回调 */
   const [sectionImageTarget, setSectionImageTarget] = useState<{ key: string } | null>(null);
+  const sectionImageTargetRef = useRef<{ key: string } | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -109,9 +121,27 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
 
   const [cinematicImage, setCinematicImage] = useState('');
   const [cinematicLayout, setCinematicLayout] = useState<LayoutType>('full_bleed');
-  const [sectionTemplateId, setSectionTemplateId] = useState<SectionTemplateId>('ribbon');
+  const [sectionTemplateId, setSectionTemplateId] = useState<SectionTemplateId>('tile_gallery');
   const [sectionData, setSectionData] = useState<SectionBlockData>({});
   const [showBorder, setShowBorder] = useState(false);
+  const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>('left');
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [textColor, setTextColor] = useState<string>('#1d1d1f');
+  /** Title/description editor (when editingTarget is set) */
+  const [fieldValue, setFieldValue] = useState('');
+  const [fieldStyle, setFieldStyle] = useState<TitleStyle>({});
+
+  useEffect(() => {
+    if (editingTarget && isOpen) {
+      if (editingTarget === 'title') {
+        setFieldValue(titleData?.title ?? '');
+        setFieldStyle(titleData?.titleStyle ?? {});
+      } else {
+        setFieldValue(descriptionData?.description ?? '');
+        setFieldStyle(descriptionData?.descriptionStyle ?? {});
+      }
+    }
+  }, [editingTarget, isOpen, titleData?.title, titleData?.titleStyle, descriptionData?.description, descriptionData?.descriptionStyle]);
 
   useEffect(() => {
     if (block) {
@@ -119,6 +149,11 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
       setContent(block.content);
       setFileName(block.metadata?.fileName || '');
       setIsRecording(false);
+      if (block.type === 'text' || block.type === 'richtext') {
+        setTextAlign(block.metadata?.textAlign ?? 'left');
+        setFontSize(block.metadata?.fontSize ?? 'medium');
+        setTextColor(block.metadata?.textColor ?? '#1d1d1f');
+      }
       if (block.type === 'image') {
         const list = block.metadata?.images?.length
           ? block.metadata.images
@@ -133,7 +168,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
         setCinematicLayout(block.metadata?.cinematicLayout ?? 'full_bleed');
       }
       if (block.type === 'section') {
-        const tid = block.metadata?.sectionTemplateId ?? 'ribbon';
+        const tid = block.metadata?.sectionTemplateId ?? 'tile_gallery';
         setSectionTemplateId(tid);
         setSectionData(block.metadata?.sectionData ?? getDefaultSectionData(tid));
       }
@@ -166,9 +201,12 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
       recorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunksRef.current, { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        setContent(url);
-        setFileName(`录制_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '').slice(0, 14)}.${ext}`);
+        const reader = new FileReader();
+        reader.onload = () => {
+          setContent(reader.result as string);
+          setFileName(`录制_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '').slice(0, 14)}.${ext}`);
+        };
+        reader.readAsDataURL(blob);
       };
       recorder.start(200);
       setIsRecording(true);
@@ -187,19 +225,25 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     setIsRecording(false);
   }, []);
 
-  const showTypePicker = isOpen && !block && onSelectType;
+  const showTypePicker = isOpen && !block && !editingTarget && onSelectType;
 
-  const handleAiImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files?.length) return;
-    const urls: string[] = [];
-    for (let i = 0; i < files.length && urls.length < MAX_IMAGES; i++) {
-      const file = files[i];
-      if (file?.type.startsWith('image/')) urls.push(URL.createObjectURL(file));
-    }
-    setAiImages((prev) => [...prev, ...urls].slice(0, MAX_IMAGES));
-    e.target.value = '';
-  }, []);
+  const handleAiImageSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files?.length) return;
+      const urls: string[] = [];
+      for (let i = 0; i < files.length && urls.length < MAX_IMAGES; i++) {
+        const file = files[i];
+        if (file?.type.startsWith('image/')) {
+          const url = await fileToUrlOrDataUrl(file, { userId });
+          urls.push(url);
+        }
+      }
+      setAiImages((prev) => [...prev, ...urls].slice(0, MAX_IMAGES));
+      e.target.value = '';
+    },
+    [userId]
+  );
 
   const handleGenerateSection = useCallback(async () => {
     if (!aiPrompt.trim()) return;
@@ -252,32 +296,35 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
   }, [aiGeneratedBlocks, aiImages, onInsertGeneratedBlocks, onClose]);
 
   const handleSectionImageSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      setSectionImageTarget((current) => {
-        if (!current) return null;
-        const url = URL.createObjectURL(file);
-        setSectionData((prev) => {
-          const next = { ...prev };
-          const [part, sub] = current.key.split('.');
-          if (part === 'feature_card' && next.feature_card) {
-            next.feature_card = { ...next.feature_card, image: url };
-          } else if (part === 'marquee' && next.marquee?.items) {
-            const idx = parseInt(sub, 10);
-            if (!Number.isNaN(idx) && next.marquee.items[idx]) {
-              const items = [...next.marquee.items];
-              items[idx] = { ...items[idx], image: url };
-              next.marquee = { ...next.marquee, items };
-            }
+      const target = sectionImageTargetRef.current;
+      setSectionImageTarget(null);
+      sectionImageTargetRef.current = null;
+      if (!target) {
+        e.target.value = '';
+        return;
+      }
+      const url = await fileToUrlOrDataUrl(file, { userId });
+      setSectionData((prev) => {
+        const next = { ...prev };
+        const [part, sub] = target.key.split('.');
+        if (part === 'feature_card' && next.feature_card) {
+          next.feature_card = { ...next.feature_card, image: url };
+        } else if (part === 'marquee' && next.marquee?.items) {
+          const idx = parseInt(sub, 10);
+          if (!Number.isNaN(idx) && next.marquee.items[idx]) {
+            const items = [...next.marquee.items];
+            items[idx] = { ...items[idx], image: url };
+            next.marquee = { ...next.marquee, items };
           }
-          return next;
-        });
-        return null;
+        }
+        return next;
       });
       e.target.value = '';
     },
-    []
+    [userId]
   );
 
   /** Template panel: 模版 (待开发) + AI (prompt → preview → 插入) — Apple TV style */
@@ -472,6 +519,121 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     );
   }
 
+  /** Title or description editor sheet (no block) */
+  if (isOpen && (editingTarget === 'title' || editingTarget === 'description') && (editingTarget === 'title' ? onSaveTitle : onSaveDescription)) {
+    const isTitle = editingTarget === 'title';
+    const handleSaveField = () => {
+      if (isTitle) {
+        onSaveTitle!({ title: fieldValue, titleStyle: fieldStyle });
+      } else {
+        onSaveDescription!({ description: fieldValue, descriptionStyle: fieldStyle });
+      }
+      onClose();
+    };
+    const align = (fieldStyle.textAlign ?? 'left') as 'left' | 'center' | 'right';
+    const size = (fieldStyle.fontSize ?? 'medium') as 'small' | 'medium' | 'large';
+    const color = fieldStyle.textColor ?? '#1d1d1f';
+    return (
+      <>
+        <div className="fixed inset-0 z-40 bg-black/20 transition-opacity duration-300" onClick={onClose} aria-hidden />
+        <div className="fixed inset-x-0 bottom-0 z-50 flex max-h-[70vh] flex-col rounded-t-[28px] bg-[#fbfbfd] shadow-[0_-4px_24px_rgba(0,0,0,0.08)] translate-y-0 animate-sheetSlideUp">
+          <div className="flex items-center justify-center pt-3 pb-1">
+            <div className="h-0.5 w-9 rounded-full bg-black/[0.12]" />
+          </div>
+          <div className="grid grid-cols-3 items-center px-5 pb-2">
+            <div />
+            <h3 className="text-center text-[17px] font-semibold text-[#1d1d1f] tracking-tight">
+              {isTitle ? '编辑标题' : '编辑描述'}
+            </h3>
+            <button type="button" onClick={onClose} className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] transition-all duration-200 active:scale-95" aria-label="关闭">
+              <X size={18} strokeWidth={2} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 pb-8 pt-2 space-y-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[12px] text-[#6e6e73] mr-1">样式</span>
+              <div className="flex rounded-full p-0.5 bg-black/[0.06]">
+                {(['left', 'center', 'right'] as const).map((a) => (
+                  <button
+                    key={a}
+                    type="button"
+                    onClick={() => setFieldStyle((s) => ({ ...s, textAlign: a }))}
+                    className={`rounded-full p-2 transition-all ${align === a ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73]'}`}
+                    aria-label={a === 'left' ? '左对齐' : a === 'center' ? '居中' : '右对齐'}
+                  >
+                    {a === 'left' && <AlignLeft size={16} strokeWidth={2} />}
+                    {a === 'center' && <AlignCenter size={16} strokeWidth={2} />}
+                    {a === 'right' && <AlignRight size={16} strokeWidth={2} />}
+                  </button>
+                ))}
+              </div>
+              <div className="flex rounded-full p-0.5 bg-black/[0.06]">
+                {(['small', 'medium', 'large'] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setFieldStyle((prev) => ({ ...prev, fontSize: s }))}
+                    className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-all ${size === s ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73]'}`}
+                  >
+                    {s === 'small' ? '小' : s === 'medium' ? '中' : '大'}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1">
+                {['#1d1d1f', '#6e6e73', '#86868b', '#007aff'].map((hex) => (
+                  <button
+                    key={hex}
+                    type="button"
+                    onClick={() => setFieldStyle((prev) => ({ ...prev, textColor: hex }))}
+                    className={`w-6 h-6 rounded-full border-2 transition-all ${color === hex ? 'border-[#1d1d1f] scale-110' : 'border-transparent'}`}
+                    style={{ backgroundColor: hex }}
+                    aria-label="颜色"
+                  />
+                ))}
+              </div>
+            </div>
+            {isTitle ? (
+              <input
+                type="text"
+                value={fieldValue}
+                onChange={(e) => setFieldValue(e.target.value)}
+                placeholder="标题"
+                className="w-full font-bold focus:outline-none rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[#1d1d1f] placeholder:text-[#86868b]"
+                style={{
+                  fontSize: size === 'small' ? '1.25rem' : size === 'large' ? '1.75rem' : '1.5rem',
+                  color,
+                  textAlign: align,
+                }}
+                maxLength={100}
+              />
+            ) : (
+              <textarea
+                value={fieldValue}
+                onChange={(e) => setFieldValue(e.target.value)}
+                placeholder="描述"
+                rows={5}
+                className="w-full resize-none focus:outline-none rounded-xl border border-black/[0.08] bg-white px-4 py-3 placeholder:text-[#86868b]"
+                style={{
+                  fontSize: size === 'small' ? 14 : size === 'large' ? 18 : 16,
+                  color,
+                  textAlign: align,
+                }}
+                maxLength={500}
+              />
+            )}
+            <button
+              type="button"
+              onClick={handleSaveField}
+              className="w-full rounded-full py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] active:scale-[0.98] transition-all"
+            >
+              保存
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   /** Type picker view — Apple TV style: pill handle, soft cards, rounded CTAs */
   if (showTypePicker) {
     return (
@@ -578,6 +740,20 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
         },
       };
     }
+    if (block.type === 'text' || block.type === 'richtext') {
+      return {
+        ...block,
+        content,
+        metadata: {
+          ...block.metadata,
+          fileName: fileName || undefined,
+          showBorder,
+          textAlign,
+          fontSize,
+          textColor,
+        },
+      };
+    }
     return {
       ...block,
       content,
@@ -603,22 +779,33 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     onClose();
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files?.length) return;
+  const handleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files?.length || !block) return;
 
-    const list = Array.from(files).map((file) => URL.createObjectURL(file));
-    if (block.type === 'image') {
-      setImages((prev) => [...prev, ...list].slice(0, MAX_IMAGES));
-    } else {
-      const file = files[0];
-      if (file) {
-        setContent(URL.createObjectURL(file));
-        setFileName(file.name);
+      if (block.type === 'image') {
+        const list: string[] = [];
+        for (let i = 0; i < files.length && list.length < MAX_IMAGES; i++) {
+          const file = files[i];
+          if (file) {
+            const url = await fileToUrlOrDataUrl(file, { userId });
+            list.push(url);
+          }
+        }
+        setImages((prev) => [...prev, ...list].slice(0, MAX_IMAGES));
+      } else {
+        const file = files[0];
+        if (file) {
+          const url = await fileToUrlOrDataUrl(file, { userId });
+          setContent(url);
+          setFileName(file.name);
+        }
       }
-    }
-    e.target.value = '';
-  };
+      e.target.value = '';
+    },
+    [block, userId]
+  );
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -628,26 +815,122 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     switch (block.type) {
       case 'text':
         return (
-          <div className="flex-1 px-2">
+          <div className="flex-1 flex flex-col px-2 min-h-0">
+            <div className="flex items-center gap-2 flex-wrap px-2 pb-2 border-b border-black/[0.06] mb-2">
+              <span className="text-[12px] text-[#6e6e73] mr-1">字体</span>
+              <div className="flex rounded-full p-0.5 bg-black/[0.06]">
+                {(['left', 'center', 'right'] as const).map((align) => (
+                  <button
+                    key={align}
+                    type="button"
+                    onClick={() => setTextAlign(align)}
+                    className={`rounded-full p-2 transition-all ${textAlign === align ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73]'}`}
+                    aria-pressed={textAlign === align}
+                    aria-label={align === 'left' ? '左对齐' : align === 'center' ? '居中' : '右对齐'}
+                  >
+                    {align === 'left' && <AlignLeft size={16} strokeWidth={2} />}
+                    {align === 'center' && <AlignCenter size={16} strokeWidth={2} />}
+                    {align === 'right' && <AlignRight size={16} strokeWidth={2} />}
+                  </button>
+                ))}
+              </div>
+              <div className="flex rounded-full p-0.5 bg-black/[0.06]">
+                {(['small', 'medium', 'large'] as const).map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => setFontSize(size)}
+                    className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-all ${fontSize === size ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73]'}`}
+                    aria-pressed={fontSize === size}
+                  >
+                    {size === 'small' ? '小' : size === 'medium' ? '中' : '大'}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1">
+                {['#1d1d1f', '#6e6e73', '#86868b', '#007aff'].map((hex) => (
+                  <button
+                    key={hex}
+                    type="button"
+                    onClick={() => setTextColor(hex)}
+                    className={`w-6 h-6 rounded-full border-2 transition-all ${textColor === hex ? 'border-[#1d1d1f] scale-110' : 'border-transparent'}`}
+                    style={{ backgroundColor: hex }}
+                    aria-pressed={textColor === hex}
+                    aria-label="颜色"
+                  />
+                ))}
+              </div>
+            </div>
             <textarea
               ref={textareaRef}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder=""
-              className="h-full w-full resize-none bg-transparent px-4 py-3.5 text-[15px] leading-relaxed rounded-xl focus:outline-none text-[#1d1d1f] placeholder:text-[#86868b] focus:bg-black/[0.02] transition-colors"
-              rows={8}
+              className="flex-1 min-h-0 w-full resize-none bg-transparent px-4 py-3.5 leading-relaxed rounded-xl focus:outline-none placeholder:text-[#86868b] focus:bg-black/[0.02] transition-colors"
+              style={{
+                fontSize: fontSize === 'small' ? 14 : fontSize === 'medium' ? 15 : 17,
+                color: textColor,
+              }}
+              rows={6}
             />
           </div>
         );
 
       case 'richtext':
         return (
-          <div className="flex-1 px-2 min-h-[200px]">
-            <BlockRichTextEditor
-              content={content}
-              onChange={setContent}
-              placeholder="内容"
-            />
+          <div className="flex-1 flex flex-col px-2 min-h-0">
+            <div className="flex items-center gap-2 flex-wrap px-2 pb-2 border-b border-black/[0.06] mb-2">
+              <span className="text-[12px] text-[#6e6e73] mr-1">字体</span>
+              <div className="flex rounded-full p-0.5 bg-black/[0.06]">
+                {(['left', 'center', 'right'] as const).map((align) => (
+                  <button
+                    key={align}
+                    type="button"
+                    onClick={() => setTextAlign(align)}
+                    className={`rounded-full p-2 transition-all ${textAlign === align ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73]'}`}
+                    aria-pressed={textAlign === align}
+                    aria-label={align === 'left' ? '左对齐' : align === 'center' ? '居中' : '右对齐'}
+                  >
+                    {align === 'left' && <AlignLeft size={16} strokeWidth={2} />}
+                    {align === 'center' && <AlignCenter size={16} strokeWidth={2} />}
+                    {align === 'right' && <AlignRight size={16} strokeWidth={2} />}
+                  </button>
+                ))}
+              </div>
+              <div className="flex rounded-full p-0.5 bg-black/[0.06]">
+                {(['small', 'medium', 'large'] as const).map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => setFontSize(size)}
+                    className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-all ${fontSize === size ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73]'}`}
+                    aria-pressed={fontSize === size}
+                  >
+                    {size === 'small' ? '小' : size === 'medium' ? '中' : '大'}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1">
+                {['#1d1d1f', '#6e6e73', '#86868b', '#007aff'].map((hex) => (
+                  <button
+                    key={hex}
+                    type="button"
+                    onClick={() => setTextColor(hex)}
+                    className={`w-6 h-6 rounded-full border-2 transition-all ${textColor === hex ? 'border-[#1d1d1f] scale-110' : 'border-transparent'}`}
+                    style={{ backgroundColor: hex }}
+                    aria-pressed={textColor === hex}
+                    aria-label="颜色"
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex-1 min-h-[200px]">
+              <BlockRichTextEditor
+                content={content}
+                onChange={setContent}
+                placeholder="内容"
+              />
+            </div>
           </div>
         );
 
@@ -844,59 +1127,24 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             <p className="text-[13px] text-[#6e6e73]">
               {SECTION_TEMPLATES.find((t) => t.id === sectionTemplateId)?.label ?? sectionTemplateId}
             </p>
-            {sectionTemplateId === 'ribbon' && sectionData.ribbon && (
-              <>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">横幅文案</label>
-                  <input
-                    type="text"
-                    value={sectionData.ribbon.message}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        ribbon: prev.ribbon ? { ...prev.ribbon, message: e.target.value } : { message: e.target.value, ctaLabel: '' },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="横幅文案"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">按钮文案</label>
-                  <input
-                    type="text"
-                    value={sectionData.ribbon.ctaLabel ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        ribbon: prev.ribbon ? { ...prev.ribbon, ctaLabel: e.target.value } : { message: '', ctaLabel: e.target.value },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="按钮"
-                  />
-                </div>
-              </>
-            )}
-            {sectionTemplateId === 'value_props' && sectionData.value_props && (
-              <div>
-                <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">要点列表（每行一条）</label>
-                <textarea
-                  value={sectionData.value_props.items.join('\n')}
-                  onChange={(e) =>
-                    setSectionData((prev) => ({
-                      ...prev,
-                      value_props: { items: e.target.value.split('\n').filter(Boolean) },
-                    }))
-                  }
-                  rows={5}
-                  className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
-                  placeholder="要点一&#10;要点二"
-                />
-              </div>
-            )}
             {sectionTemplateId === 'tile_gallery' && sectionData.tile_gallery && (
               <>
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sectionData.tile_gallery.marqueeAnimate !== false}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        tile_gallery: prev.tile_gallery
+                          ? { ...prev.tile_gallery, marqueeAnimate: e.target.checked }
+                          : { tiles: [], marqueeAnimate: e.target.checked },
+                      }))
+                    }
+                    className="rounded border-black/[0.2] text-[#1d1d1f] focus:ring-black/[0.08]"
+                  />
+                  <span className="text-[13px] font-medium text-[#6e6e73]">跑马灯动效（可动）</span>
+                </label>
                 <div>
                   <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">区块标题</label>
                   <input
@@ -990,7 +1238,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                       <img src={sectionData.feature_card.image} alt="" className="w-full rounded-xl object-cover max-h-32" />
                       <button
                         type="button"
-                        onClick={() => { setSectionImageTarget({ key: 'feature_card.image' }); sectionImageInputRef.current?.click(); }}
+                        onClick={() => { const k = { key: 'feature_card.image' }; setSectionImageTarget(k); sectionImageTargetRef.current = k; sectionImageInputRef.current?.click(); }}
                         className="w-full rounded-full py-2 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
                       >
                         更换图片
@@ -999,7 +1247,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                   ) : (
                     <button
                       type="button"
-                      onClick={() => { setSectionImageTarget({ key: 'feature_card.image' }); sectionImageInputRef.current?.click(); }}
+                      onClick={() => { const k = { key: 'feature_card.image' }; setSectionImageTarget(k); sectionImageTargetRef.current = k; sectionImageInputRef.current?.click(); }}
                       className="w-full rounded-xl border border-dashed border-black/[0.1] py-3 text-[13px] text-[#6e6e73]"
                     >
                       上传图片
@@ -1025,6 +1273,22 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             )}
             {sectionTemplateId === 'marquee' && sectionData.marquee && (
               <>
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sectionData.marquee.marqueeAnimate !== false}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        marquee: prev.marquee
+                          ? { ...prev.marquee, marqueeAnimate: e.target.checked }
+                          : { items: [], marqueeAnimate: e.target.checked },
+                      }))
+                    }
+                    className="rounded border-black/[0.2] text-[#1d1d1f] focus:ring-black/[0.08]"
+                  />
+                  <span className="text-[13px] font-medium text-[#6e6e73]">跑马灯动效（可动）</span>
+                </label>
                 <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">横向滚动项（每项可换图）</label>
                 {sectionData.marquee.items.map((item, idx) => (
                   <div key={idx} className="rounded-xl border border-black/[0.08] p-3 space-y-2">
@@ -1036,7 +1300,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                         <img src={item.image} alt="" className="w-full rounded-lg object-cover h-20" />
                         <button
                           type="button"
-                          onClick={() => { setSectionImageTarget({ key: `marquee.${idx}` }); sectionImageInputRef.current?.click(); }}
+                          onClick={() => { const k = { key: `marquee.${idx}` }; setSectionImageTarget(k); sectionImageTargetRef.current = k; sectionImageInputRef.current?.click(); }}
                           className="w-full rounded-full py-1.5 text-[12px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
                         >
                           更换图片
@@ -1045,7 +1309,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                     ) : (
                       <button
                         type="button"
-                        onClick={() => { setSectionImageTarget({ key: `marquee.${idx}` }); sectionImageInputRef.current?.click(); }}
+                        onClick={() => { const k = { key: `marquee.${idx}` }; setSectionImageTarget(k); sectionImageTargetRef.current = k; sectionImageInputRef.current?.click(); }}
                         className="w-full rounded-lg border border-dashed border-black/[0.1] py-2 text-[12px] text-[#6e6e73]"
                       >
                         上传图片

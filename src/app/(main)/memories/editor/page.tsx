@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Edit2 } from 'lucide-react';
 import { EditorHeader } from '@/components/editor/EditorHeader';
 import { ContentBlock } from '@/components/editor/ContentBlock';
 import { EditPanel } from '@/components/editor/EditPanel';
 import { AddBlockButton } from '@/components/editor/AddBlockButton';
-import type { TravelEditorData, ContentBlock as ContentBlockType, SectionBlockData, SectionTemplateId } from '@/types/editor';
+import type { TravelEditorData, ContentBlock as ContentBlockType, SectionBlockData, SectionTemplateId, TitleStyle } from '@/types/editor';
 import type { AIGeneratedDocBlock } from '@/types/ai-document-blocks';
 import type { LayoutType, StoryBlock } from '@/types/cinematic';
 import { getCinematicPlaceholderImage } from '@/lib/editor-cinematic-templates';
@@ -34,8 +35,11 @@ function TravelEditorContent() {
 
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [editingBlock, setEditingBlock] = useState<ContentBlockType | null>(null);
+  const [editingTarget, setEditingTarget] = useState<'title' | 'description' | null>(null);
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [titleFocused, setTitleFocused] = useState(false);
+  const [descriptionFocused, setDescriptionFocused] = useState(false);
 
   const searchParams = useSearchParams();
   const editId = searchParams.get('id');
@@ -361,6 +365,15 @@ function collectSectionImages(data: SectionBlockData): string[] {
   const handleCloseEditPanel = useCallback(() => {
     setIsEditPanelOpen(false);
     setEditingBlock(null);
+    setEditingTarget(null);
+  }, []);
+
+  const handleSaveTitle = useCallback((data: { title: string; titleStyle?: TitleStyle }) => {
+    setEditorData(prev => ({ ...prev, title: data.title, titleStyle: data.titleStyle }));
+  }, []);
+
+  const handleSaveDescription = useCallback((data: { description: string; descriptionStyle?: TitleStyle }) => {
+    setEditorData(prev => ({ ...prev, description: data.description, descriptionStyle: data.descriptionStyle }));
   }, []);
 
   const handleDiscardBlock = useCallback(() => {
@@ -407,33 +420,81 @@ function collectSectionImages(data: SectionBlockData): string[] {
         role="presentation"
       >
         <div className="px-8 pt-4 space-y-4 max-w-2xl mx-auto">
-          {/* Title Input — Apple-style minimal, light mode only */}
-          <div className="pt-2">
+          {/* Title — direct edit; focus 时右上角绝对定位编辑按钮，不占文档流 */}
+          <div
+            className="relative pt-2"
+            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setTitleFocused(false); }}
+          >
             <input
               type="text"
               value={editorData.title}
               onChange={(e) =>
                 setEditorData(prev => ({ ...prev, title: e.target.value }))
               }
+              onFocus={() => setTitleFocused(true)}
               placeholder="标题"
-              className="w-full text-2xl font-bold focus:outline-none bg-transparent text-[#1d1d1f] placeholder:text-[#86868b]"
+              className="w-full font-bold focus:outline-none bg-transparent placeholder:text-[#86868b]"
+              style={{
+                fontSize: editorData.titleStyle?.fontSize === 'small' ? '1.25rem' : editorData.titleStyle?.fontSize === 'large' ? '1.75rem' : '1.5rem',
+                color: editorData.titleStyle?.textColor ?? '#1d1d1f',
+                textAlign: editorData.titleStyle?.textAlign ?? 'left',
+              }}
               maxLength={100}
             />
+            {titleFocused && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingBlock(null);
+                  setEditingTarget('title');
+                  setIsEditPanelOpen(true);
+                }}
+                className="absolute top-2 right-0 z-10 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
+                aria-label="编辑标题"
+              >
+                <Edit2 size={10} strokeWidth={2.5} />
+                <span>编辑</span>
+              </button>
+            )}
           </div>
 
-          {/* Description Input — same height as text block (min 72px) */}
-          <div>
+          {/* Description — 同上：直接编辑，focus 时右上角绝对定位编辑按钮，不占文档流 */}
+          <div
+            className="relative"
+            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDescriptionFocused(false); }}
+          >
             <textarea
               value={editorData.description}
               onChange={(e) =>
                 setEditorData(prev => ({ ...prev, description: e.target.value }))
               }
+              onFocus={() => setDescriptionFocused(true)}
               placeholder="描述"
-              className="w-full resize-none text-base focus:outline-none bg-transparent rounded-xl py-3 text-[#1d1d1f] placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80"
+              className="w-full resize-none focus:outline-none bg-transparent rounded-xl py-3 placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80"
+              style={{
+                minHeight: 72,
+                fontSize: editorData.descriptionStyle?.fontSize === 'small' ? 14 : editorData.descriptionStyle?.fontSize === 'large' ? 18 : 16,
+                color: editorData.descriptionStyle?.textColor ?? '#1d1d1f',
+                textAlign: editorData.descriptionStyle?.textAlign ?? 'left',
+              }}
               rows={1}
-              style={{ minHeight: 72 }}
               maxLength={500}
             />
+            {descriptionFocused && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingBlock(null);
+                  setEditingTarget('description');
+                  setIsEditPanelOpen(true);
+                }}
+                className="absolute top-2 right-0 z-10 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
+                aria-label="编辑描述"
+              >
+                <Edit2 size={10} strokeWidth={2.5} />
+                <span>编辑</span>
+              </button>
+            )}
           </div>
 
           {/* Content Blocks — 块间距 12px，符合 8pt 网格与可读性最佳实践 */}
@@ -454,18 +515,28 @@ function collectSectionImages(data: SectionBlockData): string[] {
               ))}
           </div>
 
-          {/* Add Block Zone — sticky at bottom of scroll area */}
-          <div className="sticky bottom-0 z-10 py-6 bg-[#fbfbfd]">
-            <AddBlockButton onAddClick={handleOpenAddPanel} />
+          {/* Add Block — fixed at bottom, no wrapper background, safe area */}
+          <div
+            className="fixed left-0 right-0 z-10 flex justify-center items-center pointer-events-none"
+            style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}
+          >
+            <div className="pointer-events-auto flex justify-center w-full max-w-[280px] px-4">
+              <AddBlockButton onAddClick={handleOpenAddPanel} />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Edit Panel — type picker when block is null, block editor otherwise */}
+      {/* Edit Panel — type picker when block is null; title/description editor when editingTarget set; block editor otherwise */}
       <EditPanel
         isOpen={isEditPanelOpen}
         onClose={handleCloseEditPanel}
         block={editingBlock}
+        editingTarget={editingTarget}
+        titleData={{ title: editorData.title, titleStyle: editorData.titleStyle }}
+        descriptionData={{ description: editorData.description, descriptionStyle: editorData.descriptionStyle }}
+        onSaveTitle={handleSaveTitle}
+        onSaveDescription={handleSaveDescription}
         onSave={handleSaveBlock}
         onDelete={handleDeleteBlock}
         onDiscard={handleDiscardBlock}
@@ -497,16 +568,6 @@ function sectionBlockToHtml(
   if (!templateId || !data) return '';
   const wrap = (inner: string) => `<section class="editor-section" data-template="${escapeHtml(templateId)}">${inner}</section>`;
   switch (templateId) {
-    case 'ribbon': {
-      const d = data.ribbon;
-      if (!d) return '';
-      return wrap(`<p>${escapeHtml(d.message)}</p>${d.ctaLabel ? `<a href="#">${escapeHtml(d.ctaLabel)}</a>` : ''}`);
-    }
-    case 'value_props': {
-      const d = data.value_props;
-      if (!d?.items?.length) return '';
-      return wrap('<ul>' + d.items.map((i) => `<li>${escapeHtml(i)}</li>`).join('') + '</ul>');
-    }
     case 'tile_gallery': {
       const d = data.tile_gallery;
       if (!d?.tiles?.length) return '';

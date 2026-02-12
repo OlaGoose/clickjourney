@@ -1,10 +1,10 @@
 import type { CarouselItem, LocationData } from '@/types';
 
-/** DB row shape for travel_memories */
+/** DB row shape for travel_memories (Supabase). Must match table columns. */
 export interface TravelMemoryRow {
   id: string;
   user_id: string | null;
-  type: string | null; // MemoryType
+  type: string | null;
   title: string;
   subtitle: string;
   image_url: string;
@@ -15,6 +15,7 @@ export interface TravelMemoryRow {
   gallery_urls: string[];
   description: string | null;
   rich_content: string | null;
+  editor_blocks_json: string | null;
   audio_urls: string[];
   video_urls: string[];
   lat: number | null;
@@ -40,7 +41,7 @@ export function rowToCarouselItem(row: TravelMemoryRow): CarouselItem {
       : undefined;
   return {
     id: row.id,
-    type: row.type as any, // Cast to MemoryType; null handled by inferMemoryType
+    type: row.type as CarouselItem['type'],
     title: row.title,
     subtitle: row.subtitle,
     image: row.image_url,
@@ -51,6 +52,10 @@ export function rowToCarouselItem(row: TravelMemoryRow): CarouselItem {
     gallery: Array.isArray(row.gallery_urls) ? row.gallery_urls : [],
     description: row.description ?? undefined,
     richContent: row.rich_content ?? undefined,
+    editorBlocks:
+      row.editor_blocks_json != null && row.editor_blocks_json !== ''
+        ? (JSON.parse(row.editor_blocks_json) as CarouselItem['editorBlocks'])
+        : undefined,
     audioUrls: Array.isArray(row.audio_urls) ? row.audio_urls : [],
     videoUrls: Array.isArray(row.video_urls) ? row.video_urls : [],
     coordinates: coords,
@@ -75,6 +80,8 @@ export function carouselItemToRow(
     gallery_urls: Array.isArray(item.gallery) ? item.gallery : [],
     description: item.description ?? null,
     rich_content: item.richContent ?? null,
+    editor_blocks_json:
+      item.editorBlocks != null ? JSON.stringify(item.editorBlocks) : null,
     audio_urls: Array.isArray(item.audioUrls) ? item.audioUrls : [],
     video_urls: Array.isArray(item.videoUrls) ? item.videoUrls : [],
     lat: item.coordinates?.lat ?? null,

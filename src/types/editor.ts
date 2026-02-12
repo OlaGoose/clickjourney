@@ -9,8 +9,6 @@ export type ContentBlockType = 'text' | 'image' | 'video' | 'audio' | 'richtext'
 
 /** Apple-style section template IDs (promotional/section blocks). */
 export type SectionTemplateId =
-  | 'ribbon'
-  | 'value_props'
   | 'tile_gallery'
   | 'feature_card'
   | 'marquee';
@@ -23,16 +21,10 @@ export interface SectionCta {
 
 /** Dynamic content for section blocks (per-template shapes). */
 export interface SectionBlockData {
-  ribbon?: {
-    message: string;
-    ctaLabel: string;
-    ctaHref?: string;
-  };
-  value_props?: {
-    items: string[];
-  };
   tile_gallery?: {
     sectionHeadline?: string;
+    /** When true (default), show infinite marquee animation; when false, static horizontal scroll. */
+    marqueeAnimate?: boolean;
     tiles: Array<{
       eyebrow?: string;
       title: string;
@@ -50,6 +42,8 @@ export interface SectionBlockData {
     ctaHref?: string;
   };
   marquee?: {
+    /** When true (default), show infinite marquee animation; when false, static horizontal scroll. */
+    marqueeAnimate?: boolean;
     items: Array<{
       image: string;
       title: string;
@@ -80,13 +74,26 @@ export interface ContentBlock {
     imageFilter?: 'none' | 'grayscale' | 'warm' | 'cool' | 'vibrant' | 'muted';
     /** Cinematic block: optional mood label. */
     mood?: string;
-    /** Section block: template id (ribbon, value_props, etc.). */
+    /** Section block: template id (tile_gallery, feature_card, etc.). */
     sectionTemplateId?: SectionTemplateId;
     /** Section block: dynamic content for the chosen template. */
     sectionData?: SectionBlockData;
     /** When true, render the block with a visible border (all block types). */
     showBorder?: boolean;
+    /** Text/richtext block: alignment. */
+    textAlign?: 'left' | 'center' | 'right';
+    /** Text/richtext block: size preset. */
+    fontSize?: 'small' | 'medium' | 'large';
+    /** Text/richtext block: CSS color (hex or named). */
+    textColor?: string;
   };
+}
+
+/** Title style for the editor page title (stored in TravelEditorData). */
+export interface TitleStyle {
+  textAlign?: 'left' | 'center' | 'right';
+  fontSize?: 'small' | 'medium' | 'large';
+  textColor?: string;
 }
 
 /** Image block display: grid = PhotoGrid layout, gallery = upload-page polaroid layout */
@@ -94,7 +101,11 @@ export type ImageDisplayMode = 'grid' | 'gallery';
 
 export interface TravelEditorData {
   title: string;
+  /** Style for the title (alignment, size, color). */
+  titleStyle?: TitleStyle;
   description: string;
+  /** Style for the description (alignment, size, color). */
+  descriptionStyle?: TitleStyle;
   /** @deprecated No longer used; images come from image blocks. Kept for draft migration. */
   images?: string[];
   blocks: ContentBlock[];

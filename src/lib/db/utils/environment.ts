@@ -25,6 +25,16 @@ export function isMockAuthEnabled(): boolean {
 }
 
 /**
+ * Check if demo data should be shown for unauthenticated users.
+ * Production: only when NEXT_PUBLIC_ENABLE_DEMO_DATA=true (e.g. demo site).
+ * Development: enabled by default.
+ */
+export function isDemoDataEnabled(): boolean {
+  if (process.env.NEXT_PUBLIC_ENABLE_DEMO_DATA === 'true') return true;
+  return isDevelopment();
+}
+
+/**
  * Check if running on server side
  */
 export function isServer(): boolean {

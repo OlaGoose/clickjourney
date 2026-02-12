@@ -8,7 +8,7 @@
 import React, { useEffect } from 'react';
 import { MemoryService } from './services/memory-service';
 import { installDevTools } from './utils/dev-tools';
-import { logEnvironmentInfo, isDevelopment } from './utils/environment';
+import { logEnvironmentInfo, isDevelopment, isDemoDataEnabled } from './utils/environment';
 import { initializeDemoData, hasDemoData } from './utils/demo-data';
 import { useAuth } from '@/lib/auth';
 
@@ -32,8 +32,8 @@ export function useInitializeDatabase() {
     // Initialize memory service
     const init = async () => {
       try {
-        // Initialize demo data for non-authenticated users (only if not already present, avoid duplicate init)
-        if (!userId) {
+        // Initialize demo data only when enabled (dev or NEXT_PUBLIC_ENABLE_DEMO_DATA) and user not logged in
+        if (!userId && isDemoDataEnabled()) {
           if (!(await hasDemoData())) await initializeDemoData();
         }
         

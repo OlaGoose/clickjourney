@@ -34,6 +34,8 @@ export interface Database {
         Row: {
           id: string;
           user_id: string | null;
+          /** Memory type: photo-gallery | cinematic | rich-story | video */
+          type: string | null;
           title: string;
           subtitle: string;
           image_url: string;
@@ -44,6 +46,8 @@ export interface Database {
           gallery_urls: string[];
           description: string | null;
           rich_content: string | null;
+          /** JSON string of ContentBlock[] for rich-story editor */
+          editor_blocks_json: string | null;
           audio_urls: string[];
           video_urls: string[];
           lat: number | null;
@@ -59,6 +63,7 @@ export interface Database {
         Insert: {
           id?: string;
           user_id?: string | null;
+          type?: string | null;
           title: string;
           subtitle: string;
           image_url: string;
@@ -69,6 +74,7 @@ export interface Database {
           gallery_urls?: string[] | Json;
           description?: string | null;
           rich_content?: string | null;
+          editor_blocks_json?: string | null;
           audio_urls?: string[] | Json;
           video_urls?: string[] | Json;
           lat?: number | null;

@@ -17,7 +17,7 @@ export function SectionBlockRenderer({
   isEditMode = false,
   className = '',
 }: SectionBlockRendererProps) {
-  const templateId = (block.metadata?.sectionTemplateId ?? 'ribbon') as SectionTemplateId;
+  const templateId = (block.metadata?.sectionTemplateId ?? 'tile_gallery') as SectionTemplateId;
   const data = block.metadata?.sectionData ?? {};
 
   const showBorder = !!block.metadata?.showBorder;
@@ -27,57 +27,37 @@ export function SectionBlockRenderer({
     : 'text-[#007aff] hover:underline';
 
   switch (templateId) {
-    case 'ribbon': {
-      const d = data.ribbon;
-      if (!d) return <SectionPlaceholder label="横幅条" className={base} />;
-      return (
-        <section className={`${base} px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-[#f5f5f7] ${className}`}>
-          <p className="text-[15px] text-[#1d1d1f]">{d.message || '横幅文案'}</p>
-          <span className={`text-[14px] font-semibold ${linkClass}`}>{d.ctaLabel || '了解更多'}</span>
-        </section>
-      );
-    }
-
-    case 'value_props': {
-      const d = data.value_props;
-      if (!d?.items?.length) return <SectionPlaceholder label="价值主张列表" className={base} />;
-      return (
-        <section className={`${base} px-6 py-6 ${className}`}>
-          <ul className="space-y-3 list-none">
-            {d.items.map((item, i) => (
-              <li key={i} className="text-[15px] leading-relaxed text-[#1d1d1f]">
-                {item || '—'}
-              </li>
-            ))}
-          </ul>
-        </section>
-      );
-    }
-
     case 'tile_gallery': {
       const d = data.tile_gallery;
       if (!d?.tiles?.length) return <SectionPlaceholder label="横向卡片组" className={base} />;
+      const tiles = d.tiles;
+      const animate = d.marqueeAnimate !== false;
+      const duplicated = animate ? [...tiles, ...tiles] : tiles;
       return (
-        <section className={`${base} px-4 py-5 ${className}`}>
+        <section className={`${base} px-4 py-5 overflow-hidden ${className}`}>
           {d.sectionHeadline && (
             <h3 className="text-xl font-semibold tracking-tight mb-4">{d.sectionHeadline}</h3>
           )}
-          <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-2 no-scrollbar scroll-smooth">
-            {d.tiles.map((tile, i) => (
-              <div
-                key={i}
-                className="flex-shrink-0 w-[260px] rounded-2xl border border-black/[0.08] bg-white p-4"
-              >
-                {tile.eyebrow && (
-                  <p className="text-[12px] font-medium text-[#6e6e73] uppercase tracking-wide">{tile.eyebrow}</p>
-                )}
-                <p className="mt-1 text-[17px] font-semibold">{tile.title || '标题'}</p>
-                <p className="mt-1 text-[13px] text-[#6e6e73] line-clamp-2">{tile.copy || ''}</p>
-                <span className={`mt-3 inline-block text-[14px] font-semibold ${linkClass}`}>
-                  {tile.ctaLabel || '行动'}
-                </span>
-              </div>
-            ))}
+          <div className="overflow-hidden pb-2 -mx-4">
+            <div
+              className={`flex gap-4 w-max ${animate ? 'animate-tile-marquee' : ''}`}
+            >
+              {duplicated.map((tile, i) => (
+                <div
+                  key={i}
+                  className="flex-shrink-0 w-[260px] rounded-2xl border border-black/[0.08] bg-white p-4"
+                >
+                  {tile.eyebrow && (
+                    <p className="text-[12px] font-medium text-[#6e6e73] uppercase tracking-wide">{tile.eyebrow}</p>
+                  )}
+                  <p className="mt-1 text-[17px] font-semibold">{tile.title || '标题'}</p>
+                  <p className="mt-1 text-[13px] text-[#6e6e73] line-clamp-2">{tile.copy || ''}</p>
+                  <span className={`mt-3 inline-block text-[14px] font-semibold ${linkClass}`}>
+                    {tile.ctaLabel || '行动'}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       );
@@ -110,23 +90,33 @@ export function SectionBlockRenderer({
     case 'marquee': {
       const d = data.marquee;
       if (!d?.items?.length) return <SectionPlaceholder label="横向滚动条" className={base} />;
-      return (
-        <section className={`${base} py-4 ${className}`}>
-          <div className="flex gap-4 overflow-x-auto overflow-y-hidden px-4 no-scrollbar scroll-smooth">
-            {d.items.map((item, i) => (
-              <div key={i} className="flex-shrink-0 w-[140px]">
-                <div
-                  className="aspect-video rounded-xl bg-black/10 overflow-hidden"
-                  style={{ backgroundImage: item.image ? `url(${item.image})` : undefined, backgroundSize: 'cover' }}
-                >
-                  {item.image && <img src={item.image} alt="" className="w-full h-full object-cover" />}
-                </div>
-                <p className="mt-2 text-[13px] font-medium truncate">{item.title || '标题'}</p>
-                {item.ctaLabel && (
-                  <span className={`text-[12px] font-medium ${linkClass}`}>{item.ctaLabel}</span>
-                )}
+      const animate = d.marqueeAnimate !== false;
+      const items = d.items;
+      const duplicated = animate ? [...items, ...items] : items;
+      const TrackContent = () => (
+        <>
+          {duplicated.map((item, i) => (
+            <div key={i} className="flex-shrink-0 w-[140px]">
+              <div
+                className="aspect-video rounded-xl bg-black/10 overflow-hidden"
+                style={{ backgroundImage: item.image ? `url(${item.image})` : undefined, backgroundSize: 'cover' }}
+              >
+                {item.image && <img src={item.image} alt="" className="w-full h-full object-cover" />}
               </div>
-            ))}
+              <p className="mt-2 text-[13px] font-medium truncate">{item.title || '标题'}</p>
+              {item.ctaLabel && (
+                <span className={`text-[12px] font-medium ${linkClass}`}>{item.ctaLabel}</span>
+              )}
+            </div>
+          ))}
+        </>
+      );
+      return (
+        <section className={`${base} py-4 overflow-hidden ${className}`}>
+          <div className={animate ? 'overflow-hidden pb-2 -mx-4' : 'overflow-x-auto overflow-y-hidden px-4 no-scrollbar scroll-smooth'}>
+            <div className={`flex gap-4 ${animate ? 'w-max animate-tile-marquee' : ''}`}>
+              <TrackContent />
+            </div>
           </div>
         </section>
       );

@@ -1,15 +1,18 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { fileToUrlOrDataUrl } from '@/lib/upload-media';
 
 interface MediaUploaderProps {
   type: 'image' | 'audio' | 'video';
   files: string[];
   onChange: (files: string[]) => void;
   maxFiles?: number;
+  /** When set, uploads go to Supabase Storage under this user folder. */
+  userId?: string | null;
 }
 
-export default function MediaUploader({ type, files, onChange, maxFiles = 10 }: MediaUploaderProps) {
+export default function MediaUploader({ type, files, onChange, maxFiles = 10, userId }: MediaUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -50,7 +53,7 @@ export default function MediaUploader({ type, files, onChange, maxFiles = 10 }: 
 
   const handleFileSelect = async (selectedFiles: FileList | null) => {
     if (!selectedFiles || selectedFiles.length === 0) return;
-    
+
     if (files.length + selectedFiles.length > maxFiles) {
       alert(`Maximum ${maxFiles} files allowed`);
       return;
@@ -60,16 +63,13 @@ export default function MediaUploader({ type, files, onChange, maxFiles = 10 }: 
 
     try {
       const newFiles: string[] = [];
-      
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
         if (file) {
-          // Convert to base64 for demo (in production, upload to Supabase Storage)
-          const base64 = await fileToBase64(file);
-          newFiles.push(base64);
+          const url = await fileToUrlOrDataUrl(file, { userId });
+          newFiles.push(url);
         }
       }
-
       onChange([...files, ...newFiles]);
     } catch (error) {
       console.error('Upload error:', error);
@@ -77,15 +77,6 @@ export default function MediaUploader({ type, files, onChange, maxFiles = 10 }: 
     } finally {
       setIsUploading(false);
     }
-  };
-
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-    });
   };
 
   const handleRemove = (index: number) => {

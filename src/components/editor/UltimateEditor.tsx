@@ -8,6 +8,7 @@ import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import { Audio } from '@/lib/tiptap/audio-extension';
 import { Video } from '@/lib/tiptap/video-extension';
+import { fileToUrlOrDataUrl } from '@/lib/upload-media';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 interface UltimateEditorProps {
@@ -197,14 +198,6 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
     }
   }, [images, audios, videos, onMediaChange]);
 
-  const readFileAsDataURL = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
-
   const handleImageUpload = async (files: FileList | null) => {
     if (!files?.length || !editor) return;
 
@@ -212,7 +205,7 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
     const newSrcs: string[] = [];
 
     for (const file of fileArray) {
-      const src = await readFileAsDataURL(file);
+      const src = await fileToUrlOrDataUrl(file);
       newSrcs.push(src);
       editor
         .chain()
@@ -229,13 +222,9 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const src = e.target?.result as string;
-          editor.chain().focus().setAudio({ src }).run();
-          setAudios((prev) => [...prev, src]);
-        };
-        reader.readAsDataURL(file);
+        const src = await fileToUrlOrDataUrl(file);
+        editor.chain().focus().setAudio({ src }).run();
+        setAudios((prev) => [...prev, src]);
       }
     }
   };
@@ -246,13 +235,9 @@ export default function UltimateEditor({ content, onChange, onMediaChange, place
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const src = e.target?.result as string;
-          editor.chain().focus().setVideo({ src }).run();
-          setVideos((prev) => [...prev, src]);
-        };
-        reader.readAsDataURL(file);
+        const src = await fileToUrlOrDataUrl(file);
+        editor.chain().focus().setVideo({ src }).run();
+        setVideos((prev) => [...prev, src]);
       }
     }
   };
