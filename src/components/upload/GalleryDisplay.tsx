@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { RefreshCw, Trash2 } from 'lucide-react';
 import type { GalleryProps } from '@/types/upload';
 
@@ -132,25 +132,28 @@ export function getGalleryImageStyle(index: number, total: number) {
 /**
  * Airbnb-style gallery: polaroid-like cards with "perfectly messy" layout.
  * Click a card to show replace/delete actions in a glass bubble.
+ * Memoized so parent re-renders (e.g. transcript typing) don't re-render the gallery.
  */
-export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
+function GalleryDisplayInner({ images, onDelete, onReplace }: GalleryProps) {
   const count = images.length;
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
 
-  const handleImageClick = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setActiveId(activeId === id ? null : id);
-  };
+  const handleBackdropClick = useCallback(() => setActiveId(null), []);
 
-  const handleImageLoad = (id: string) => {
+  const handleImageClick = useCallback((e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setActiveId((prev) => (prev === id ? null : id));
+  }, []);
+
+  const handleImageLoad = useCallback((id: string) => {
     setLoadedImages((prev) => new Set(prev).add(id));
-  };
+  }, []);
 
   return (
     <div
       className="relative w-full h-full flex justify-center items-center"
-      onClick={() => setActiveId(null)}
+      onClick={handleBackdropClick}
     >
       {images.map((img, index) => {
         const { className, style } = getGalleryImageStyle(index, count);
@@ -236,6 +239,8 @@ export function GalleryDisplay({ images, onDelete, onReplace }: GalleryProps) {
     </div>
   );
 }
+
+export const GalleryDisplay = memo(GalleryDisplayInner);
 
 export interface GalleryDisplayViewProps {
   images: string[];

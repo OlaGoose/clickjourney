@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
   ImagePlus,
-  RefreshCw,
   Mic,
   Square,
   Play,
@@ -29,7 +27,7 @@ import { useLocale } from '@/lib/i18n';
 import { saveMemory } from '@/lib/storage';
 import { directorScriptToCarouselItem } from '@/lib/upload-to-memory';
 import { saveCinematicScript, saveLocalCinematic } from '@/lib/cinematic-storage';
-import type { UploadedImage } from '@/types/upload';
+import type { UploadedImage, ImageAnalysis } from '@/types/upload';
 import type { DirectorScript } from '@/types/cinematic';
 
 const blobToBase64 = (blob: Blob): Promise<string> => {
@@ -45,9 +43,29 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
   });
 };
 
+/** Pure: format seconds as MM:SS. Kept outside component to avoid re-creation. */
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+/** Revoke object URL if it's a blob URL to avoid memory leaks. */
+function revokeBlobUrlIfNeeded(url: string): void {
+  if (typeof url === 'string' && url.startsWith('blob:')) {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      // ignore
+    }
+  }
+}
+
 export default function MemoryUploadPage() {
   const router = useRouter();
   const { t } = useLocale();
+  /** Step 0: user-entered travel location (memory place). */
+  const [memoryLocation, setMemoryLocation] = useState('');
   const [images, setImages] = useState<UploadedImage[]>(DEFAULT_UPLOAD_IMAGES);
   const [isDefault, setIsDefault] = useState(true);
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
@@ -61,29 +79,6 @@ export default function MemoryUploadPage() {
   const [transcript, setTranscript] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
 
-  // Image analysis state
-  interface ImageAnalysis {
-    index: number;
-    description: string;
-    storyPotential: string;
-    emotionalTone: string;
-    visualFeatures: {
-      mood: string;
-      composition: string;
-      colorPalette: string;
-      colorDominance: string;
-      subject: string;
-      timeOfDay: string;
-      lighting: string;
-      depth: string;
-      movement: string;
-      texture: string;
-      perspective: string;
-      focus: string;
-    };
-    layoutSuggestion: string;
-    textPlacement: string;
-  }
   const [imageAnalyses, setImageAnalyses] = useState<ImageAnalysis[]>([]);
   const [isAnalyzingImages, setIsAnalyzingImages] = useState(false);
   const [analysisError, setAnalysisError] = useState(false);
@@ -93,7 +88,7 @@ export default function MemoryUploadPage() {
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
 
-  /** Step index: 0 = image upload, 1 = audio upload. Drives top story bar and bottom toolbar. */
+  /** Step index: 0 = location, 1 = image upload, 2 = audio/transcript. Drives top story bar and bottom toolbar. */
   const [currentStep, setCurrentStep] = useState(0);
 
   // AI Generation state
@@ -172,11 +167,13 @@ export default function MemoryUploadPage() {
             imageAnalyses: imageAnalyses,
             transcript: transcript || '',
             userContext: '',
+            location: memoryLocation.trim() || undefined,
           }
         : {
             images: base64Images,
             transcript: transcript || '',
             userContext: '',
+            location: memoryLocation.trim() || undefined,
           };
 
       const response = await fetch('/api/generate-cinematic-script', {
@@ -221,16 +218,17 @@ export default function MemoryUploadPage() {
       );
       setIsGenerating(false);
     }
-  }, [images, isDefault, transcript, imageAnalyses, userId, router, t]);
+  }, [images, isDefault, transcript, imageAnalyses, memoryLocation, userId, router, t]);
 
   const goToNextStep = useCallback(() => {
     if (currentStep === 0) {
       setCurrentStep(1);
     } else if (currentStep === 1) {
-      // Step 1 -> Generate: Create cinematic memory
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
       generateCinematicMemory();
     }
-  }, [currentStep, isDefault, generateCinematicMemory]);
+  }, [currentStep, generateCinematicMemory]);
 
   const goToEditor = useCallback(() => {
     if (isDefault) {
@@ -243,8 +241,11 @@ export default function MemoryUploadPage() {
     if (transcript.trim()) {
       sessionStorage.setItem('editor-description', transcript.trim());
     }
+    if (memoryLocation.trim()) {
+      sessionStorage.setItem('editor-location', memoryLocation.trim());
+    }
     router.push('/memories/editor');
-  }, [images, isDefault, transcript, router]);
+  }, [images, isDefault, transcript, memoryLocation, router, t]);
 
   const handleStartClick = useCallback(() => {
     setReplaceTargetId(null);
@@ -258,6 +259,8 @@ export default function MemoryUploadPage() {
 
   const handleDeleteImage = useCallback((id: string) => {
     setImages((prev) => {
+      const removed = prev.find((img) => img.id === id);
+      if (removed?.url) revokeBlobUrlIfNeeded(removed.url);
       const next = prev.filter((img) => img.id !== id);
       if (next.length === 0) {
         setIsDefault(true);
@@ -275,12 +278,14 @@ export default function MemoryUploadPage() {
       if (replaceTargetId) {
         const file = files[0];
         if (!file) return;
-        const newUrl = URL.createObjectURL(file);
-        setImages((prev) =>
-          prev.map((img) =>
+        setImages((prev) => {
+          const prevImg = prev.find((img) => img.id === replaceTargetId);
+          if (prevImg?.url) revokeBlobUrlIfNeeded(prevImg.url);
+          const newUrl = URL.createObjectURL(file);
+          return prev.map((img) =>
             img.id === replaceTargetId ? { ...img, url: newUrl } : img
-          )
-        );
+          );
+        });
         if (isDefault) setIsDefault(false);
         setReplaceTargetId(null);
       } else {
@@ -424,6 +429,7 @@ export default function MemoryUploadPage() {
   }, [audioUrl]);
 
   const handleReset = useCallback(() => {
+    setMemoryLocation('');
     setImages(DEFAULT_UPLOAD_IMAGES);
     setIsDefault(true);
     setAudioUrl(null);
@@ -434,13 +440,15 @@ export default function MemoryUploadPage() {
     setAnalysisError(false);
   }, []);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  const handleDismissError = useCallback(() => setGenerationError(null), []);
 
   const isDark = useDayNightTheme() === 'dark';
+
+  /** Stable list of image URLs for CinematicGenerationLoader to avoid child re-renders. */
+  const imageUrlsForLoader = useMemo(
+    () => images.map((img) => img.url),
+    [images]
+  );
 
   return (
     <div
@@ -460,18 +468,21 @@ export default function MemoryUploadPage() {
       />
 
       {/* Cinematic Generation Loader — same gradient as upload in day, Apple TV black in night */}
-      <CinematicGenerationLoader
-        isGenerating={isGenerating}
-        progress={generationProgress}
-        imageUrls={images.map((img) => img.url)}
-        theme={isDark ? 'dark' : 'light'}
-      />
+      {/* Mount loader only when generating to avoid framer-motion cost when idle */}
+      {isGenerating && (
+        <CinematicGenerationLoader
+          isGenerating={true}
+          progress={generationProgress}
+          imageUrls={imageUrlsForLoader}
+          theme={isDark ? 'dark' : 'light'}
+        />
+      )}
 
       {/* Error Display */}
       <ErrorDisplay
         error={generationError}
         onRetry={generateCinematicMemory}
-        onDismiss={() => setGenerationError(null)}
+        onDismiss={handleDismissError}
       />
 
       {/* Top: Instagram-style step bar + back/reset row */}
@@ -503,14 +514,41 @@ export default function MemoryUploadPage() {
         <audio ref={audioPlayerRef} src={audioUrl} className="hidden" aria-hidden />
       )}
 
-      <main className="max-w-4xl w-full flex flex-col items-center gap-12 z-10 flex-1 pt-24 md:pt-28 pb-32 md:pb-36">
-        <div className="w-full relative h-[360px] md:h-[500px] flex justify-center items-center">
-          <GalleryDisplay
-            images={images}
-            onDelete={handleDeleteImage}
-            onReplace={handleTriggerReplace}
-          />
-        </div>
+      <main className="max-w-4xl w-full flex flex-col items-center z-10 flex-1 pt-24 md:pt-28 pb-32 md:pb-36">
+        {currentStep === 0 ? (
+          <div className="flex-1 w-full flex flex-col justify-center items-center px-4">
+            <h2
+              className={`text-2xl font-semibold mb-3 text-center ${
+                isDark ? 'text-white/90' : 'text-gray-800'
+              }`}
+            >
+              {t('upload.locationHeading')}
+            </h2>
+            <input
+              type="text"
+              value={memoryLocation}
+              onChange={(e) => setMemoryLocation(e.target.value)}
+              placeholder={t('upload.locationPlaceholder')}
+              className={`w-full max-w-md text-base rounded-xl px-4 py-3 outline-none transition-colors ${
+                isDark
+                  ? 'bg-white/10 text-white placeholder:text-white/40 focus:bg-white/15'
+                  : 'bg-white/50 text-gray-800 placeholder:text-gray-400 focus:bg-white'
+              }`}
+              autoFocus
+              aria-label={t('upload.locationPlaceholder')}
+            />
+          </div>
+        ) : (
+          <div className="w-full flex flex-col items-center gap-12 flex-1">
+            <div className="w-full relative h-[360px] md:h-[500px] flex justify-center items-center">
+              <GalleryDisplay
+                images={images}
+                onDelete={handleDeleteImage}
+                onReplace={handleTriggerReplace}
+              />
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Fixed bottom toolbar (Instagram-style glass dock, center) */}
@@ -519,7 +557,7 @@ export default function MemoryUploadPage() {
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       >
         <div className="w-full max-w-4xl flex flex-col items-center px-4 pointer-events-auto">
-          {currentStep === 1 && (
+          {currentStep === 2 && (
             <div className="w-full max-w-sm mb-4">
               <div
                 className={`backdrop-blur-2xl rounded-3xl shadow-2xl p-5 relative transition-colors duration-300 ${
@@ -634,6 +672,15 @@ export default function MemoryUploadPage() {
             }`}
           >
             {currentStep === 0 ? (
+              <button
+                type="button"
+                onClick={goToNextStep}
+                className="group flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl transition-all active:scale-95"
+              >
+                <ChevronRight size={16} strokeWidth={2.5} />
+                <span className="font-semibold text-[13px]">{t('upload.next')}</span>
+              </button>
+            ) : currentStep === 1 ? (
               <>
                 <button
                   type="button"
@@ -648,7 +695,7 @@ export default function MemoryUploadPage() {
                   }`}
                 >
                   <ImagePlus size={16} strokeWidth={2.5} className="text-white" />
-                  <span className="font-semibold text-[13px]">Upload</span>
+                  <span className="font-semibold text-[13px]">{t('upload.uploadButton')}</span>
                 </button>
                 <div className={`w-px h-5 mx-1 ${isDark ? 'bg-white/20' : 'bg-black/10'}`} />
                 <button
@@ -664,7 +711,7 @@ export default function MemoryUploadPage() {
                   }`}
                 >
                   <ChevronRight size={16} strokeWidth={2.5} />
-                  <span className="font-semibold text-[13px]">Next</span>
+                  <span className="font-semibold text-[13px]">{t('upload.next')}</span>
                 </button>
               </>
             ) : (
@@ -682,7 +729,7 @@ export default function MemoryUploadPage() {
                   }`}
                 >
                   <Edit3 size={16} strokeWidth={2.5} />
-                  <span className="font-semibold text-[13px]">Edit Journey</span>
+                  <span className="font-semibold text-[13px]">{t('upload.editJourney')}</span>
                 </button>
                 <div className={`w-px h-5 mx-1 ${isDark ? 'bg-white/20' : 'bg-black/10'}`} />
                 <button
@@ -701,7 +748,7 @@ export default function MemoryUploadPage() {
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
                   )}
                   <Sparkles size={16} strokeWidth={2.5} className={isDefault ? '' : 'animate-pulse'} />
-                  <span className="font-semibold text-[13px] relative z-10">Generate</span>
+                  <span className="font-semibold text-[13px] relative z-10">{t('upload.generate')}</span>
                 </button>
               </>
             )}

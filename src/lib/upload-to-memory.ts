@@ -29,7 +29,8 @@ const LOCATION_COORDINATES: Array<{ keys: string[]; lat: number; lng: number; na
   { keys: ['北京', 'beijing'], lat: 39.9042, lng: 116.4074, name: 'Beijing' },
 ];
 
-function resolveCoordinatesForLocation(locationStr: string): LocationData {
+/** Resolve lat/lng/name from a location string (for globe and Memory storage). */
+export function resolveCoordinatesForLocation(locationStr: string): LocationData {
   const normalized = locationStr.trim().toLowerCase();
   if (!normalized) {
     return { lat: 0, lng: 0, name: locationStr || 'Unknown' };

@@ -188,6 +188,12 @@
     "openGallery": "打开媒体库，查看更多图片"
   },
   "upload": {
+    "locationHeading": "这段回忆在哪里？",
+    "locationPlaceholder": "例如：东京、京都、巴黎…",
+    "next": "下一步",
+    "uploadButton": "上传",
+    "editJourney": "编辑旅程",
+    "generate": "生成",
     "uploadOnePhotoFirst": "请先上传至少一张照片",
     "maxNinePhotos": "最多只能上传 9 张照片",
     "transcriptUnavailable": "无法识别录音内容",

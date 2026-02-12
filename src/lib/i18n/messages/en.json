@@ -188,6 +188,12 @@
     "openGallery": "Open gallery, view more images"
   },
   "upload": {
+    "locationHeading": "Where was this memory?",
+    "locationPlaceholder": "e.g. Tokyo, Kyoto, Paris…",
+    "next": "Next",
+    "uploadButton": "Upload",
+    "editJourney": "Edit Journey",
+    "generate": "Generate",
     "uploadOnePhotoFirst": "Please upload at least one photo first",
     "maxNinePhotos": "You can upload at most 9 photos",
     "transcriptUnavailable": "Could not transcribe recording",

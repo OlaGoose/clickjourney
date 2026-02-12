@@ -182,7 +182,7 @@ export default function HomePage() {
         <div className="absolute left-6 top-12 right-6 z-30 pointer-events-auto md:left-16 flex flex-col gap-3">
           <h2
             className={`text-5xl font-bold tracking-tight text-[#f5f5f7] drop-shadow-lg md:text-6xl ${
-              hasLocationHighlight ? 'leading-tight' : 'truncate pr-16 min-w-0 max-w-[calc(100%-4rem)]'
+              hasLocationHighlight ? 'leading-tight' : 'truncate pr-4 min-w-0 max-w-[calc(100%-4rem)]'
             }`}
           >
             {titleText}

@@ -188,6 +188,12 @@
     "openGallery": "ギャラリーを開く、さらに画像を見る"
   },
   "upload": {
+    "locationHeading": "この思い出はどこでしたか？",
+    "locationPlaceholder": "例：東京、京都、パリ…",
+    "next": "次へ",
+    "uploadButton": "アップロード",
+    "editJourney": "旅程を編集",
+    "generate": "生成",
     "uploadOnePhotoFirst": "まず1枚以上の写真をアップロードしてください",
     "maxNinePhotos": "最大9枚までアップロードできます",
     "transcriptUnavailable": "録音を文字起こしできませんでした",

@@ -30,6 +30,8 @@ interface GenerateScriptRequest {
   imageAnalyses?: ImageAnalysis[]; // Pre-analyzed image data (preferred)
   transcript: string;
   userContext?: string;
+  /** User-provided travel location (memory place); overrides AI-inferred location when set. */
+  location?: string;
 }
 
 interface GeminiBlock {
@@ -73,7 +75,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { images, imageAnalyses, transcript, userContext } = body;
+  const { images, imageAnalyses, transcript, userContext, location: userLocation } = body;
 
   // Support both new (imageAnalyses) and old (images) flow
   const useAnalysisFlow = imageAnalyses && Array.isArray(imageAnalyses) && imageAnalyses.length > 0;
@@ -108,6 +110,9 @@ EDITORIAL PHILOSOPHY (Airbnb + Apple Standard):
 - AUTHENTICITY: Real moments, real emotions. No tourism clichés.
 - RHYTHM: Like a symphony—build tension, release, surprise, resolution
 - BEAUTY: Make every frame worthy of being printed and framed
+
+LOCATION (use this as the primary place for the story):
+${userLocation?.trim() ? `"${userLocation.trim()}" — use this location for title/location and narrative.` : 'Infer from images and context.'}
 
 AUDIO CONTEXT:
 ${transcript || 'No audio transcript. Pure visual poetry.'}
@@ -250,6 +255,10 @@ Create a film-grade story script from the user's journey. Each block should feel
    - Build a complete narrative arc across all blocks
 4. **Validate**: Ensure variety in layouts and progression in storytelling
 </instructions>
+
+<location>
+${userLocation?.trim() ? `Primary location (use for "location" in JSON): ${userLocation.trim()}` : 'Infer from images.'}
+</location>
 
 <user_context>
 ${transcript ? `<transcript>\n${transcript}\n</transcript>` : '<transcript>No audio provided. Create story from visual evidence alone.</transcript>'}
@@ -422,10 +431,12 @@ Now analyze the ${imageCount} images. Create a story that honors the user's auth
         console.warn(`[AI Director] Block count mismatch: expected ${imageCount}, got ${parsed.blocks.length}`);
       }
 
+      // Prefer user-provided location when set; otherwise use AI response
+      const locationStr = userLocation?.trim() || parsed.location;
       // Build the final DirectorScript with actual image data and enhanced metadata
       const directorScript: DirectorScript = {
         title: parsed.title,
-        location: parsed.location,
+        location: locationStr,
         ...(lat != null && lng != null && { latitude: lat, longitude: lng }),
         blocks: parsed.blocks.slice(0, imageCount).map((block, index) => ({
           id: `block_${Date.now()}_${index}`,

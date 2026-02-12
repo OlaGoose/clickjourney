@@ -16,6 +16,7 @@ import { saveMemory, updateMemory } from '@/lib/storage';
 import { useOptionalAuth } from '@/lib/auth';
 import { useLocale } from '@/lib/i18n';
 import { MemoryService } from '@/lib/db/services/memory-service';
+import { resolveCoordinatesForLocation } from '@/lib/upload-to-memory';
 
 const STORAGE_KEY = 'travel-editor-draft';
 
@@ -32,6 +33,7 @@ function TravelEditorContent() {
   const [editorData, setEditorData] = useState<TravelEditorData>({
     title: '',
     description: '',
+    location: '',
     blocks: [],
   });
 
@@ -53,11 +55,14 @@ function TravelEditorContent() {
       try {
         const imageUrls: string[] = JSON.parse(fromUpload);
         const description = sessionStorage.getItem('editor-description') || '';
+        const location = sessionStorage.getItem('editor-location') || '';
         sessionStorage.removeItem('editor-images');
         sessionStorage.removeItem('editor-description');
+        sessionStorage.removeItem('editor-location');
         setEditorData({
           title: '',
           description: description,
+          location: location,
           blocks: imageUrls.length
             ? [
                 {
@@ -75,6 +80,7 @@ function TravelEditorContent() {
         console.error('Failed to parse editor-images:', e);
         sessionStorage.removeItem('editor-images');
         sessionStorage.removeItem('editor-description');
+        sessionStorage.removeItem('editor-location');
       }
     }
 
@@ -86,15 +92,19 @@ function TravelEditorContent() {
             ...b,
             metadata: b.metadata?.images ? { ...b.metadata, images: b.metadata.images } : b.metadata,
           }));
+          const location = memory.coordinates?.name ?? memory.subtitle ?? '';
           setEditorData({
             title: memory.detailTitle ?? memory.title ?? '',
             description: memory.description ?? '',
+            location: typeof location === 'string' ? location : '',
             blocks: normalized.length > 0 ? normalized : (memory.richContent ? [] : []),
           });
         } else if (memory) {
+          const location = memory.coordinates?.name ?? memory.subtitle ?? '';
           setEditorData({
             title: memory.detailTitle ?? memory.title ?? '',
             description: memory.description ?? '',
+            location: typeof location === 'string' ? location : '',
             blocks: [],
           });
         }
@@ -144,10 +154,12 @@ function TravelEditorContent() {
 
     setIsSaving(true);
 
+    const locationStr = (editorData.location ?? '').trim();
+    const coordinates = locationStr ? resolveCoordinatesForLocation(locationStr) : undefined;
     const memoryData = {
       type: 'rich-story' as const,
       title: editorData.title,
-      subtitle: editorData.description.slice(0, 50) || t('editor.travelMemory'),
+      subtitle: locationStr || editorData.description.slice(0, 50) || t('editor.travelMemory'),
       detailTitle: editorData.title,
       description: editorData.description,
       image: allImages[0] ?? '',
@@ -157,6 +169,7 @@ function TravelEditorContent() {
       category: t('editor.travelMemory'),
       richContent: generateRichContent(editorData),
       editorBlocks: editorData.blocks,
+      ...(coordinates && { coordinates }),
     };
 
     try {
@@ -458,6 +471,24 @@ function collectSectionImages(data: SectionBlockData): string[] {
                 <span>{t('common.edit')}</span>
               </button>
             )}
+          </div>
+
+          {/* Location — travel place for this memory; shown in edit and stored in Memory */}
+          <div className="pt-1">
+            <label htmlFor="editor-location" className="sr-only">
+              {t('cinematic.location')}
+            </label>
+            <input
+              id="editor-location"
+              type="text"
+              value={editorData.location ?? ''}
+              onChange={(e) =>
+                setEditorData(prev => ({ ...prev, location: e.target.value }))
+              }
+              placeholder={t('upload.locationPlaceholder')}
+              className="w-full text-sm text-[#86868b] focus:text-[#1d1d1f] focus:outline-none bg-transparent placeholder:text-[#86868b] border-b border-[#d2d2d7] focus:border-[#1d1d1f] pb-1.5 transition-colors"
+              maxLength={120}
+            />
           </div>
 
           {/* Description — 同上：直接编辑，focus 时右上角绝对定位编辑按钮，不占文档流 */}

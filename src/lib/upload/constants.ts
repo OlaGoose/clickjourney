@@ -1,7 +1,7 @@
 import type { UploadedImage } from '@/types/upload';
 
-/** Number of steps in the upload flow (for top story-style progress bar). Step 0 = images, 1 = audio, 2+ reserved. */
-export const UPLOAD_STEP_COUNT = 2;
+/** Number of steps in the upload flow (for top story-style progress bar). Step 0 = location, 1 = images, 2 = audio. */
+export const UPLOAD_STEP_COUNT = 3;
 
 /** Default placeholder images for the upload gallery — 3 landscape/scenery photos. */
 export const DEFAULT_UPLOAD_IMAGES: UploadedImage[] = [

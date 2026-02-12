@@ -10,3 +10,27 @@ export interface GalleryProps {
   onDelete: (id: string) => void;
   onReplace: (id: string) => void;
 }
+
+/** Result of deep image analysis (e.g. from /api/analyze-images). */
+export interface ImageAnalysis {
+  index: number;
+  description: string;
+  storyPotential: string;
+  emotionalTone: string;
+  visualFeatures: {
+    mood: string;
+    composition: string;
+    colorPalette: string;
+    colorDominance: string;
+    subject: string;
+    timeOfDay: string;
+    lighting: string;
+    depth: string;
+    movement: string;
+    texture: string;
+    perspective: string;
+    focus: string;
+  };
+  layoutSuggestion: string;
+  textPlacement: string;
+}

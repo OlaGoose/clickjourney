@@ -188,6 +188,12 @@
     "openGallery": "Abrir galería, ver más imágenes"
   },
   "upload": {
+    "locationHeading": "¿Dónde fue este recuerdo?",
+    "locationPlaceholder": "ej. Tokio, Kioto, París…",
+    "next": "Siguiente",
+    "uploadButton": "Subir",
+    "editJourney": "Editar viaje",
+    "generate": "Generar",
     "uploadOnePhotoFirst": "Sube al menos una foto primero",
     "maxNinePhotos": "Puedes subir como máximo 9 fotos",
     "transcriptUnavailable": "No se pudo transcribir la grabación",

@@ -106,6 +106,8 @@ export interface TravelEditorData {
   description: string;
   /** Style for the description (alignment, size, color). */
   descriptionStyle?: TitleStyle;
+  /** Travel/location name for this memory (e.g. city or place); shown in editor and stored in Memory. */
+  location?: string;
   /** @deprecated No longer used; images come from image blocks. Kept for draft migration. */
   images?: string[];
   blocks: ContentBlock[];
