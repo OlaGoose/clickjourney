@@ -9,7 +9,6 @@ export type ContentBlockType = 'text' | 'image' | 'video' | 'audio' | 'richtext'
 
 /** Apple-style section template IDs (promotional/section blocks). */
 export type SectionTemplateId =
-  | 'hero_cta'
   | 'ribbon'
   | 'value_props'
   | 'tile_gallery'
@@ -24,13 +23,6 @@ export interface SectionCta {
 
 /** Dynamic content for section blocks (per-template shapes). */
 export interface SectionBlockData {
-  hero_cta?: {
-    headline: string;
-    subline?: string;
-    primaryCta: SectionCta;
-    secondaryCta?: SectionCta;
-    backgroundImage?: string;
-  };
   ribbon?: {
     message: string;
     ctaLabel: string;
@@ -88,7 +80,7 @@ export interface ContentBlock {
     imageFilter?: 'none' | 'grayscale' | 'warm' | 'cool' | 'vibrant' | 'muted';
     /** Cinematic block: optional mood label. */
     mood?: string;
-    /** Section block: template id (hero_cta, ribbon, value_props, etc.). */
+    /** Section block: template id (ribbon, value_props, etc.). */
     sectionTemplateId?: SectionTemplateId;
     /** Section block: dynamic content for the chosen template. */
     sectionData?: SectionBlockData;

@@ -109,7 +109,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
 
   const [cinematicImage, setCinematicImage] = useState('');
   const [cinematicLayout, setCinematicLayout] = useState<LayoutType>('full_bleed');
-  const [sectionTemplateId, setSectionTemplateId] = useState<SectionTemplateId>('hero_cta');
+  const [sectionTemplateId, setSectionTemplateId] = useState<SectionTemplateId>('ribbon');
   const [sectionData, setSectionData] = useState<SectionBlockData>({});
   const [showBorder, setShowBorder] = useState(false);
 
@@ -133,7 +133,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
         setCinematicLayout(block.metadata?.cinematicLayout ?? 'full_bleed');
       }
       if (block.type === 'section') {
-        const tid = block.metadata?.sectionTemplateId ?? 'hero_cta';
+        const tid = block.metadata?.sectionTemplateId ?? 'ribbon';
         setSectionTemplateId(tid);
         setSectionData(block.metadata?.sectionData ?? getDefaultSectionData(tid));
       }
@@ -261,9 +261,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
         setSectionData((prev) => {
           const next = { ...prev };
           const [part, sub] = current.key.split('.');
-          if (part === 'hero_cta' && next.hero_cta) {
-            next.hero_cta = { ...next.hero_cta, backgroundImage: url };
-          } else if (part === 'feature_card' && next.feature_card) {
+          if (part === 'feature_card' && next.feature_card) {
             next.feature_card = { ...next.feature_card, image: url };
           } else if (part === 'marquee' && next.marquee?.items) {
             const idx = parseInt(sub, 10);
@@ -846,115 +844,6 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             <p className="text-[13px] text-[#6e6e73]">
               {SECTION_TEMPLATES.find((t) => t.id === sectionTemplateId)?.label ?? sectionTemplateId}
             </p>
-            {sectionTemplateId === 'hero_cta' && sectionData.hero_cta && (
-              <>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">主标题</label>
-                  <input
-                    type="text"
-                    value={sectionData.hero_cta.headline}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        hero_cta: prev.hero_cta
-                          ? { ...prev.hero_cta, headline: e.target.value }
-                          : { headline: e.target.value, primaryCta: { label: '' }, subline: '' },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="主标题"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">副标题</label>
-                  <input
-                    type="text"
-                    value={sectionData.hero_cta.subline}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        hero_cta: prev.hero_cta
-                          ? { ...prev.hero_cta, subline: e.target.value }
-                          : { headline: '', primaryCta: { label: '' }, subline: e.target.value },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="副标题"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">主按钮文案</label>
-                  <input
-                    type="text"
-                    value={sectionData.hero_cta.primaryCta?.label ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        hero_cta: prev.hero_cta
-                          ? { ...prev.hero_cta, primaryCta: { ...prev.hero_cta.primaryCta, label: e.target.value } }
-                          : { headline: '', primaryCta: { label: e.target.value }, subline: '' },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="主按钮"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">次按钮文案（可选）</label>
-                  <input
-                    type="text"
-                    value={sectionData.hero_cta.secondaryCta?.label ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        hero_cta: prev.hero_cta
-                          ? { ...prev.hero_cta, secondaryCta: { label: e.target.value } }
-                          : { headline: '', primaryCta: { label: '' }, subline: '', secondaryCta: { label: e.target.value } },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="次按钮"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">背景图</label>
-                  {sectionData.hero_cta.backgroundImage ? (
-                    <div className="space-y-2">
-                      <img src={sectionData.hero_cta.backgroundImage} alt="" className="w-full rounded-xl object-cover max-h-32" />
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => { setSectionImageTarget({ key: 'hero_cta.backgroundImage' }); sectionImageInputRef.current?.click(); }}
-                          className="flex-1 rounded-full py-2 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
-                        >
-                          更换图片
-                        </button>
-                        <input
-                          type="text"
-                          value={sectionData.hero_cta.backgroundImage ?? ''}
-                          onChange={(e) =>
-                            setSectionData((prev) => ({
-                              ...prev,
-                              hero_cta: prev.hero_cta ? { ...prev.hero_cta, backgroundImage: e.target.value || undefined } : { headline: '', primaryCta: { label: '' }, subline: '', backgroundImage: e.target.value },
-                            }))
-                          }
-                          className="flex-1 rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-[13px]"
-                          placeholder="或粘贴 URL"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => { setSectionImageTarget({ key: 'hero_cta.backgroundImage' }); sectionImageInputRef.current?.click(); }}
-                      className="w-full rounded-xl border border-dashed border-black/[0.1] py-3 text-[13px] text-[#6e6e73]"
-                    >
-                      上传图片
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
             {sectionTemplateId === 'ribbon' && sectionData.ribbon && (
               <>
                 <div>

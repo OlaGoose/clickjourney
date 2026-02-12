@@ -192,7 +192,6 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
 
 function collectSectionImages(data: SectionBlockData): string[] {
   const urls: string[] = [];
-  if (data.hero_cta?.backgroundImage) urls.push(data.hero_cta.backgroundImage);
   if (data.feature_card?.image) urls.push(data.feature_card.image);
   if (data.marquee?.items) data.marquee.items.forEach((i) => i.image && urls.push(i.image));
   return urls;
@@ -455,8 +454,8 @@ function collectSectionImages(data: SectionBlockData): string[] {
               ))}
           </div>
 
-          {/* Add Block Zone — rounded rectangle, opens edit panel type picker */}
-          <div className="py-6">
+          {/* Add Block Zone — sticky at bottom of scroll area */}
+          <div className="sticky bottom-0 z-10 py-6 bg-[#fbfbfd]">
             <AddBlockButton onAddClick={handleOpenAddPanel} />
           </div>
         </div>
@@ -498,16 +497,6 @@ function sectionBlockToHtml(
   if (!templateId || !data) return '';
   const wrap = (inner: string) => `<section class="editor-section" data-template="${escapeHtml(templateId)}">${inner}</section>`;
   switch (templateId) {
-    case 'hero_cta': {
-      const d = data.hero_cta;
-      if (!d) return '';
-      let inner = `<h2 class="section-headline">${escapeHtml(d.headline)}</h2>`;
-      if (d.subline) inner += `<p class="section-subline">${escapeHtml(d.subline)}</p>`;
-      if (d.primaryCta?.label) inner += `<p><a href="${d.primaryCta.href ? escapeHtml(d.primaryCta.href) : '#'}">${escapeHtml(d.primaryCta.label)}</a></p>`;
-      if (d.secondaryCta?.label) inner += `<p><a href="${d.secondaryCta.href ? escapeHtml(d.secondaryCta.href) : '#'}">${escapeHtml(d.secondaryCta.label)}</a></p>`;
-      if (d.backgroundImage) inner = `<img src="${escapeHtml(d.backgroundImage)}" alt="" class="section-bg" />` + inner;
-      return wrap(inner);
-    }
     case 'ribbon': {
       const d = data.ribbon;
       if (!d) return '';

@@ -16,7 +16,6 @@ export interface SectionTemplateDef {
 
 /** Section templates inspired by Apple TV / product page blocks. */
 export const SECTION_TEMPLATES: SectionTemplateDef[] = [
-  { id: 'hero_cta', label: '主视觉 + 双 CTA', description: '大标题、副标题、主/次按钮' },
   { id: 'ribbon', label: '横幅条', description: '单行提示 + 一个 CTA' },
   { id: 'value_props', label: '价值主张列表', description: '3–5 条短句' },
   { id: 'tile_gallery', label: '横向卡片组', description: '多张圆角卡片，每张有标题/描述/CTA' },
@@ -27,16 +26,6 @@ export const SECTION_TEMPLATES: SectionTemplateDef[] = [
 /** Default section data for each template (dynamic content). */
 export function getDefaultSectionData(templateId: SectionTemplateId): SectionBlockData {
   switch (templateId) {
-    case 'hero_cta':
-      return {
-        hero_cta: {
-          headline: '主标题',
-          subline: '副标题或一句话描述',
-          primaryCta: { label: '主按钮' },
-          secondaryCta: { label: '次按钮' },
-          backgroundImage: PLACEHOLDER_IMAGE,
-        },
-      };
     case 'ribbon':
       return {
         ribbon: {

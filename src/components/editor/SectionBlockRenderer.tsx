@@ -17,7 +17,7 @@ export function SectionBlockRenderer({
   isEditMode = false,
   className = '',
 }: SectionBlockRendererProps) {
-  const templateId = (block.metadata?.sectionTemplateId ?? 'hero_cta') as SectionTemplateId;
+  const templateId = (block.metadata?.sectionTemplateId ?? 'ribbon') as SectionTemplateId;
   const data = block.metadata?.sectionData ?? {};
 
   const showBorder = !!block.metadata?.showBorder;
@@ -27,41 +27,6 @@ export function SectionBlockRenderer({
     : 'text-[#007aff] hover:underline';
 
   switch (templateId) {
-    case 'hero_cta': {
-      const d = data.hero_cta;
-      if (!d) return <SectionPlaceholder label="主视觉 + 双 CTA" className={base} />;
-      const bg = d.backgroundImage || getSectionPlaceholderImage();
-      return (
-        <section className={`${base} ${className}`}>
-          <div className="relative min-h-[200px] rounded-2xl bg-black/5 overflow-hidden">
-            <img
-              src={bg}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            <div className="relative px-6 py-8 flex flex-col justify-end min-h-[200px]">
-              <h2 className="text-2xl font-semibold tracking-tight text-white drop-shadow-md">
-                {d.headline || '主标题'}
-              </h2>
-              {d.subline && (
-                <p className="mt-1 text-[15px] text-white/90 drop-shadow">{d.subline}</p>
-              )}
-              <div className="mt-4 flex flex-wrap gap-3">
-                <span className="inline-flex items-center rounded-full bg-white px-4 py-2 text-[14px] font-medium text-[#1d1d1f]">
-                  {d.primaryCta?.label ?? '主按钮'}
-                </span>
-                {d.secondaryCta?.label && (
-                  <span className="inline-flex items-center rounded-full bg-white/80 px-4 py-2 text-[14px] font-medium text-[#1d1d1f]">
-                    {d.secondaryCta.label}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-      );
-    }
-
     case 'ribbon': {
       const d = data.ribbon;
       if (!d) return <SectionPlaceholder label="横幅条" className={base} />;
