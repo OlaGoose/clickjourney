@@ -25,6 +25,7 @@ import { DEFAULT_UPLOAD_IMAGES, UPLOAD_STEP_COUNT } from '@/lib/upload/constants
 import { compressMultipleImages } from '@/lib/utils/imageUtils';
 import { useDayNightTheme } from '@/hooks/useDayNightTheme';
 import { useOptionalAuth } from '@/lib/auth';
+import { useLocale } from '@/lib/i18n';
 import { saveMemory } from '@/lib/storage';
 import { directorScriptToCarouselItem } from '@/lib/upload-to-memory';
 import { saveCinematicScript, saveLocalCinematic } from '@/lib/cinematic-storage';
@@ -46,6 +47,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
 
 export default function MemoryUploadPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [images, setImages] = useState<UploadedImage[]>(DEFAULT_UPLOAD_IMAGES);
   const [isDefault, setIsDefault] = useState(true);
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
@@ -141,7 +143,7 @@ export default function MemoryUploadPage() {
 
   const generateCinematicMemory = useCallback(async () => {
     if (isDefault) {
-      alert('请先上传至少一张照片');
+      alert(t('upload.uploadOnePhotoFirst'));
       return;
     }
 
@@ -219,7 +221,7 @@ export default function MemoryUploadPage() {
       );
       setIsGenerating(false);
     }
-  }, [images, isDefault, transcript, imageAnalyses, userId, router]);
+  }, [images, isDefault, transcript, imageAnalyses, userId, router, t]);
 
   const goToNextStep = useCallback(() => {
     if (currentStep === 0) {
@@ -232,7 +234,7 @@ export default function MemoryUploadPage() {
 
   const goToEditor = useCallback(() => {
     if (isDefault) {
-      alert('请先上传至少一张照片');
+      alert(t('upload.uploadOnePhotoFirst'));
       return;
     }
 
@@ -285,7 +287,7 @@ export default function MemoryUploadPage() {
         const currentImages = isDefault ? [] : images;
         const remainingSlots = 9 - currentImages.length;
         if (remainingSlots <= 0) {
-          alert('最多只能上传 9 张照片');
+          alert(t('upload.maxNinePhotos'));
           if (fileInputRef.current) fileInputRef.current.value = '';
           return;
         }
@@ -299,7 +301,7 @@ export default function MemoryUploadPage() {
       }
       if (fileInputRef.current) fileInputRef.current.value = '';
     },
-    [replaceTargetId, isDefault, images]
+    [replaceTargetId, isDefault, images, t]
   );
 
   const transcribeAudio = useCallback(async (audioBlob: Blob) => {
@@ -317,16 +319,16 @@ export default function MemoryUploadPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setTranscript(data?.error ?? '无法识别录音内容');
+        setTranscript(data?.error ?? t('upload.transcriptUnavailable'));
         return;
       }
       setTranscript(data.text ?? '');
     } catch {
-      setTranscript('无法识别录音内容');
+      setTranscript(t('upload.transcriptUnavailable'));
     } finally {
       setIsTranscribing(false);
     }
-  }, []);
+  }, [t]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -356,9 +358,9 @@ export default function MemoryUploadPage() {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
     } catch {
-      alert('无法访问麦克风，请检查权限设置。');
+      alert(t('upload.micPermissionDenied'));
     }
-  }, [transcribeAudio]);
+  }, [transcribeAudio, t]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
@@ -404,14 +406,14 @@ export default function MemoryUploadPage() {
       if (apiRes.ok) {
         setTranscript(data.text ?? '');
       } else {
-        setTranscript(data?.error ?? '无法识别录音内容');
+        setTranscript(data?.error ?? t('upload.transcriptUnavailable'));
       }
     } catch {
-      setTranscript('无法识别录音内容');
+      setTranscript(t('upload.transcriptUnavailable'));
     } finally {
       setIsTranscribing(false);
     }
-  }, [audioUrl]);
+  }, [audioUrl, t]);
 
   useEffect(() => {
     const audio = audioPlayerRef.current;
@@ -533,7 +535,7 @@ export default function MemoryUploadPage() {
                     }`}
                   >
                     <Pencil size={14} className={isDark ? 'text-white/50' : 'text-gray-500'} />
-                    Transcript
+                    {t('upload.transcriptHeading')}
                   </h3>
                 </div>
                 <textarea
@@ -545,7 +547,7 @@ export default function MemoryUploadPage() {
                   rows={4}
                   value={transcript}
                   onChange={(e) => setTranscript(e.target.value)}
-                  placeholder="No transcript available. Record and click Transcribe."
+                  placeholder={t('upload.transcribePrompt')}
                   readOnly={isTranscribing}
                 />
                 <div className={`mt-3 flex items-center justify-end gap-1.5 ${isDark ? 'text-white/90' : 'text-gray-800'}`}>
@@ -562,7 +564,7 @@ export default function MemoryUploadPage() {
                         type="button"
                         onClick={stopRecording}
                         className="flex items-center justify-center w-8 h-8 rounded-full bg-black text-white hover:bg-gray-800 transition-all active:scale-95"
-                        aria-label="停止录音"
+                        aria-label={t('upload.recordingStop')}
                       >
                         <Square size={12} fill="currentColor" />
                       </button>
@@ -577,8 +579,8 @@ export default function MemoryUploadPage() {
                             ? isDark ? 'bg-white/20 text-white' : 'bg-gray-800 text-white'
                             : 'bg-black hover:bg-gray-800 text-white'
                         }`}
-                        title={isPlaying ? 'Pause' : 'Play'}
-                        aria-label={isPlaying ? 'Pause' : 'Play'}
+                        title={isPlaying ? t('home.pause') : t('home.play')}
+                        aria-label={isPlaying ? t('home.pause') : t('home.play')}
                       >
                         {isPlaying ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
                       </button>
@@ -593,7 +595,7 @@ export default function MemoryUploadPage() {
                         }`}
                       >
                         {isTranscribing ? <Loader2 size={12} className="animate-spin" /> : null}
-                        <span>{isTranscribing ? '…' : 'Transcribe'}</span>
+                        <span>{isTranscribing ? '…' : t('upload.transcribe')}</span>
                       </button>
                       <button
                         type="button"
@@ -603,8 +605,8 @@ export default function MemoryUploadPage() {
                             ? 'hover:bg-white/10 text-white/50 hover:text-red-400'
                             : 'hover:bg-black/5 text-gray-500 hover:text-red-500'
                         }`}
-                        title="Delete"
-                        aria-label="删除录音"
+                        title={t('memory.delete')}
+                        aria-label={t('upload.deleteRecording')}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -616,7 +618,7 @@ export default function MemoryUploadPage() {
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black hover:bg-gray-800 text-white text-xs font-semibold transition-all active:scale-95"
                     >
                       <Mic size={12} strokeWidth={2.5} />
-                      <span>Record</span>
+                      <span>{t('upload.record')}</span>
                     </button>
                   )}
                 </div>

@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import {
-  XMarkIcon,
   UserIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
@@ -12,7 +11,8 @@ import {
   BookmarkIcon,
   MapPinIcon,
 } from '@heroicons/react/24/outline';
-import { useAuth, useAuthGuard } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
+import { useLocale } from '@/lib/i18n';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -30,8 +30,8 @@ interface SidebarItem {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { user, profile, signOut, isAuthenticated } = useAuth();
-  const { redirectToAuth } = useAuthGuard();
+  const { user, profile, signOut } = useAuth();
+  const { t } = useLocale();
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -84,15 +84,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const avatarUrl = profile?.avatar_url ?? null;
 
   const menuItems: SidebarItem[] = [
-    { id: 'profile', label: 'Profile', icon: UserIcon, href: '/profile' },
-    { id: 'journey', label: 'My Journey', icon: MapPinIcon, href: '/' },
-    { id: 'premium', label: 'Premium', icon: StarIcon, href: '/premium', badge: 'Soon' },
-    { id: 'bookmarks', label: 'Bookmarks', icon: BookmarkIcon, href: '/bookmarks' },
-    { id: 'settings', label: 'Settings', icon: Cog6ToothIcon, href: '/settings' },
+    { id: 'profile', label: t('nav.profile'), icon: UserIcon, href: '/profile' },
+    { id: 'journey', label: t('nav.myJourney'), icon: MapPinIcon, href: '/' },
+    { id: 'premium', label: t('nav.premium'), icon: StarIcon, href: '/premium', badge: t('nav.soon') },
+    { id: 'bookmarks', label: t('nav.bookmarks'), icon: BookmarkIcon, href: '/bookmarks' },
+    { id: 'settings', label: t('nav.settings'), icon: Cog6ToothIcon, href: '/settings' },
     { id: 'divider', label: '', icon: () => null },
     {
       id: 'logout',
-      label: 'Log out',
+      label: t('nav.logOut'),
       icon: ArrowRightOnRectangleIcon,
       onClick: handleSignOut,
       isDestructive: true,
@@ -208,33 +208,31 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </div>
                   <div className="flex-1">
                     <h3 className="mb-1 text-lg font-bold text-gray-900 dark:text-white">
-                      Journey memory.
+                      {t('home.journeyMemory')}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Get the Orbit app for the best experience
+                      {t('home.getTheAppDescription')}
                     </p>
                   </div>
                 </div>
-                {/* 功能特色 - 一比一复刻 aha-lang */}
                 <div className="relative z-10 mb-4 grid grid-cols-2 gap-3">
                   <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                     <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                    <span>Real-time updates</span>
+                    <span>{t('home.realTimeUpdates')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                     <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                    <span>Push notifications</span>
+                    <span>{t('home.pushNotifications')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                     <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
-                    <span>Offline reading</span>
+                    <span>{t('home.offlineReading')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                     <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                    <span>Dark mode</span>
+                    <span>{t('home.darkMode')}</span>
                   </div>
                 </div>
-                {/* 下载按钮 - 一比一复刻 aha-lang */}
                 <motion.button
                   type="button"
                   className="relative z-10 flex w-full items-center justify-center gap-2 rounded-xl bg-black px-6 py-4 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
@@ -244,7 +242,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                   </svg>
-                  Get the app
+                  {t('home.getTheApp')}
                 </motion.button>
               </motion.div>
             </div>

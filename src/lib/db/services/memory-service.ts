@@ -39,8 +39,8 @@ export function carouselItemToMemoryRecord(
     placeName: item.coordinates?.name ?? null,
     placeAddress:
       item.coordinates?.address ??
-      [item.coordinates?.name, item.coordinates?.region, item.coordinates?.country].filter(Boolean).join(', ') ||
-      null,
+      ([item.coordinates?.name, item.coordinates?.region, item.coordinates?.country].filter(Boolean).join(', ') ||
+        null),
     sortOrder: opts.sortOrder ?? 0,
     isJourneyStart: opts.isJourneyStart ?? false,
     isJourneyEnd: opts.isJourneyEnd ?? false,
@@ -112,8 +112,7 @@ export function carouselItemToUpdateInput(partial: Partial<CarouselItem>): Updat
     input.placeName = c?.name ?? null;
     input.placeAddress =
       c?.address ??
-      [c?.name, c?.region, c?.country].filter(Boolean).join(', ') ||
-      null;
+      ([c?.name, c?.region, c?.country].filter(Boolean).join(', ') || null);
   }
   return input;
 }

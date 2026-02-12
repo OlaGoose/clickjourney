@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ContentBlock } from '@/components/editor/ContentBlock';
 import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { MemoryService } from '@/lib/db/services/memory-service';
+import { useLocale } from '@/lib/i18n';
 import type { CarouselItem } from '@/types/memory';
 
 const SHARE_FEEDBACK_MS = 2200;
@@ -19,6 +20,7 @@ interface RichStoryDetailProps {
 /** Renders rich-story memory with same layout as memories/editor (read-only). Header has Share and "..." menu (Edit, Delete). */
 export function RichStoryDetail({ memory, onBack, shareView = false }: RichStoryDetailProps) {
   const router = useRouter();
+  const { t } = useLocale();
   const [isDeleting, setIsDeleting] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<'idle' | 'copied' | 'shared'>('idle');
   const shareFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -50,7 +52,7 @@ export function RichStoryDetail({ memory, onBack, shareView = false }: RichStory
 
   const handleShare = useCallback(async () => {
     const shareUrl = getShareUrl();
-    const shareTitle = title || '回忆';
+    const shareTitle = title || t('memory.defaultTitle');
     const shareText = description ? description.slice(0, 120) : shareTitle;
 
     const shareData = { title: shareTitle, text: shareText, url: shareUrl };
@@ -78,21 +80,21 @@ export function RichStoryDetail({ memory, onBack, shareView = false }: RichStory
         window.open(shareUrl, '_blank', 'noopener');
       }
     }
-  }, [getShareUrl, title, description, clearShareFeedback]);
+  }, [getShareUrl, title, description, clearShareFeedback, t]);
 
   const handleEdit = () => {
     router.push(`/memories/editor?id=${memory.id}`);
   };
 
   const handleDelete = async () => {
-    const confirmed = confirm('确定要删除这个回忆吗？此操作无法撤销。');
+    const confirmed = confirm(t('memory.deleteConfirm'));
     if (!confirmed) return;
 
     setIsDeleting(true);
     try {
       const { error } = await MemoryService.deleteMemory(memory.id);
       if (error) {
-        alert(`删除失败：${error}`);
+        alert(`${t('memory.deleteFailed')} ${error}`);
         setIsDeleting(false);
         return;
       }
@@ -100,16 +102,16 @@ export function RichStoryDetail({ memory, onBack, shareView = false }: RichStory
       router.push('/');
     } catch (e) {
       console.error('Failed to delete memory:', e);
-      alert('删除失败，请重试');
+      alert(t('memory.deleteFailed'));
       setIsDeleting(false);
     }
   };
 
   const contentBody = (
-    <div className="no-scrollbar flex-1 overflow-y-auto pb-24 pt-4">
-      <div className="px-8 pt-4 space-y-4 max-w-2xl mx-auto">
+    <div className="no-scrollbar flex-1 min-h-0 overflow-y-auto pb-24 pt-4 bg-[#fbfbfd]">
+      <div className="px-8 pt-4 space-y-4 max-w-2xl mx-auto min-h-full">
         <div className="pt-2">
-          <h1 className="text-2xl font-bold text-[#1d1d1f]">{title || '无标题'}</h1>
+          <h1 className="text-2xl font-bold text-[#1d1d1f]">{title || t('memory.untitled')}</h1>
         </div>
         {description ? (
           <div>
@@ -144,8 +146,9 @@ export function RichStoryDetail({ memory, onBack, shareView = false }: RichStory
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col animate-fadeIn font-sans bg-[#fbfbfd] text-[#1d1d1f] relative">
+    <div className="fixed inset-0 z-50 flex flex-col min-h-screen animate-fadeIn font-sans bg-[#fbfbfd] text-[#1d1d1f] relative">
       <MemoryDetailHeader
+        title={title || undefined}
         onBack={onBack}
         onShare={handleShare}
         moreMenu={
@@ -156,7 +159,7 @@ export function RichStoryDetail({ memory, onBack, shareView = false }: RichStory
               className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100"
               role="menuitem"
             >
-              编辑
+              {t('common.edit')}
             </button>
             <button
               type="button"
@@ -165,7 +168,7 @@ export function RichStoryDetail({ memory, onBack, shareView = false }: RichStory
               className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
               role="menuitem"
             >
-              {isDeleting ? '删除中...' : '删除'}
+              {isDeleting ? t('memory.deleting') : t('memory.delete')}
             </button>
           </>
         }
@@ -176,7 +179,7 @@ export function RichStoryDetail({ memory, onBack, shareView = false }: RichStory
           role="status"
           aria-live="polite"
         >
-          {shareFeedback === 'copied' ? '链接已复制' : '已分享'}
+          {shareFeedback === 'copied' ? t('memory.linkCopied') : t('memory.shared')}
         </div>
       )}
 

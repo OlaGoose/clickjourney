@@ -14,6 +14,7 @@ import { getCinematicPlaceholderImage } from '@/lib/editor-cinematic-templates';
 import { getDefaultSectionData } from '@/lib/editor-section-templates';
 import { saveMemory, updateMemory } from '@/lib/storage';
 import { useOptionalAuth } from '@/lib/auth';
+import { useLocale } from '@/lib/i18n';
 import { MemoryService } from '@/lib/db/services/memory-service';
 
 const STORAGE_KEY = 'travel-editor-draft';
@@ -25,6 +26,7 @@ function generateId() {
 function TravelEditorContent() {
   const router = useRouter();
   const auth = useOptionalAuth();
+  const { t } = useLocale();
   const userId = auth?.user?.id ?? null;
 
   const [editorData, setEditorData] = useState<TravelEditorData>({
@@ -121,22 +123,22 @@ function TravelEditorContent() {
   }, [editorData]);
 
   const handleBack = useCallback(() => {
-    const shouldLeave = confirm('确定要离开吗？未保存的内容将丢失。');
+    const shouldLeave = confirm(t('editor.confirmLeave'));
     if (shouldLeave) {
       localStorage.removeItem(STORAGE_KEY);
       router.back();
     }
-  }, [router]);
+  }, [router, t]);
 
   const handleSave = useCallback(async () => {
     if (!editorData.title.trim()) {
-      alert('请输入标题');
+      alert(t('editor.enterTitle'));
       return;
     }
 
     const allImages = collectImagesFromBlocks(editorData.blocks);
     if (allImages.length === 0) {
-      alert('请至少添加一张照片（在内容块中添加图片）');
+      alert(t('editor.addOnePhoto'));
       return;
     }
 
@@ -145,14 +147,14 @@ function TravelEditorContent() {
     const memoryData = {
       type: 'rich-story' as const,
       title: editorData.title,
-      subtitle: editorData.description.slice(0, 50) || '旅行回忆',
+      subtitle: editorData.description.slice(0, 50) || t('editor.travelMemory'),
       detailTitle: editorData.title,
       description: editorData.description,
       image: allImages[0] ?? '',
       gallery: allImages,
       color: '#3B82F6',
       chord: [0.2, 0.4, 0.6],
-      category: '旅行回忆',
+      category: t('editor.travelMemory'),
       richContent: generateRichContent(editorData),
       editorBlocks: editorData.blocks,
     };
@@ -174,15 +176,15 @@ function TravelEditorContent() {
       }
 
       localStorage.removeItem(STORAGE_KEY);
-      alert(editId ? '更新成功！' : '保存成功！');
+      alert(editId ? t('editor.updateSuccess') : t('editor.saveSuccess'));
       router.push(editId ? `/memories/${editId}` : '/');
     } catch (error) {
       console.error('Failed to save:', error);
-      alert('保存失败，请重试');
+      alert(t('editor.saveFailed'));
     } finally {
       setIsSaving(false);
     }
-  }, [editorData, userId, router, editId]);
+  }, [editorData, userId, router, editId, t]);
 
 /** Collect all image URLs from image, cinematic, and section blocks. */
 function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
@@ -350,7 +352,7 @@ function collectSectionImages(data: SectionBlockData): string[] {
   const handleDeleteBlock = useCallback(() => {
     if (!editingBlock) return;
 
-    const shouldDelete = confirm('确定要删除这个内容块吗？');
+    const shouldDelete = confirm(t('editor.confirmDeleteBlock'));
     if (shouldDelete) {
       setEditorData(prev => ({
         ...prev,
@@ -360,7 +362,7 @@ function collectSectionImages(data: SectionBlockData): string[] {
       setEditingBlock(null);
       setSelectedBlockId(null);
     }
-  }, [editingBlock]);
+  }, [editingBlock, t]);
 
   const handleCloseEditPanel = useCallback(() => {
     setIsEditPanelOpen(false);
@@ -432,7 +434,7 @@ function collectSectionImages(data: SectionBlockData): string[] {
                 setEditorData(prev => ({ ...prev, title: e.target.value }))
               }
               onFocus={() => setTitleFocused(true)}
-              placeholder="标题"
+              placeholder={t('editor.title')}
               className="w-full font-bold focus:outline-none bg-transparent placeholder:text-[#86868b]"
               style={{
                 fontSize: editorData.titleStyle?.fontSize === 'small' ? '1.25rem' : editorData.titleStyle?.fontSize === 'large' ? '1.75rem' : '1.5rem',
@@ -450,10 +452,10 @@ function collectSectionImages(data: SectionBlockData): string[] {
                   setIsEditPanelOpen(true);
                 }}
                 className="absolute top-2 right-0 z-10 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
-                aria-label="编辑标题"
+                aria-label={t('editor.editTitle')}
               >
                 <Edit2 size={10} strokeWidth={2.5} />
-                <span>编辑</span>
+                <span>{t('common.edit')}</span>
               </button>
             )}
           </div>
@@ -469,7 +471,7 @@ function collectSectionImages(data: SectionBlockData): string[] {
                 setEditorData(prev => ({ ...prev, description: e.target.value }))
               }
               onFocus={() => setDescriptionFocused(true)}
-              placeholder="描述"
+              placeholder={t('editor.description')}
               className="w-full resize-none focus:outline-none bg-transparent rounded-xl py-3 placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80"
               style={{
                 minHeight: 72,
@@ -489,10 +491,10 @@ function collectSectionImages(data: SectionBlockData): string[] {
                   setIsEditPanelOpen(true);
                 }}
                 className="absolute top-2 right-0 z-10 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
-                aria-label="编辑描述"
+                aria-label={t('editor.editDescription')}
               >
                 <Edit2 size={10} strokeWidth={2.5} />
-                <span>编辑</span>
+                <span>{t('common.edit')}</span>
               </button>
             )}
           </div>

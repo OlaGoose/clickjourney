@@ -2,6 +2,7 @@
 
 import { useState, memo, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useLocale } from '@/lib/i18n';
 import { FormInput } from './form-input';
 import { SubmitButton } from './submit-button';
 import { ErrorMessage } from './error-message';
@@ -22,6 +23,7 @@ export const LoginForm = memo<LoginFormProps>(function LoginForm({
   const [error, setError] = useState<string | null>(null);
 
   const { signIn, isLoading } = useAuth();
+  const { t } = useLocale();
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -59,28 +61,28 @@ export const LoginForm = memo<LoginFormProps>(function LoginForm({
           id="login-email"
           name="email"
           type="email"
-          label="Email"
-          placeholder="Enter your email"
+          label={t('auth.email')}
+          placeholder={t('auth.enterEmail')}
           value={email}
           onChange={handleChange}
           disabled={isSubmitting || isLoading}
           autoComplete="email"
           required
-          error={email && !isEmailValid ? 'Please enter a valid email' : undefined}
+          error={email && !isEmailValid ? t('auth.validEmail') : undefined}
         />
         <FormInput
           id="login-password"
           name="password"
           type="password"
-          label="Password"
-          placeholder="Enter your password"
+          label={t('auth.password')}
+          placeholder={t('auth.enterPassword')}
           value={password}
           onChange={handleChange}
           disabled={isSubmitting || isLoading}
           autoComplete="current-password"
           showPasswordToggle
           required
-          error={password && !isPasswordValid ? 'Password must be at least 6 characters' : undefined}
+          error={password && !isPasswordValid ? t('auth.passwordMin6') : undefined}
         />
         <ErrorMessage error={error} />
         <SubmitButton
@@ -88,19 +90,19 @@ export const LoginForm = memo<LoginFormProps>(function LoginForm({
           disabled={!isFormValid}
           loading={isSubmitting || isLoading}
         >
-          Continue
+          {t('auth.continue')}
         </SubmitButton>
         {onSwitchToRegister && (
           <div className="mt-5 text-center">
             <span className="text-sm text-[#a1a1a6]">
-              Don&apos;t have an account?{' '}
+              {t('auth.noAccount')}{' '}
               <button
                 type="button"
                 onClick={onSwitchToRegister}
                 className="cursor-pointer border-none bg-transparent font-semibold text-white underline hover:no-underline disabled:opacity-50"
                 disabled={isSubmitting || isLoading}
               >
-                Sign up
+                {t('auth.signUp')}
               </button>
             </span>
           </div>
@@ -108,7 +110,7 @@ export const LoginForm = memo<LoginFormProps>(function LoginForm({
       </form>
       <LoadingOverlay
         isVisible={isSubmitting || isLoading}
-        message={isSubmitting ? 'Signing in...' : 'Verifying...'}
+        message={isSubmitting ? t('auth.signingIn') : t('auth.verifying')}
         showBackdrop
         size="md"
       />

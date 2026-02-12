@@ -9,11 +9,13 @@ import { RegisterForm } from '@/components/auth/register-form';
 import { SocialLoginSection } from '@/components/auth/social-login-section';
 import { AuthHeader } from '@/components/auth/auth-header';
 import { useAuthGuard } from '@/lib/auth';
+import { useLocale } from '@/lib/i18n';
 
 export default function AuthPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [showEmailForm, setShowEmailForm] = useState(false);
   const router = useRouter();
+  const { t } = useLocale();
   const { isAuthenticated, getRedirectPath, clearRedirectPath } = useAuthGuard();
 
   useEffect(() => {
@@ -41,18 +43,18 @@ export default function AuthPage() {
           >
             Orbit Journey
           </Link>
-          <span className="text-sm font-medium text-[#a1a1a6]">Help</span>
+          <span className="text-sm font-medium text-[#a1a1a6]">{t('auth.help')}</span>
         </nav>
       </header>
 
       <main className="flex min-h-screen flex-col items-center px-5 pt-[4rem]">
         <div className="w-full max-w-md flex-1 py-8">
           <AuthHeader
-            title={mode === 'login' ? 'Sign in to your account' : 'Create your account'}
+            title={mode === 'login' ? t('auth.signInTitle') : t('auth.signUpTitle')}
             subtitle={
               mode === 'login'
-                ? 'Welcome back. Sign in to continue.'
-                : 'Join to save your journey and memories.'
+                ? t('auth.signInSubtitle')
+                : t('auth.signUpSubtitle')
             }
           />
 
@@ -87,22 +89,18 @@ export default function AuthPage() {
                   transition={{ duration: 0.2 }}
                   className="py-5 text-center"
                 >
-                  <p className="m-0 text-sm text-[#a1a1a6]">Choose how to continue</p>
+                  <p className="m-0 text-sm text-[#a1a1a6]">{t('auth.continueWith')}</p>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
           <p className="text-center text-xs leading-relaxed text-[#6e6e73]">
-            By continuing, you agree to our{' '}
-            <a href="#" className="text-white underline hover:no-underline">
-              Terms
-            </a>{' '}
-            and{' '}
-            <a href="#" className="text-white underline hover:no-underline">
-              Privacy Policy
-            </a>
-            .
+            {t('auth.termsPrefix')}
+            <a href="#" className="text-white underline hover:no-underline">{t('auth.terms')}</a>
+            {t('auth.termsAnd')}
+            <a href="#" className="text-white underline hover:no-underline">{t('auth.privacyPolicy')}</a>
+            {t('auth.termsSuffix')}
           </p>
         </div>
       </main>

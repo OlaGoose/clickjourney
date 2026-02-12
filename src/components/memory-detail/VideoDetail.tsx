@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { CarouselItem } from '@/types/memory';
 import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { MemoryService } from '@/lib/db/services/memory-service';
+import { useLocale } from '@/lib/i18n';
 
 interface VideoDetailProps {
   memory: CarouselItem;
@@ -13,6 +14,7 @@ interface VideoDetailProps {
 
 export function VideoDetail({ memory, onBack }: VideoDetailProps) {
   const router = useRouter();
+  const { t } = useLocale();
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
   const title = memory.detailTitle ?? memory.title ?? '';
@@ -26,7 +28,7 @@ export function VideoDetail({ memory, onBack }: VideoDetailProps) {
 
   const handleShare = useCallback(async () => {
     const shareUrl = getShareUrl();
-    const shareTitle = title || '回忆';
+    const shareTitle = title || t('memory.defaultTitle');
     const shareData = { title: shareTitle, url: shareUrl };
     if (typeof navigator !== 'undefined' && navigator.share) {
       const canShare = typeof navigator.canShare === 'function' ? navigator.canShare(shareData) : true;
@@ -44,21 +46,21 @@ export function VideoDetail({ memory, onBack }: VideoDetailProps) {
     } catch {
       if (typeof window !== 'undefined' && window.open) window.open(shareUrl, '_blank', 'noopener');
     }
-  }, [getShareUrl, title]);
+  }, [getShareUrl, title, t]);
 
   const handleEdit = () => {
     router.push(`/memories/editor?id=${memory.id}`);
   };
 
   const handleDelete = async () => {
-    const confirmed = confirm('确定要删除这个回忆吗？此操作无法撤销。');
+    const confirmed = confirm(t('memory.deleteConfirm'));
     if (!confirmed) return;
 
     setIsDeleting(true);
     try {
       const { error } = await MemoryService.deleteMemory(memory.id);
       if (error) {
-        alert(`删除失败：${error}`);
+        alert(`${t('memory.deleteFailed')} ${error}`);
         setIsDeleting(false);
         return;
       }
@@ -66,7 +68,7 @@ export function VideoDetail({ memory, onBack }: VideoDetailProps) {
       router.push('/');
     } catch (e) {
       console.error('Failed to delete memory:', e);
-      alert('删除失败，请重试');
+      alert(t('memory.deleteFailed'));
       setIsDeleting(false);
     }
   };
@@ -78,7 +80,7 @@ export function VideoDetail({ memory, onBack }: VideoDetailProps) {
         onShare={handleShare}
         moreMenu={
           <>
-            <button type="button" onClick={handleEdit} className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100" role="menuitem">编辑</button>
+            <button type="button" onClick={handleEdit} className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100" role="menuitem">{t('common.edit')}</button>
             <button
               type="button"
               onClick={handleDelete}
@@ -86,7 +88,7 @@ export function VideoDetail({ memory, onBack }: VideoDetailProps) {
               className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
               role="menuitem"
             >
-              {isDeleting ? '删除中...' : '删除'}
+              {isDeleting ? t('memory.deleting') : t('memory.delete')}
             </button>
           </>
         }
@@ -130,7 +132,7 @@ export function VideoDetail({ memory, onBack }: VideoDetailProps) {
           </div>
         ) : (
           <div className="flex h-full items-center justify-center text-gray-400">
-            No videos available
+            {t('memory.noVideos')}
           </div>
         )}
       </div>

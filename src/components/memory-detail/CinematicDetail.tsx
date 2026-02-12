@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { MapPin, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { CarouselItem } from '@/types/memory';
@@ -9,28 +9,11 @@ import { StaticBlockRenderer } from '@/components/cinematic/StaticBlockRenderer'
 import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { useDayNightTheme } from '@/hooks/useDayNightTheme';
 import { useOptionalAuth } from '@/lib/auth';
+import { useLocale } from '@/lib/i18n';
 import { saveMemory } from '@/lib/storage';
 import { directorScriptToCarouselItem } from '@/lib/upload-to-memory';
 import { saveCinematicScript, saveLocalCinematic } from '@/lib/cinematic-storage';
 import { MemoryService } from '@/lib/db/services/memory-service';
-
-const DEFAULT_SCRIPT: DirectorScript = {
-  title: "未命名的旅程",
-  location: "未知目的地",
-  blocks: [
-    {
-      id: '1',
-      layout: "full_bleed",
-      image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&h=1200&fit=crop",
-      text: "每一段旅程，都从一个决定开始",
-      animation: "fade_in",
-      textPosition: "center",
-      textSize: "large",
-      imageFilter: "none",
-      mood: "contemplative"
-    }
-  ]
-};
 
 interface CinematicDetailProps {
   memory: CarouselItem;
@@ -38,9 +21,31 @@ interface CinematicDetailProps {
   onBack: () => void;
 }
 
+function buildDefaultScript(t: (key: import('@/lib/i18n/types').MessageKey) => string): DirectorScript {
+  return {
+    title: t('cinematic.untitledJourney'),
+    location: t('cinematic.unknownDestination'),
+    blocks: [
+      {
+        id: '1',
+        layout: 'full_bleed',
+        image: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&h=1200&fit=crop',
+        text: t('cinematic.defaultOpeningLine'),
+        animation: 'fade_in',
+        textPosition: 'center',
+        textSize: 'large',
+        imageFilter: 'none',
+        mood: 'contemplative',
+      },
+    ],
+  };
+}
+
 export function CinematicDetail({ memory, script: initialScript, onBack }: CinematicDetailProps) {
   const router = useRouter();
-  const [script, setScript] = useState<DirectorScript>(initialScript || DEFAULT_SCRIPT);
+  const { t, locale } = useLocale();
+  const defaultScript = useMemo(() => buildDefaultScript(t), [t]);
+  const [script, setScript] = useState<DirectorScript>(initialScript || defaultScript);
   const [isEditMode, setIsEditMode] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -56,7 +61,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
 
   const handleShare = useCallback(async () => {
     const shareUrl = getShareUrl();
-    const shareTitle = script.title || '回忆';
+    const shareTitle = script.title || t('memory.defaultTitle');
     const shareData = { title: shareTitle, url: shareUrl };
     if (typeof navigator !== 'undefined' && navigator.share) {
       const canShare = typeof navigator.canShare === 'function' ? navigator.canShare(shareData) : true;
@@ -74,7 +79,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
     } catch {
       if (typeof window !== 'undefined' && window.open) window.open(shareUrl, '_blank', 'noopener');
     }
-  }, [getShareUrl, script.title]);
+  }, [getShareUrl, script.title, t]);
 
   const handleUpdateBlock = (id: string, updates: Partial<StoryBlock>) => {
     setScript(prev => ({
@@ -107,22 +112,23 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
   }, [script, userId]);
 
   const getCurrentDate = () => {
-    return new Date().toLocaleDateString('zh-CN', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const localeTag = locale === 'zh-Hans' ? 'zh-Hans' : locale === 'ja' ? 'ja' : locale === 'es' ? 'es' : 'en';
+    return new Date().toLocaleDateString(localeTag, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
   };
 
   const handleDelete = async () => {
-    const confirmed = confirm('确定要删除这个回忆吗？此操作无法撤销。');
+    const confirmed = confirm(t('memory.deleteConfirm'));
     if (!confirmed) return;
 
     setIsDeleting(true);
     try {
       const { error } = await MemoryService.deleteMemory(memory.id);
       if (error) {
-        alert(`删除失败：${error}`);
+        alert(`${t('memory.deleteFailed')} ${error}`);
         setIsDeleting(false);
         return;
       }
@@ -130,7 +136,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
       router.push('/');
     } catch (e) {
       console.error('Failed to delete memory:', e);
-      alert('删除失败，请重试');
+      alert(t('memory.deleteFailed'));
       setIsDeleting(false);
     }
   };
@@ -143,11 +149,12 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
       isDark ? 'bg-[#0a0a0a] text-white' : 'bg-white text-black'
     }`}>
       <MemoryDetailHeader
+        title={memory.title || script.title || undefined}
         onBack={onBack}
         onShare={handleShare}
         moreMenu={
           <>
-            <button type="button" onClick={() => setIsEditMode(true)} className={moreMenuClass} role="menuitem">编辑</button>
+            <button type="button" onClick={() => setIsEditMode(true)} className={moreMenuClass} role="menuitem">{t('common.edit')}</button>
             <button
               type="button"
               onClick={handleSaveToMemory}
@@ -155,9 +162,9 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
               className={moreMenuClass}
               role="menuitem"
             >
-              {saveStatus === 'saving' ? '保存中...' : saveStatus === 'saved' ? '已保存' : '保存'}
+              {saveStatus === 'saving' ? t('cinematic.saving') : saveStatus === 'saved' ? t('cinematic.saved') : t('common.save')}
             </button>
-            <button type="button" className={moreMenuClass} role="menuitem">下载</button>
+            <button type="button" className={moreMenuClass} role="menuitem">{t('common.download')}</button>
             <button
               type="button"
               onClick={handleDelete}
@@ -165,7 +172,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
               className={moreMenuClassDanger}
               role="menuitem"
             >
-              {isDeleting ? '删除中...' : '删除'}
+              {isDeleting ? t('memory.deleting') : t('memory.delete')}
             </button>
           </>
         }
@@ -180,14 +187,14 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
               value={script.location}
               onChange={(e) => setScript(s => ({ ...s, location: e.target.value }))}
               className={`w-full bg-transparent text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} border-b ${isDark ? 'border-white/10' : 'border-black/10'} focus:outline-none focus:border-current pb-1`}
-              placeholder="地点"
+              placeholder={t('cinematic.location')}
             />
             <input
               type="text"
               value={script.title}
               onChange={(e) => setScript(s => ({ ...s, title: e.target.value }))}
               className={`w-full bg-transparent text-2xl font-bold border-b ${isDark ? 'border-white/10' : 'border-black/10'} focus:outline-none focus:border-current pb-2`}
-              placeholder="标题"
+              placeholder={t('common.title')}
             />
           </div>
         ) : (

@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useLocale } from '@/lib/i18n';
 
 interface MemoryDetailHeaderProps {
   onBack: () => void;
   onShare?: () => void;
   /** Menu content for the "..." dropdown (e.g. Edit, Delete). Clicks on buttons inside will close the menu. */
   moreMenu?: React.ReactNode;
+  /** Optional title; when not provided, defaults to localized default. */
+  title?: string;
 }
 
-const TITLE = '旅行回忆';
-
-export function MemoryDetailHeader({ onBack, onShare, moreMenu }: MemoryDetailHeaderProps) {
+export function MemoryDetailHeader({ onBack, onShare, moreMenu, title }: MemoryDetailHeaderProps) {
+  const { t } = useLocale();
+  const displayTitle = title ?? t('memory.defaultTitle');
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
 
@@ -31,36 +34,40 @@ export function MemoryDetailHeader({ onBack, onShare, moreMenu }: MemoryDetailHe
   };
 
   return (
-    <div className="sticky top-0 z-10 flex items-center justify-between bg-white px-4 py-3 border-b border-gray-100">
-      <button
-        type="button"
-        onClick={onBack}
-        className="-ml-2 rounded-full p-2 transition-colors hover:bg-gray-100"
-        aria-label="Back"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+    <div className="sticky top-0 z-10 grid grid-cols-3 items-center gap-2 bg-white px-4 py-3 border-b border-gray-100 text-[#1d1d1f]">
+      <div className="flex justify-start">
+        <button
+          type="button"
+          onClick={onBack}
+          className="-ml-2 rounded-full p-2 transition-colors hover:bg-gray-100 text-inherit"
+          aria-label={t('memory.back')}
         >
-          <line x1="19" y1="12" x2="5" y2="12" />
-          <polyline points="12 19 5 12 12 5" />
-        </svg>
-      </button>
-      <span className="text-base font-semibold">{TITLE}</span>
-      <div className="flex items-center gap-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+        </button>
+      </div>
+      <span className="text-base font-semibold text-center truncate text-[#1d1d1f]" aria-hidden="true">
+        {displayTitle}
+      </span>
+      <div className="flex items-center justify-end gap-1">
         {onShare != null && (
           <button
             type="button"
             onClick={onShare}
-            className="rounded-full p-2 hover:bg-gray-100"
-            aria-label="Share"
+            className="rounded-full p-2 hover:bg-gray-100 text-inherit"
+            aria-label={t('memory.share')}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -83,8 +90,8 @@ export function MemoryDetailHeader({ onBack, onShare, moreMenu }: MemoryDetailHe
           <button
             type="button"
             onClick={() => setMoreOpen((v) => !v)}
-            className="rounded-full p-2 hover:bg-gray-100"
-            aria-label="More actions"
+            className="rounded-full p-2 hover:bg-gray-100 text-inherit"
+            aria-label={t('memory.moreActions')}
             aria-expanded={moreOpen}
           >
             <svg
@@ -105,7 +112,7 @@ export function MemoryDetailHeader({ onBack, onShare, moreMenu }: MemoryDetailHe
           </button>
           {moreOpen && moreMenu != null && (
             <div
-              className="absolute right-0 top-full mt-1 min-w-[140px] rounded-lg bg-white py-1 shadow-lg border border-gray-200 text-left z-50"
+              className="absolute right-0 top-full mt-1 min-w-[140px] rounded-lg bg-white py-1 shadow-lg border border-gray-200 text-left text-[#1d1d1f] z-50"
               role="menu"
               onClick={handleMoreContentClick}
             >

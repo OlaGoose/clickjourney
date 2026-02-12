@@ -2,6 +2,7 @@
 
 import { useState, memo, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useLocale } from '@/lib/i18n';
 import { FormInput } from './form-input';
 import { SubmitButton } from './submit-button';
 import { ErrorMessage } from './error-message';
@@ -24,6 +25,7 @@ export const RegisterForm = memo<RegisterFormProps>(function RegisterForm({
   const [error, setError] = useState<string | null>(null);
 
   const { signUp, isLoading } = useAuth();
+  const { t } = useLocale();
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -70,48 +72,48 @@ export const RegisterForm = memo<RegisterFormProps>(function RegisterForm({
           id="register-username"
           name="username"
           type="text"
-          label="Username"
-          placeholder="Choose a username"
+          label={t('auth.username')}
+          placeholder={t('auth.chooseUsername')}
           value={username}
           onChange={handleChange}
           disabled={isSubmitting || isLoading}
           autoComplete="username"
           required
-          error={username && !isUsernameValid ? 'At least 3 characters' : undefined}
+          error={username && !isUsernameValid ? t('auth.atLeast3Chars') : undefined}
         />
         <FormInput
           id="register-email"
           name="email"
           type="email"
-          label="Email"
-          placeholder="Enter your email"
+          label={t('auth.email')}
+          placeholder={t('auth.enterEmail')}
           value={email}
           onChange={handleChange}
           disabled={isSubmitting || isLoading}
           autoComplete="email"
           required
-          error={email && !isEmailValid ? 'Please enter a valid email' : undefined}
+          error={email && !isEmailValid ? t('auth.validEmail') : undefined}
         />
         <FormInput
           id="register-password"
           name="password"
           type="password"
-          label="Password"
-          placeholder="Choose a password"
+          label={t('auth.password')}
+          placeholder={t('auth.choosePassword')}
           value={password}
           onChange={handleChange}
           disabled={isSubmitting || isLoading}
           autoComplete="new-password"
           showPasswordToggle
           required
-          error={password && !isPasswordValid ? 'At least 8 characters' : undefined}
+          error={password && !isPasswordValid ? t('auth.atLeast8Chars') : undefined}
         />
         <FormInput
           id="register-confirm-password"
           name="confirmPassword"
           type="password"
-          label="Confirm password"
-          placeholder="Confirm your password"
+          label={t('auth.confirmPassword')}
+          placeholder={t('auth.confirmPasswordPlaceholder')}
           value={confirmPassword}
           onChange={handleChange}
           disabled={isSubmitting || isLoading}
@@ -119,7 +121,7 @@ export const RegisterForm = memo<RegisterFormProps>(function RegisterForm({
           showPasswordToggle
           required
           error={
-            confirmPassword && !isPasswordMatch ? 'Passwords do not match' : undefined
+            confirmPassword && !isPasswordMatch ? t('auth.passwordsDoNotMatch') : undefined
           }
         />
         <ErrorMessage error={error} />
@@ -129,19 +131,19 @@ export const RegisterForm = memo<RegisterFormProps>(function RegisterForm({
           loading={isSubmitting || isLoading}
           variant="success"
         >
-          Continue
+          {t('auth.continue')}
         </SubmitButton>
         {onSwitchToLogin && (
           <div className="mt-5 text-center">
             <span className="text-sm text-[#a1a1a6]">
-              Already have an account?{' '}
+              {t('auth.hasAccount')}{' '}
               <button
                 type="button"
                 onClick={onSwitchToLogin}
                 className="cursor-pointer border-none bg-transparent font-semibold text-white underline hover:no-underline disabled:opacity-50"
                 disabled={isSubmitting || isLoading}
               >
-                Sign in
+                {t('auth.signIn')}
               </button>
             </span>
           </div>
@@ -149,7 +151,7 @@ export const RegisterForm = memo<RegisterFormProps>(function RegisterForm({
       </form>
       <LoadingOverlay
         isVisible={isSubmitting || isLoading}
-        message={isSubmitting ? 'Creating account...' : 'Verifying...'}
+        message={isSubmitting ? t('auth.creatingAccount') : t('auth.verifying')}
         showBackdrop
         size="md"
       />

@@ -7,6 +7,7 @@ import GalleryModal from '@/components/GalleryModal';
 import PhotoGrid from '@/components/PhotoGrid';
 import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { MemoryService } from '@/lib/db/services/memory-service';
+import { useLocale } from '@/lib/i18n';
 
 interface PhotoGalleryDetailProps {
   memory: CarouselItem;
@@ -20,13 +21,14 @@ function getGalleryImages(item: CarouselItem): string[] {
 
 export function PhotoGalleryDetail({ memory, onBack }: PhotoGalleryDetailProps) {
   const router = useRouter();
+  const { t } = useLocale();
   const [showGallery, setShowGallery] = useState(false);
   const [initialGalleryIndex, setInitialGalleryIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const title = memory.detailTitle ?? memory.title ?? '';
   const description =
-    memory.description ?? '探索世界，记录美好时光。';
+    memory.description ?? t('memory.defaultDescription');
   const images = getGalleryImages(memory);
 
   const handleImageClick = (index: number) => {
@@ -41,7 +43,7 @@ export function PhotoGalleryDetail({ memory, onBack }: PhotoGalleryDetailProps) 
 
   const handleShare = useCallback(async () => {
     const shareUrl = getShareUrl();
-    const shareTitle = title || '回忆';
+    const shareTitle = title || t('memory.defaultTitle');
     const shareData = { title: shareTitle, url: shareUrl };
     if (typeof navigator !== 'undefined' && navigator.share) {
       const canShare = typeof navigator.canShare === 'function' ? navigator.canShare(shareData) : true;
@@ -59,21 +61,21 @@ export function PhotoGalleryDetail({ memory, onBack }: PhotoGalleryDetailProps) 
     } catch {
       if (typeof window !== 'undefined' && window.open) window.open(shareUrl, '_blank', 'noopener');
     }
-  }, [getShareUrl, title]);
+  }, [getShareUrl, title, t]);
 
   const handleEdit = () => {
     router.push(`/memories/editor?id=${memory.id}`);
   };
 
   const handleDelete = async () => {
-    const confirmed = confirm('确定要删除这个回忆吗？此操作无法撤销。');
+    const confirmed = confirm(t('memory.deleteConfirm'));
     if (!confirmed) return;
 
     setIsDeleting(true);
     try {
       const { error } = await MemoryService.deleteMemory(memory.id);
       if (error) {
-        alert(`删除失败：${error}`);
+        alert(`${t('memory.deleteFailed')} ${error}`);
         setIsDeleting(false);
         return;
       }
@@ -81,7 +83,7 @@ export function PhotoGalleryDetail({ memory, onBack }: PhotoGalleryDetailProps) 
       router.push('/');
     } catch (e) {
       console.error('Failed to delete memory:', e);
-      alert('删除失败，请重试');
+      alert(t('memory.deleteFailed'));
       setIsDeleting(false);
     }
   };
@@ -94,7 +96,7 @@ export function PhotoGalleryDetail({ memory, onBack }: PhotoGalleryDetailProps) 
           onShare={handleShare}
           moreMenu={
             <>
-              <button type="button" onClick={handleEdit} className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100" role="menuitem">编辑</button>
+              <button type="button" onClick={handleEdit} className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100" role="menuitem">{t('common.edit')}</button>
               <button
                 type="button"
                 onClick={handleDelete}
@@ -102,7 +104,7 @@ export function PhotoGalleryDetail({ memory, onBack }: PhotoGalleryDetailProps) 
                 className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 role="menuitem"
               >
-                {isDeleting ? '删除中...' : '删除'}
+                {isDeleting ? t('memory.deleting') : t('memory.delete')}
               </button>
             </>
           }
@@ -124,7 +126,7 @@ export function PhotoGalleryDetail({ memory, onBack }: PhotoGalleryDetailProps) 
               />
             </div>
           ) : (
-            <div className="px-4 py-8 text-center text-gray-500 text-sm">暂无图片</div>
+            <div className="px-4 py-8 text-center text-gray-500 text-sm">{t('memory.noPhotos')}</div>
           )}
         </div>
       </div>

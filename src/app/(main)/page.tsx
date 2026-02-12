@@ -8,6 +8,7 @@ import Carousel from '@/components/Carousel';
 import InfoModal from '@/components/InfoModal';
 import { UserAvatar } from '@/components/auth/UserAvatar';
 import { useOptionalAuth } from '@/lib/auth';
+import { useLocale } from '@/lib/i18n';
 import { getCarouselItems, buildCarouselItems } from '@/lib/storage';
 import { isDemoDataEnabled } from '@/lib/db/utils/environment';
 import type { LocationData, CarouselItem, GeminiResponse } from '@/types';
@@ -41,6 +42,7 @@ function isContentCard(item: CarouselItem | null): boolean {
 export default function HomePage() {
   const router = useRouter();
   const auth = useOptionalAuth();
+  const { t } = useLocale();
   const userId = auth?.user?.id ?? null;
 
   const [carouselItems, setCarouselItems] = useState<CarouselItem[]>(() => buildCarouselItems([]));
@@ -227,7 +229,7 @@ export default function HomePage() {
               ))}
             </div>
             <span className="subhead above-keyline typography-callout-above-keyline-base">
-              Together.
+              {t('home.together')}
             </span>
           </div>
           <div className="callout mt-1" data-staggered-item="">
@@ -237,7 +239,7 @@ export default function HomePage() {
               </p>
               <button
                 type="button"
-                aria-label={calloutPlaying ? 'Pause' : 'Play'}
+                aria-label={calloutPlaying ? t('home.pause') : t('home.play')}
                 onClick={handleCalloutPlayPause}
                 className="callout-player-btn"
               >
@@ -286,7 +288,7 @@ export default function HomePage() {
                 <path d="M12 5v14" />
                 <path d="M5 12h14" />
               </svg>
-              Add Memory
+              {t('home.addMemory')}
             </button>
           ) : (
             <button
@@ -308,7 +310,7 @@ export default function HomePage() {
                 <path d="M5 12h14" />
                 <path d="M12 5l7 7-7 7" />
               </svg>
-              Review Journey
+              {t('home.reviewJourney')}
             </button>
           )}
         </div>

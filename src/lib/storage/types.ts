@@ -89,8 +89,8 @@ export function carouselItemToRow(
     place_name: item.coordinates?.name ?? null,
     place_address:
       item.coordinates?.address ??
-      [item.coordinates?.name, item.coordinates?.region, item.coordinates?.country].filter(Boolean).join(', ') ||
-      null,
+      ([item.coordinates?.name, item.coordinates?.region, item.coordinates?.country].filter(Boolean).join(', ') ||
+        null),
     sort_order: opts.sortOrder ?? 0,
     is_journey_start: opts.isJourneyStart ?? false,
     is_journey_end: opts.isJourneyEnd ?? false,
