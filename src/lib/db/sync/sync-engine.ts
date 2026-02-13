@@ -39,6 +39,7 @@ function memoryRecordToRow(record: MemoryRecord): Omit<TravelMemoryRow, 'created
     is_journey_end: record.isJourneyEnd,
     visibility: record.visibility ?? 'private',
     cinematic_script_json: record.cinematicScriptJson ?? null,
+    vlog_data_json: record.vlogDataJson ?? null,
   };
 }
 
@@ -72,6 +73,7 @@ function rowToMemoryRecord(row: TravelMemoryRow): MemoryRecord {
     isJourneyEnd: row.is_journey_end,
     visibility: row.visibility ?? 'private',
     cinematicScriptJson: row.cinematic_script_json ?? null,
+    vlogDataJson: row.vlog_data_json ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     syncStatus: 'synced',
