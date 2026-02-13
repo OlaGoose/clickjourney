@@ -406,11 +406,7 @@ export default function MemoryUploadPage() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans transition-colors duration-300 ${
-        isDark
-          ? 'selection:bg-white selection:text-black'
-          : 'selection:bg-black selection:text-white'
-      }`}
+      className={`min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans transition-colors duration-300 selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black ${isDark ? 'dark' : ''}`}
     >
       <div
         className="fixed inset-0 pointer-events-none z-0 transition-colors duration-300"
@@ -471,11 +467,7 @@ export default function MemoryUploadPage() {
       <main className="max-w-4xl w-full flex flex-col items-center z-10 flex-1 pt-24 md:pt-28 pb-32 md:pb-36">
         {currentStep === 0 ? (
           <div className="flex-1 w-full flex flex-col justify-center items-center px-4">
-            <h2
-              className={`text-2xl font-semibold mb-3 text-center ${
-                isDark ? 'text-white/90' : 'text-gray-800'
-              }`}
-            >
+            <h2 className="text-2xl font-semibold mb-3 text-center text-gray-800 dark:text-white/90">
               {t('upload.locationHeading')}
             </h2>
             <input
@@ -483,11 +475,7 @@ export default function MemoryUploadPage() {
               value={memoryLocation}
               onChange={(e) => setMemoryLocation(e.target.value)}
               placeholder={t('upload.locationPlaceholder')}
-              className={`w-full max-w-md text-base rounded-xl px-4 py-3 outline-none transition-colors ${
-                isDark
-                  ? 'bg-white/10 text-white placeholder:text-white/40 focus:bg-white/15'
-                  : 'bg-white/50 text-gray-800 placeholder:text-gray-400 focus:bg-white'
-              }`}
+              className="w-full max-w-md text-base rounded-xl px-4 py-3 outline-none transition-colors bg-white/50 text-gray-800 placeholder:text-gray-400 focus:bg-white dark:bg-white/10 dark:text-white dark:placeholder:text-white/40 dark:focus:bg-white/15"
               autoFocus
               aria-label={t('upload.locationPlaceholder')}
             />
@@ -514,36 +502,22 @@ export default function MemoryUploadPage() {
         <div className="w-full max-w-4xl flex flex-col items-center px-4 pointer-events-auto">
           {currentStep === 2 && (
             <div className="w-full max-w-sm mb-4">
-              <div
-                className={`backdrop-blur-2xl rounded-3xl shadow-2xl p-5 relative transition-colors duration-300 ${
-                  isDark
-                    ? 'bg-white/10 border border-white/20'
-                    : 'bg-white/60 border border-white/40'
-                }`}
-              >
+              <div className="backdrop-blur-2xl rounded-3xl shadow-2xl p-5 relative transition-colors duration-300 bg-white/60 border border-white/40 dark:bg-white/10 dark:border-white/20">
                 <div className="flex justify-between items-center mb-2">
-                  <h3
-                    className={`text-sm font-semibold flex items-center gap-2 ${
-                      isDark ? 'text-white/90' : 'text-gray-800'
-                    }`}
-                  >
-                    <Pencil size={14} className={isDark ? 'text-white/50' : 'text-gray-500'} />
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-gray-800 dark:text-white/90">
+                    <Pencil size={14} className="text-gray-500 dark:text-white/50" />
                     {t('upload.transcriptHeading')}
                   </h3>
                 </div>
                 <textarea
-                  className={`w-full text-sm leading-relaxed bg-transparent resize-none outline-none rounded-xl p-2 ml-1 transition-colors ${
-                    isDark
-                      ? 'text-white/90 placeholder:text-white/40 focus:bg-white/5'
-                      : 'text-gray-800 placeholder:text-gray-400 focus:bg-white/40'
-                  }`}
+                  className="w-full text-sm leading-relaxed bg-transparent resize-none outline-none rounded-xl p-2 ml-1 transition-colors text-gray-800 placeholder:text-gray-400 focus:bg-white/40 dark:text-white/90 dark:placeholder:text-white/40 dark:focus:bg-white/5"
                   rows={4}
                   value={transcript}
                   onChange={(e) => setTranscript(e.target.value)}
                   placeholder={t('upload.transcribePrompt')}
                   readOnly={isTranscribing}
                 />
-                <div className={`mt-3 flex items-center justify-end gap-1.5 ${isDark ? 'text-white/90' : 'text-gray-800'}`}>
+                <div className="mt-3 flex items-center justify-end gap-1.5 text-gray-800 dark:text-white/90">
                   {isRecording ? (
                     <>
                       <span className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-red-500 text-white text-xs font-medium tabular-nums">
@@ -567,11 +541,11 @@ export default function MemoryUploadPage() {
                       <button
                         type="button"
                         onClick={togglePlayback}
-                        className={`flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95 ${
+                        className={
                           isPlaying
-                            ? isDark ? 'bg-white/20 text-white' : 'bg-gray-800 text-white'
-                            : 'bg-black hover:bg-gray-800 text-white'
-                        }`}
+                            ? 'flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95 bg-gray-800 text-white dark:bg-white/20 dark:text-white'
+                            : 'flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95 bg-black hover:bg-gray-800 text-white'
+                        }
                         title={isPlaying ? t('home.pause') : t('home.play')}
                         aria-label={isPlaying ? t('home.pause') : t('home.play')}
                       >
@@ -581,11 +555,7 @@ export default function MemoryUploadPage() {
                         type="button"
                         onClick={handleTranscribeClick}
                         disabled={isTranscribing}
-                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 ${
-                          isTranscribing
-                            ? isDark ? 'bg-white/10 text-white/50 cursor-wait' : 'bg-gray-200 text-gray-400 cursor-wait'
-                            : 'bg-black hover:bg-gray-800 text-white'
-                        }`}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 bg-black hover:bg-gray-800 text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-wait dark:disabled:bg-white/10 dark:disabled:text-white/50"
                       >
                         {isTranscribing ? <Loader2 size={12} className="animate-spin" /> : null}
                         <span>{isTranscribing ? '…' : t('upload.transcribe')}</span>
@@ -593,11 +563,7 @@ export default function MemoryUploadPage() {
                       <button
                         type="button"
                         onClick={deleteAudio}
-                        className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
-                          isDark
-                            ? 'hover:bg-white/10 text-white/50 hover:text-red-400'
-                            : 'hover:bg-black/5 text-gray-500 hover:text-red-500'
-                        }`}
+                        className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-black/5 text-gray-500 hover:text-red-500 dark:hover:bg-white/10 dark:text-white/50 dark:hover:text-red-400"
                         title={t('memory.delete')}
                         aria-label={t('upload.deleteRecording')}
                       >
@@ -619,13 +585,7 @@ export default function MemoryUploadPage() {
             </div>
           )}
 
-          <div
-            className={`backdrop-blur-2xl rounded-full p-2 flex items-center gap-2 transition-all duration-300 ${
-              isDark
-                ? 'bg-white/10 border border-white/20 shadow-[0_20px_40px_rgba(0,0,0,0.3)]'
-                : 'bg-white/30 border border-white/40 shadow-[0_20px_40px_rgba(0,0,0,0.1)]'
-            }`}
-          >
+          <div className="backdrop-blur-2xl rounded-full p-2 flex items-center gap-2 transition-all duration-300 bg-white/30 border border-white/40 shadow-[0_20px_40px_rgba(0,0,0,0.1)] dark:bg-white/10 dark:border-white/20 dark:shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
             {currentStep === 0 ? (
               <button
                 type="button"
@@ -641,29 +601,17 @@ export default function MemoryUploadPage() {
                   type="button"
                   onClick={handleStartClick}
                   disabled={!isDefault && images.length >= 9}
-                  className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full transition-all active:scale-95 ${
-                    !isDefault && images.length >= 9
-                      ? isDark
-                        ? 'bg-white/10 text-white/30 cursor-not-allowed'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl'
-                  }`}
+                  className="group flex items-center gap-1.5 px-5 py-2.5 rounded-full transition-all active:scale-95 bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed dark:disabled:bg-white/10 dark:disabled:text-white/60 dark:disabled:border dark:disabled:border-white/20"
                 >
                   <ImagePlus size={16} strokeWidth={2.5} className="text-white" />
                   <span className="font-semibold text-[13px]">{t('upload.uploadButton')}</span>
                 </button>
-                <div className={`w-px h-5 mx-1 ${isDark ? 'bg-white/20' : 'bg-black/10'}`} />
+                <div className="w-px h-5 mx-1 bg-black/10 dark:bg-white/20" />
                 <button
                   type="button"
                   onClick={goToNextStep}
                   disabled={isDefault}
-                  className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 ${
-                    isDefault
-                      ? isDark
-                        ? 'bg-white/10 text-white/30 cursor-not-allowed'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-black hover:bg-gray-800 text-white'
-                  }`}
+                  className="group flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 bg-black hover:bg-gray-800 text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed dark:disabled:bg-white/10 dark:disabled:text-white/60 dark:disabled:border dark:disabled:border-white/20"
                 >
                   <ChevronRight size={16} strokeWidth={2.5} />
                   <span className="font-semibold text-[13px]">{t('upload.next')}</span>
@@ -675,29 +623,17 @@ export default function MemoryUploadPage() {
                   type="button"
                   onClick={goToEditor}
                   disabled={isDefault}
-                  className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 ${
-                    isDefault
-                      ? isDark
-                        ? 'bg-white/10 text-white/30 cursor-not-allowed'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-black hover:bg-gray-800 text-white'
-                  }`}
+                  className="group flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 bg-black hover:bg-gray-800 text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed dark:disabled:bg-white/10 dark:disabled:text-white/60 dark:disabled:border dark:disabled:border-white/20"
                 >
                   <Edit3 size={16} strokeWidth={2.5} />
                   <span className="font-semibold text-[13px]">{t('upload.editJourney')}</span>
                 </button>
-                <div className={`w-px h-5 mx-1 ${isDark ? 'bg-white/20' : 'bg-black/10'}`} />
+                <div className="w-px h-5 mx-1 bg-black/10 dark:bg-white/20" />
                 <button
                   type="button"
                   onClick={goToNextStep}
                   disabled={isDefault}
-                  className={`group relative flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 overflow-hidden ${
-                    isDefault
-                      ? isDark
-                        ? 'bg-white/10 text-white/30 cursor-not-allowed'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-black via-gray-900 to-black hover:from-gray-900 hover:to-gray-900 text-white'
-                  }`}
+                  className="group relative flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 overflow-hidden bg-gradient-to-r from-black via-gray-900 to-black hover:from-gray-900 hover:to-gray-900 text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed dark:disabled:bg-white/10 dark:disabled:text-white/60 dark:disabled:border dark:disabled:border-white/20"
                 >
                   {!isDefault && (
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />

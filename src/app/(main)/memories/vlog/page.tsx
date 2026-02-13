@@ -384,11 +384,7 @@ export default function VlogPage() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans transition-colors duration-300 ${
-        isDark
-          ? 'selection:bg-white selection:text-black'
-          : 'selection:bg-black selection:text-white'
-      }`}
+      className={`min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans transition-colors duration-300 selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black ${isDark ? 'dark' : ''}`}
     >
       <div
         className="fixed inset-0 pointer-events-none z-0 transition-colors duration-300"
@@ -462,11 +458,7 @@ export default function VlogPage() {
       <main className="max-w-4xl w-full flex flex-col items-center z-10 flex-1 pt-24 md:pt-28 pb-32 md:pb-36">
         {currentStep === 0 && (
           <div className="flex-1 w-full flex flex-col justify-center items-center px-4">
-            <h2
-              className={`text-2xl font-semibold mb-3 text-center ${
-                isDark ? 'text-white/90' : 'text-gray-800'
-              }`}
-            >
+            <h2 className="text-2xl font-semibold mb-3 text-center text-gray-800 dark:text-white/90">
               {t('upload.locationHeading')}
             </h2>
             <input
@@ -474,11 +466,7 @@ export default function VlogPage() {
               value={memoryLocation}
               onChange={(e) => setMemoryLocation(e.target.value)}
               placeholder={t('upload.locationPlaceholder')}
-              className={`w-full max-w-md text-base rounded-xl px-4 py-3 outline-none transition-colors border border-transparent focus:border ${
-                isDark
-                  ? 'bg-white/10 text-white placeholder:text-white/40 focus:bg-white/15 focus:border-white/30'
-                  : 'bg-white/50 text-gray-800 placeholder:text-gray-400 focus:bg-white focus:border-gray-300'
-              }`}
+              className="w-full max-w-md text-base rounded-xl px-4 py-3 outline-none transition-colors border border-transparent focus:border bg-white/50 text-gray-800 placeholder:text-gray-400 focus:bg-white focus:border-gray-300 dark:bg-white/10 dark:text-white dark:placeholder:text-white/40 dark:focus:bg-white/15 dark:focus:border-white/30"
               autoFocus
               aria-label={t('upload.locationPlaceholder')}
             />
@@ -501,29 +489,15 @@ export default function VlogPage() {
         {currentStep === 2 && (
           <div className="w-full flex flex-col items-center gap-6 flex-1">
             <div className="w-full max-w-sm mb-4">
-              <div
-                className={`backdrop-blur-2xl rounded-3xl shadow-2xl p-5 relative transition-colors duration-300 ${
-                  isDark
-                    ? 'bg-white/10 border border-white/20'
-                    : 'bg-white/60 border border-white/40'
-                }`}
-              >
+              <div className="backdrop-blur-2xl rounded-3xl shadow-2xl p-5 relative transition-colors duration-300 bg-white/60 border border-white/40 dark:bg-white/10 dark:border-white/20">
                 <div className="flex justify-between items-center mb-2">
-                  <h3
-                    className={`text-sm font-semibold flex items-center gap-2 ${
-                      isDark ? 'text-white/90' : 'text-gray-800'
-                    }`}
-                  >
-                    <Pencil size={14} className={isDark ? 'text-white/50' : 'text-gray-500'} />
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-gray-800 dark:text-white/90">
+                    <Pencil size={14} className="text-gray-500 dark:text-white/50" />
                     {t('upload.transcriptHeading')}
                   </h3>
                 </div>
                 <textarea
-                  className={`w-full text-sm leading-relaxed bg-transparent resize-none outline-none rounded-xl p-2 ml-1 transition-colors ${
-                    isDark
-                      ? 'text-white/90 placeholder:text-white/40 focus:bg-white/5'
-                      : 'text-gray-800 placeholder:text-gray-400 focus:bg-white/40'
-                  }`}
+                  className="w-full text-sm leading-relaxed bg-transparent resize-none outline-none rounded-xl p-2 ml-1 transition-colors text-gray-800 placeholder:text-gray-400 focus:bg-white/40 dark:text-white/90 dark:placeholder:text-white/40 dark:focus:bg-white/5"
                   rows={4}
                   value={subtitleText}
                   onChange={(e) => setSubtitleText(e.target.value)}
@@ -531,7 +505,7 @@ export default function VlogPage() {
                   readOnly={isTranscribing}
                   aria-label={t('upload.transcriptHeading')}
                 />
-                <div className={`mt-3 flex items-center justify-end gap-1.5 ${isDark ? 'text-white/90' : 'text-gray-800'}`}>
+                <div className="mt-3 flex items-center justify-end gap-1.5 text-gray-800 dark:text-white/90">
                   {isRecording ? (
                     <>
                       <span className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-red-500 text-white text-xs font-medium tabular-nums">
@@ -555,11 +529,11 @@ export default function VlogPage() {
                       <button
                         type="button"
                         onClick={toggleRecordedPlayback}
-                        className={`flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95 ${
+                        className={
                           isPlayingRecorded
-                            ? isDark ? 'bg-white/20 text-white' : 'bg-gray-800 text-white'
-                            : 'bg-black hover:bg-gray-800 text-white'
-                        }`}
+                            ? 'flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95 bg-gray-800 text-white dark:bg-white/20 dark:text-white'
+                            : 'flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95 bg-black hover:bg-gray-800 text-white'
+                        }
                         aria-label={isPlayingRecorded ? t('home.pause') : t('home.play')}
                       >
                         {isPlayingRecorded ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
@@ -568,11 +542,7 @@ export default function VlogPage() {
                         type="button"
                         onClick={handleTranscribeRecordedClick}
                         disabled={isTranscribing}
-                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 ${
-                          isTranscribing
-                            ? isDark ? 'bg-white/10 text-white/50 cursor-wait' : 'bg-gray-200 text-gray-400 cursor-wait'
-                            : 'bg-black hover:bg-gray-800 text-white'
-                        }`}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 bg-black hover:bg-gray-800 text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-wait dark:disabled:bg-white/10 dark:disabled:text-white/50"
                       >
                         {isTranscribing ? <Loader2 size={12} className="animate-spin" /> : null}
                         <span>{isTranscribing ? '…' : t('upload.transcribe')}</span>
@@ -580,11 +550,7 @@ export default function VlogPage() {
                       <button
                         type="button"
                         onClick={deleteRecordedAudio}
-                        className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
-                          isDark
-                            ? 'hover:bg-white/10 text-white/50 hover:text-red-400'
-                            : 'hover:bg-black/5 text-gray-500 hover:text-red-500'
-                        }`}
+                        className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-black/5 text-gray-500 hover:text-red-500 dark:hover:bg-white/10 dark:text-white/50 dark:hover:text-red-400"
                         aria-label={t('upload.deleteRecording')}
                       >
                         <Trash2 size={14} />
@@ -604,27 +570,19 @@ export default function VlogPage() {
               </div>
             </div>
 
-            <div
-              className={`w-full max-w-sm backdrop-blur-2xl rounded-2xl p-4 transition-colors ${
-                isDark ? 'bg-white/10 border border-white/20' : 'bg-white/60 border border-white/40'
-              }`}
-            >
+            <div className="w-full max-w-sm backdrop-blur-2xl rounded-2xl p-4 transition-colors bg-white/60 border border-white/40 dark:bg-white/10 dark:border-white/20">
               <div className="flex justify-between items-center mb-1">
-                <span className={`text-xs font-semibold ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+                <span className="text-xs font-semibold text-gray-500 dark:text-white/60">
                   {t('vlog.videoLinks')}
                 </span>
                 {youtubeIds.length > 0 && (
-                  <span className={`text-[10px] ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                  <span className="text-[10px] text-green-600 dark:text-green-400">
                     {youtubeIds.length} {t('vlog.clipsAdded')}
                   </span>
                 )}
               </div>
               <textarea
-                className={`w-full h-16 text-sm rounded-xl p-2 resize-none outline-none transition-colors ${
-                  isDark
-                    ? 'bg-white/5 text-white placeholder:text-white/40 focus:bg-white/10 focus:border focus:border-white/20'
-                    : 'bg-white/50 text-gray-800 placeholder:text-gray-400 focus:bg-white/80 focus:border focus:border-gray-300'
-                }`}
+                className="w-full h-16 text-sm rounded-xl p-2 resize-none outline-none transition-colors bg-white/50 text-gray-800 placeholder:text-gray-400 focus:bg-white/80 focus:border focus:border-gray-300 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:bg-white/10 dark:focus:border-white/20"
                 placeholder={t('vlog.videoInsertsPlaceholder')}
                 value={videoText}
                 onChange={(e) => setVideoText(e.target.value)}
@@ -637,13 +595,7 @@ export default function VlogPage() {
                 id="vlog-lut-select"
                 value={selectedFilterPreset}
                 onChange={(e) => setSelectedFilterPreset(e.target.value)}
-                className={`w-full rounded-xl border px-4 py-3 pr-10 text-sm font-medium outline-none transition-colors cursor-pointer ${
-                  isDark ? '[color-scheme:dark]' : '[color-scheme:light]'
-                } ${
-                  isDark
-                    ? 'bg-white/10 border border-white/20 text-white focus:bg-white/15 focus:border-white/30'
-                    : 'bg-white/60 border border-white/40 text-gray-800 focus:bg-white/80 focus:border-gray-300'
-                }`}
+                className="w-full rounded-xl border px-4 py-3 pr-10 text-sm font-medium outline-none transition-colors cursor-pointer [color-scheme:light] dark:[color-scheme:dark] bg-white/60 border-white/40 text-gray-800 focus:bg-white/80 focus:border-gray-300 dark:bg-white/10 dark:border-white/20 dark:text-white dark:focus:bg-white/15 dark:focus:border-white/30"
                 aria-label={t('vlog.colorGrade')}
               >
                 {FILTER_PRESETS.map((preset) => (
@@ -662,13 +614,7 @@ export default function VlogPage() {
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       >
         <div className="w-full max-w-4xl flex flex-col items-center px-4 pointer-events-auto">
-          <div
-            className={`backdrop-blur-2xl rounded-full p-2 flex items-center gap-2 transition-all duration-300 ${
-              isDark
-                ? 'bg-white/10 border border-white/20 shadow-[0_20px_40px_rgba(0,0,0,0.3)]'
-                : 'bg-white/30 border border-white/40 shadow-[0_20px_40px_rgba(0,0,0,0.1)]'
-            }`}
-          >
+          <div className="backdrop-blur-2xl rounded-full p-2 flex items-center gap-2 transition-all duration-300 bg-white/30 border border-white/40 shadow-[0_20px_40px_rgba(0,0,0,0.1)] dark:bg-white/10 dark:border-white/20 dark:shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
             {currentStep === 0 ? (
               <button
                 type="button"
@@ -684,41 +630,31 @@ export default function VlogPage() {
                   type="button"
                   onClick={handleStartClick}
                   disabled={!isDefault && images.length >= MAX_PHOTOS}
-                  className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full transition-all active:scale-95 ${
-                    !isDefault && images.length >= MAX_PHOTOS
-                      ? isDark ? 'bg-white/10 text-white/60 cursor-not-allowed border border-white/20' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl'
-                  }`}
+                  className="group flex items-center gap-1.5 px-5 py-2.5 rounded-full transition-all active:scale-95 bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed dark:disabled:bg-white/10 dark:disabled:text-white/60 dark:disabled:border dark:disabled:border-white/20"
                 >
                   <ImagePlus size={16} strokeWidth={2.5} className="text-white" />
                   <span className="font-semibold text-[13px]">{t('upload.uploadButton')}</span>
                 </button>
-                <div className={`w-px h-5 mx-1 ${isDark ? 'bg-white/20' : 'bg-black/10'}`} />
+                <div className="w-px h-5 mx-1 bg-black/10 dark:bg-white/20" />
                 <button
                   type="button"
                   onClick={() => audioInputRef.current?.click()}
-                  className={`flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-95 ${
+                  className={
                     audioUrl
-                      ? 'bg-black text-white hover:bg-gray-800'
-                      : isDark
-                        ? 'bg-white/10 text-white/70 hover:bg-white/20'
-                        : 'bg-black/5 text-gray-600 hover:bg-black/10'
-                  }`}
+                      ? 'flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-95 bg-black text-white hover:bg-gray-800'
+                      : 'flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-95 bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/10 dark:text-white/70 dark:hover:bg-white/20'
+                  }
                   title={t('vlog.soundtrack')}
                   aria-label={t('vlog.soundtrack')}
                 >
                   {audioUrl ? <Check size={18} strokeWidth={2.5} /> : <Music size={18} strokeWidth={2.5} />}
                 </button>
-                <div className={`w-px h-5 mx-1 ${isDark ? 'bg-white/20' : 'bg-black/10'}`} />
+                <div className="w-px h-5 mx-1 bg-black/10 dark:bg-white/20" />
                 <button
                   type="button"
                   onClick={goToNextStep}
                   disabled={isDefault}
-                  className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 ${
-                    isDefault
-                      ? isDark ? 'bg-white/10 text-white/60 cursor-not-allowed border border-white/20' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-black hover:bg-gray-800 text-white'
-                  }`}
+                  className="group flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 bg-black hover:bg-gray-800 text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed dark:disabled:bg-white/10 dark:disabled:text-white/60 dark:disabled:border dark:disabled:border-white/20"
                 >
                   <ChevronRight size={16} strokeWidth={2.5} />
                   <span className="font-semibold text-[13px]">{t('upload.next')}</span>
@@ -729,23 +665,15 @@ export default function VlogPage() {
                 type="button"
                 onClick={goToNextStep}
                 disabled={!canStart}
-                className={`group relative flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 overflow-hidden ${
-                  canStart
-                    ? isDark
-                      ? 'bg-black hover:bg-gray-800 text-white border border-white/20 shadow-[0_20px_40px_rgba(0,0,0,0.3)]'
-                      : 'bg-black hover:bg-gray-800 text-white'
-                    : isDark
-                      ? 'bg-white/10 text-white/60 cursor-not-allowed border border-white/20'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
+                className="group relative flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 overflow-hidden bg-black hover:bg-gray-800 text-white dark:border dark:border-white/20 dark:shadow-[0_20px_40px_rgba(0,0,0,0.3)] disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed dark:disabled:bg-white/10 dark:disabled:text-white/60 dark:disabled:border-white/20"
               >
-                <Play size={16} strokeWidth={2.5} className={canStart ? 'text-white' : undefined} />
-                <span className={`font-semibold text-[13px] ${canStart ? 'text-white' : ''}`}>{t('vlog.startPlayback')}</span>
+                <Play size={16} strokeWidth={2.5} className="text-white" />
+                <span className="font-semibold text-[13px] text-white">{t('vlog.startPlayback')}</span>
               </button>
             )}
           </div>
           {currentStep === 2 && !canStart && (
-            <p className={`mt-3 text-xs text-center max-w-sm ${isDark ? 'text-white/70' : 'text-gray-500'}`}>
+            <p className="mt-3 text-xs text-center max-w-sm text-gray-500 dark:text-white/70">
               {t('vlog.needPhotosAudioSubtitles')}
             </p>
           )}

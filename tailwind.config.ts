@@ -6,6 +6,16 @@ const config: Config = {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  // Safelist classes used in ternary/dynamic branches so production purge keeps them (vlog/upload day-night, StoryStepBar)
+  safelist: [
+    'dark',
+    'bg-white/30',
+    'bg-white/80',
+    'flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95 bg-gray-800 text-white dark:bg-white/20 dark:text-white',
+    'flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95 bg-black hover:bg-gray-800 text-white',
+    'flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-95 bg-black text-white hover:bg-gray-800',
+    'flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-95 bg-black/5 text-gray-600 hover:bg-black/10 dark:bg-white/10 dark:text-white/70 dark:hover:bg-white/20',
+  ],
   darkMode: 'class',
   theme: {
     extend: {
