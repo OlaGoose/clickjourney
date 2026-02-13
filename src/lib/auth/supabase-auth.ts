@@ -123,7 +123,8 @@ export class SupabaseAuthService {
   static async getUserProfile(userId: string): Promise<UserProfile | null> {
     if (!supabase) return null;
     try {
-      const { data, error } = await supabase.from('user_profiles').select('*').eq('id', userId).single();
+      // Use maybeSingle() so 0 rows returns null instead of 406 (Not Acceptable)
+      const { data, error } = await supabase.from('user_profiles').select('*').eq('id', userId).maybeSingle();
       if (error || !data) return null;
       return data as UserProfile;
     } catch {
