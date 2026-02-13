@@ -406,7 +406,7 @@ export default function MemoryUploadPage() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans transition-colors duration-300 selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black ${isDark ? 'dark' : ''}`}
+      className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans transition-colors duration-300 selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black"
     >
       <div
         className="fixed inset-0 pointer-events-none z-0 transition-colors duration-300"

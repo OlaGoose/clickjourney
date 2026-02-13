@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/lib/auth';
 import { LocaleProvider } from '@/lib/i18n';
 import { DatabaseProvider } from '@/lib/db/init';
+import { DayNightThemeSync } from '@/components/theme/DayNightThemeSync';
 
 export const metadata: Metadata = {
   title: 'Orbit Journey – Travel Memory',
@@ -18,10 +19,19 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+/** Inline script: set day/night class on <html> before first paint so vlog/upload dark: styles apply immediately. */
+const DAY_NIGHT_SCRIPT = `
+(function(){
+  var h=new Date().getHours();
+  document.documentElement.classList.toggle('dark',h<6||h>=22);
+})();
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: DAY_NIGHT_SCRIPT }} />
         <link rel="icon" href="/favicon.ico" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -31,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <DayNightThemeSync />
         <AuthProvider>
           <LocaleProvider>
             <DatabaseProvider>{children}</DatabaseProvider>
