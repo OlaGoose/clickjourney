@@ -40,14 +40,14 @@ interface YTPlayer {
   getPlayerState: () => number;
 }
 
-/** Optimized animation variants - removed expensive filter animations */
+/** Optimized animation variants - smooth crossfade with overlap */
 const ANIMATION_VARIANTS = [
   {
     initial: { opacity: 0, scale: 1.08 },
     animate: { opacity: 1, scale: 1.0 },
     exit: { opacity: 0, scale: 0.96 },
     transition: {
-      opacity: { duration: 1.2, ease: [0.22, 1, 0.36, 1] as const },
+      opacity: { duration: TRANSITION_DURATION, ease: 'easeInOut' as const },
       scale: { duration: SLIDE_DURATION + 1, ease: 'linear' as const },
     },
   },
@@ -56,7 +56,7 @@ const ANIMATION_VARIANTS = [
     animate: { opacity: 1, x: '0%', scale: 1.0 },
     exit: { opacity: 0, x: '-4%', scale: 1.0 },
     transition: {
-      opacity: { duration: 1.2, ease: [0.22, 1, 0.36, 1] as const },
+      opacity: { duration: TRANSITION_DURATION, ease: 'easeInOut' as const },
       x: { duration: SLIDE_DURATION, ease: [0.22, 1, 0.36, 1] as const },
       scale: { duration: SLIDE_DURATION, ease: 'linear' as const },
     },
@@ -66,7 +66,7 @@ const ANIMATION_VARIANTS = [
     animate: { opacity: 1, y: 0, scale: 1.0 },
     exit: { opacity: 0, y: -40, scale: 0.98 },
     transition: {
-      opacity: { duration: 1.2, ease: [0.22, 1, 0.36, 1] as const },
+      opacity: { duration: TRANSITION_DURATION, ease: 'easeInOut' as const },
       y: { duration: SLIDE_DURATION + 0.5, ease: [0.25, 0.46, 0.45, 0.94] as const },
       scale: { duration: SLIDE_DURATION + 0.5, ease: 'linear' as const },
     },
@@ -113,7 +113,7 @@ const ControlButtons = memo(({
 ));
 ControlButtons.displayName = 'ControlButtons';
 
-/** Optimized background with static blur layer */
+/** Optimized background with crossfade */
 const BlurredBackground = memo(({ 
   src, 
   currentIndex 
@@ -125,7 +125,7 @@ const BlurredBackground = memo(({
   
   return (
     <div className="absolute inset-0">
-      <AnimatePresence mode="wait">
+      <AnimatePresence initial={false}>
         <motion.img
           key={`bg-${currentIndex}`}
           src={src}
@@ -135,7 +135,10 @@ const BlurredBackground = memo(({
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.6 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 1.8 }}
+          transition={{ 
+            duration: TRANSITION_DURATION * 1.2,
+            ease: 'easeInOut'
+          }}
           className="w-full h-full object-cover"
           style={{
             filter: 'blur(48px) brightness(0.5)',
@@ -149,7 +152,7 @@ const BlurredBackground = memo(({
 });
 BlurredBackground.displayName = 'BlurredBackground';
 
-/** Optimized subtitle with simpler animation */
+/** Optimized subtitle with crossfade animation */
 const SubtitleDisplay = memo(({ 
   subtitle, 
   subtitleIndex 
@@ -159,13 +162,17 @@ const SubtitleDisplay = memo(({
 }) => (
   <div className="absolute inset-y-0 right-0 z-30 flex items-center justify-end px-6 md:px-16 lg:px-20 pointer-events-none w-full">
     <div className="max-w-[85vw] md:max-w-xl lg:max-w-2xl text-right">
-      <AnimatePresence mode="wait">
+      <AnimatePresence initial={false}>
         <motion.div
           key={subtitleIndex}
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 15 }}
-          transition={{ delay: 0.3, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ 
+            opacity: { duration: TRANSITION_DURATION, ease: 'easeInOut' },
+            x: { duration: TRANSITION_DURATION, ease: [0.22, 1, 0.36, 1] },
+            delay: 0.3 
+          }}
           className="flex flex-col items-end"
           style={{ willChange: 'opacity, transform' }}
         >
@@ -356,15 +363,15 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
     if (recordedAudioRef.current) recordedAudioRef.current.muted = isMuted;
   }, [isMuted]);
 
-  /** Advanced preloading: preload current, next, and next+1 images */
+  /** Aggressive preloading: ensure images are ready before transition */
   useEffect(() => {
     const preloadIndices = [
-      currentIndex,
-      (currentIndex + 1) % playlist.length,
-      (currentIndex + 2) % playlist.length,
+      (currentIndex + 1) % playlist.length,   // Next (most important)
+      (currentIndex + 2) % playlist.length,   // Next+1
+      currentIndex,                           // Current (ensure it's cached)
     ];
 
-    preloadIndices.forEach((idx) => {
+    preloadIndices.forEach((idx, priority) => {
       const item = playlist[idx];
       if (!item || item.type !== 'image') return;
       const src = item.src;
@@ -372,14 +379,22 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
       
       const img = new Image();
       img.decoding = 'async';
-      img.fetchPriority = idx === currentIndex ? 'high' : 'low';
+      // Highest priority for next image
+      img.fetchPriority = priority === 0 ? 'high' : 'low';
+      
+      // Wait for image to fully load before marking as cached
+      img.onload = () => {
+        imagePreloadCacheRef.current.set(src, img);
+      };
+      
+      // Start loading
       img.src = src;
-      imagePreloadCacheRef.current.set(src, img);
     });
 
-    // Cleanup old cached images (keep only recent 5)
-    if (imagePreloadCacheRef.current.size > 5) {
-      const keysToDelete = Array.from(imagePreloadCacheRef.current.keys()).slice(0, -5);
+    // Cleanup: keep last 6 images to cover all possibilities
+    if (imagePreloadCacheRef.current.size > 6) {
+      const allKeys = Array.from(imagePreloadCacheRef.current.keys());
+      const keysToDelete = allKeys.slice(0, allKeys.length - 6);
       keysToDelete.forEach(key => imagePreloadCacheRef.current.delete(key));
     }
   }, [currentIndex, playlist]);
@@ -403,6 +418,12 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
       return `https://img.youtube.com/vi/${currentItem.id}/hqdefault.jpg`;
     return '';
   }, [currentItem]);
+
+  // Prerender next image in hidden DOM for instant display
+  const nextItem = useMemo(
+    () => playlist[(currentIndex + 1) % playlist.length],
+    [playlist, currentIndex]
+  );
 
   const handleExit = useCallback(() => onExit(), [onExit]);
   const handleMute = useCallback(() => setIsMuted((m) => !m), []);
@@ -453,9 +474,21 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
       {/* Main content area */}
       <div className="absolute inset-0 z-10 flex items-center justify-center">
         <div className="relative w-full h-full md:w-[56.25vh] md:h-full overflow-hidden shadow-2xl bg-black">
-          {/* Image slides */}
+          {/* Hidden prerender of next image for instant transition */}
+          {nextItem?.type === 'image' && (
+            <img
+              src={nextItem.src}
+              alt=""
+              loading="eager"
+              decoding="async"
+              className="hidden"
+              aria-hidden="true"
+            />
+          )}
+
+          {/* Image slides - overlapping crossfade for smooth transition */}
           {currentItem?.type === 'image' && (
-            <AnimatePresence mode="wait">
+            <AnimatePresence initial={false}>
               <motion.div
                 key={currentIndex}
                 className={`absolute inset-0 w-full h-full flex items-center justify-center bg-black ${activeFilter.className}`}
@@ -468,6 +501,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
                 <img
                   src={currentItem.src}
                   alt=""
+                  loading="eager"
                   decoding="async"
                   className="w-full h-full object-cover"
                   style={{ imageRendering: 'crisp-edges' }}
@@ -476,9 +510,9 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
             </AnimatePresence>
           )}
           
-          {/* Video slides */}
+          {/* Video slides - overlapping crossfade */}
           {currentItem?.type === 'video' && (
-            <AnimatePresence mode="wait">
+            <AnimatePresence initial={false}>
               <motion.div
                 key={currentIndex}
                 className={`absolute inset-0 w-full h-full flex items-center justify-center bg-black ${activeFilter.className}`}
