@@ -11,6 +11,4 @@ export interface GalleryProps {
   images: UploadedImage[];
   onDelete: (id: string) => void;
   onReplace: (id: string) => void;
-  /** When 'dark', replace/delete bubble and active ring use dark-theme styles for day/night consistency. */
-  variant?: 'light' | 'dark';
 }

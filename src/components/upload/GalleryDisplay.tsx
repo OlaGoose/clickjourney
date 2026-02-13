@@ -134,11 +134,10 @@ export function getGalleryImageStyle(index: number, total: number) {
  * Click a card to show replace/delete actions in a glass bubble.
  * Memoized so parent re-renders (e.g. transcript typing) don't re-render the gallery.
  */
-function GalleryDisplayInner({ images, onDelete, onReplace, variant = 'light' }: GalleryProps) {
+function GalleryDisplayInner({ images, onDelete, onReplace }: GalleryProps) {
   const count = images.length;
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
-  const isDark = variant === 'dark';
 
   const handleBackdropClick = useCallback(() => setActiveId(null), []);
 
@@ -177,28 +176,16 @@ function GalleryDisplayInner({ images, onDelete, onReplace, variant = 'light' }:
                 transition-all duration-300
                 ${
                   isActive
-                    ? isDark
-                      ? 'ring-[3px] ring-white/30 scale-[1.02] shadow-[0_20px_60px_rgba(0,0,0,0.5)]'
-                      : 'ring-[3px] ring-black/10 scale-[1.02] shadow-[0_20px_60px_rgba(0,0,0,0.3)]'
+                    ? 'ring-[3px] ring-black/10 scale-[1.02] shadow-[0_20px_60px_rgba(0,0,0,0.3)]'
                     : 'shadow-[0_8px_40px_rgba(0,0,0,0.18)] hover:scale-105 hover:shadow-[0_12px_50px_rgba(0,0,0,0.22)]'
                 }
               `}
             >
               {/* Skeleton placeholder */}
               {!isLoaded && (
-                <div
-                  className={`absolute inset-0 animate-pulse ${
-                    isDark
-                      ? 'bg-gradient-to-br from-white/20 via-white/10 to-white/20'
-                      : 'bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100'
-                  }`}
-                >
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 animate-pulse">
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div
-                      className={`w-12 h-12 border-3 rounded-full animate-spin ${
-                        isDark ? 'border-white/20 border-t-white/50' : 'border-gray-200 border-t-gray-400'
-                      }`}
-                    />
+                    <div className="w-12 h-12 border-3 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
                   </div>
                 </div>
               )}
@@ -233,40 +220,28 @@ function GalleryDisplayInner({ images, onDelete, onReplace, variant = 'light' }:
                   }}
                 />
               )}
-              <div className={`absolute inset-0 rounded-[32px] ring-1 pointer-events-none ${isDark ? 'ring-white/10' : 'ring-black/5'}`} />
+              <div className="absolute inset-0 rounded-[32px] ring-1 ring-black/5 pointer-events-none" />
             </div>
 
             {isActive && (
               <div
-                className={`absolute -bottom-20 left-1/2 -translate-x-1/2 flex items-center backdrop-blur-2xl rounded-full p-2 opacity-100 transition-all duration-200 z-[101] ${
-                  isDark
-                    ? 'bg-white/15 border border-white/25 shadow-[0_8px_32px_rgba(0,0,0,0.4)]'
-                    : 'bg-white/70 border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)]'
-                }`}
+                className="absolute -bottom-20 left-1/2 -translate-x-1/2 flex items-center bg-white/70 backdrop-blur-2xl rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/40 p-2 opacity-100 transition-all duration-200 z-[101]"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
                   type="button"
                   onClick={() => onReplace(img.id)}
-                  className={`p-2.5 rounded-full transition-colors ${
-                    isDark
-                      ? 'text-white/90 hover:text-white hover:bg-white/10'
-                      : 'text-gray-700 hover:text-black hover:bg-black/5'
-                  }`}
+                  className="p-2.5 rounded-full hover:bg-black/5 text-gray-700 hover:text-black transition-colors"
                   title="Replace"
                   aria-label="Replace photo"
                 >
                   <RefreshCw size={16} strokeWidth={2.5} />
                 </button>
-                <div className={`w-px h-4 mx-1 ${isDark ? 'bg-white/20' : 'bg-black/10'}`} />
+                <div className="w-px h-4 bg-black/10 mx-1" />
                 <button
                   type="button"
                   onClick={() => onDelete(img.id)}
-                  className={`p-2.5 rounded-full transition-colors ${
-                    isDark
-                      ? 'text-red-400 hover:text-red-300 hover:bg-white/10'
-                      : 'text-red-500 hover:bg-red-50'
-                  }`}
+                  className="p-2.5 rounded-full hover:bg-red-50 text-red-500 transition-colors"
                   title="Delete"
                   aria-label="Delete photo"
                 >
