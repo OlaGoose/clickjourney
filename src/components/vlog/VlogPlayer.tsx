@@ -40,406 +40,38 @@ interface YTPlayer {
   getPlayerState: () => number;
 }
 
-/** ========================================
- *  CINEMATIC THEME SYSTEM
- *  Each LUT has unique transitions, subtitle styles, and visual effects
- *  based on film art best practices
- * ======================================== */
-
-type AnimationVariant = {
-  initial: Record<string, number | string>;
-  animate: Record<string, number | string>;
-  exit: Record<string, number | string>;
-  transition: Record<string, any>;
-};
-
-type SubtitleStyle = {
-  fontFamily: string;
-  fontSize: string;
-  fontWeight: string;
-  textColor: string;
-  position: 'bottom-right' | 'bottom-center' | 'top-left' | 'center' | 'bottom-left';
-  animation: 'fade-slide' | 'typewriter' | 'glitch' | 'bounce' | 'blur-in' | 'scale-rotate';
-  textShadow: string;
-  letterSpacing?: string;
-  textTransform?: 'uppercase' | 'lowercase' | 'none';
-  writingMode?: 'horizontal-tb' | 'vertical-rl';
-};
-
-type ThemeConfig = {
-  name: string;
-  variants: AnimationVariant[];
-  subtitle: SubtitleStyle;
-  effects: {
-    vignette?: boolean;
-    scanlines?: boolean;
-    chromatic?: boolean;
-    filmGrain?: 'light' | 'medium' | 'heavy';
-    glow?: string;
-  };
-};
-
-/** Original - Pure & Natural */
-const ORIGINAL_VARIANTS: AnimationVariant[] = [
-  {
-    initial: { opacity: 0, scale: 1.05 },
-    animate: { opacity: 1, scale: 1.0 },
-    exit: { opacity: 0, scale: 1.02 },
-    transition: {
-      opacity: { duration: 1.2, ease: 'easeInOut' },
-      scale: { duration: SLIDE_DURATION, ease: 'linear' },
-    },
-  },
+/** Optimized animation variants - smooth crossfade with overlap */
+const ANIMATION_VARIANTS = [
   {
     initial: { opacity: 0, scale: 1.08 },
     animate: { opacity: 1, scale: 1.0 },
-    exit: { opacity: 0, scale: 0.98 },
+    exit: { opacity: 0, scale: 0.96 },
     transition: {
-      opacity: { duration: 1.5, ease: 'easeInOut' },
-      scale: { duration: SLIDE_DURATION, ease: 'linear' },
+      opacity: { duration: TRANSITION_DURATION, ease: 'easeInOut' as const },
+      scale: { duration: SLIDE_DURATION + 1, ease: 'linear' as const },
+    },
+  },
+  {
+    initial: { opacity: 0, x: '8%', scale: 1.05 },
+    animate: { opacity: 1, x: '0%', scale: 1.0 },
+    exit: { opacity: 0, x: '-4%', scale: 1.0 },
+    transition: {
+      opacity: { duration: TRANSITION_DURATION, ease: 'easeInOut' as const },
+      x: { duration: SLIDE_DURATION, ease: [0.22, 1, 0.36, 1] as const },
+      scale: { duration: SLIDE_DURATION, ease: 'linear' as const },
+    },
+  },
+  {
+    initial: { opacity: 0, y: 40, scale: 1.04 },
+    animate: { opacity: 1, y: 0, scale: 1.0 },
+    exit: { opacity: 0, y: -40, scale: 0.98 },
+    transition: {
+      opacity: { duration: TRANSITION_DURATION, ease: 'easeInOut' as const },
+      y: { duration: SLIDE_DURATION + 0.5, ease: [0.25, 0.46, 0.45, 0.94] as const },
+      scale: { duration: SLIDE_DURATION + 0.5, ease: 'linear' as const },
     },
   },
 ];
-
-/** Hollywood '95 - Classic Cinema (Ken Burns) */
-const HOLLYWOOD_VARIANTS: AnimationVariant[] = [
-  {
-    initial: { opacity: 0, scale: 1.15, x: '-5%', y: '-3%' },
-    animate: { opacity: 1, scale: 1.0, x: '0%', y: '0%' },
-    exit: { opacity: 0, scale: 0.95 },
-    transition: {
-      opacity: { duration: 2.0, ease: [0.25, 0.1, 0.25, 1] as const },
-      scale: { duration: SLIDE_DURATION + 1.5, ease: 'linear' },
-      x: { duration: SLIDE_DURATION + 1.5, ease: 'linear' },
-      y: { duration: SLIDE_DURATION + 1.5, ease: 'linear' },
-    },
-  },
-  {
-    initial: { opacity: 0, scale: 1.12, x: '4%', y: '2%' },
-    animate: { opacity: 1, scale: 1.0, x: '0%', y: '0%' },
-    exit: { opacity: 0, scale: 1.05 },
-    transition: {
-      opacity: { duration: 1.8, ease: [0.33, 1, 0.68, 1] as const },
-      scale: { duration: SLIDE_DURATION + 1, ease: 'linear' },
-      x: { duration: SLIDE_DURATION + 1, ease: 'linear' },
-      y: { duration: SLIDE_DURATION + 1, ease: 'linear' },
-    },
-  },
-];
-
-/** Chungking Express - Wong Kar-wai (Fast cuts, motion blur) */
-const CHUNGKING_VARIANTS: AnimationVariant[] = [
-  {
-    initial: { opacity: 0, x: '15%', scale: 1.1, filter: 'blur(8px)' },
-    animate: { opacity: 1, x: '0%', scale: 1.0, filter: 'blur(0px)' },
-    exit: { opacity: 0, x: '-10%', filter: 'blur(4px)' },
-    transition: {
-      duration: 0.8,
-      ease: [0.76, 0, 0.24, 1] as const,
-    },
-  },
-  {
-    initial: { opacity: 0, y: '12%', scale: 1.08, filter: 'blur(6px)' },
-    animate: { opacity: 1, y: '0%', scale: 1.0, filter: 'blur(0px)' },
-    exit: { opacity: 0, scale: 0.95, filter: 'blur(3px)' },
-    transition: {
-      duration: 0.9,
-      ease: [0.87, 0, 0.13, 1] as const,
-    },
-  },
-];
-
-/** Film Noir - Hard cuts & dramatic shadows */
-const NOIR_VARIANTS: AnimationVariant[] = [
-  {
-    initial: { opacity: 0 },
-    animate: { opacity: 1 },
-    exit: { opacity: 0 },
-    transition: {
-      opacity: { duration: 0.4, ease: 'easeInOut' },
-    },
-  },
-  {
-    initial: { opacity: 0, x: '-100%' },
-    animate: { opacity: 1, x: '0%' },
-    exit: { opacity: 0, x: '100%' },
-    transition: {
-      duration: 0.6,
-      ease: [0.65, 0, 0.35, 1] as const,
-    },
-  },
-];
-
-/** Wes Anderson - Symmetry & whimsy */
-const WES_VARIANTS: AnimationVariant[] = [
-  {
-    initial: { opacity: 0, scale: 0.85, rotateY: 5 },
-    animate: { opacity: 1, scale: 1.0, rotateY: 0 },
-    exit: { opacity: 0, scale: 0.9, rotateY: -5 },
-    transition: {
-      duration: 1.4,
-      ease: [0.34, 1.56, 0.64, 1] as const,
-    },
-  },
-  {
-    initial: { opacity: 0, scale: 1.2, y: '5%' },
-    animate: { opacity: 1, scale: 1.0, y: '0%' },
-    exit: { opacity: 0, scale: 0.8, y: '-5%' },
-    transition: {
-      duration: 1.3,
-      ease: [0.22, 1, 0.36, 1] as const,
-    },
-  },
-];
-
-/** Tokyo Love Story - Soft & dreamy */
-const TOKYO_VARIANTS: AnimationVariant[] = [
-  {
-    initial: { opacity: 0, scale: 1.1, filter: 'blur(12px)' },
-    animate: { opacity: 1, scale: 1.0, filter: 'blur(0px)' },
-    exit: { opacity: 0, filter: 'blur(8px)' },
-    transition: {
-      duration: 2.2,
-      ease: [0.16, 1, 0.3, 1] as const,
-    },
-  },
-  {
-    initial: { opacity: 0, y: '8%', filter: 'blur(10px)' },
-    animate: { opacity: 1, y: '0%', filter: 'blur(0px)' },
-    exit: { opacity: 0, y: '-5%', filter: 'blur(6px)' },
-    transition: {
-      duration: 2.0,
-      ease: [0.25, 1, 0.5, 1] as const,
-    },
-  },
-];
-
-/** Cyberpunk 2077 - Glitch & neon */
-const CYBERPUNK_VARIANTS: AnimationVariant[] = [
-  {
-    initial: { opacity: 0, x: '8%', scaleX: 1.02, filter: 'hue-rotate(20deg)' },
-    animate: { opacity: 1, x: '0%', scaleX: 1.0, filter: 'hue-rotate(0deg)' },
-    exit: { opacity: 0, x: '-5%', filter: 'hue-rotate(-10deg)' },
-    transition: {
-      duration: 0.7,
-      ease: [0.9, 0.1, 0.5, 1] as const,
-    },
-  },
-  {
-    initial: { opacity: 0, y: '-6%', scaleY: 1.05 },
-    animate: { opacity: 1, y: '0%', scaleY: 1.0 },
-    exit: { opacity: 0, scaleY: 0.98 },
-    transition: {
-      duration: 0.8,
-      ease: [0.85, 0, 0.15, 1] as const,
-    },
-  },
-];
-
-/** Amélie's World - Magical realism */
-const AMELIE_VARIANTS: AnimationVariant[] = [
-  {
-    initial: { opacity: 0, scale: 0.9, rotate: -3 },
-    animate: { opacity: 1, scale: 1.0, rotate: 0 },
-    exit: { opacity: 0, scale: 1.05, rotate: 2 },
-    transition: {
-      duration: 1.6,
-      ease: [0.68, -0.55, 0.265, 1.55] as const,
-    },
-  },
-  {
-    initial: { opacity: 0, scale: 1.15, rotate: 4 },
-    animate: { opacity: 1, scale: 1.0, rotate: 0 },
-    exit: { opacity: 0, scale: 0.92, rotate: -3 },
-    transition: {
-      duration: 1.5,
-      ease: [0.34, 1.56, 0.64, 1] as const,
-    },
-  },
-];
-
-/** Vintage VHS - Tape glitch & tracking noise */
-const VHS_VARIANTS: AnimationVariant[] = [
-  {
-    initial: { opacity: 0, x: '3%', scaleX: 0.98 },
-    animate: { opacity: 1, x: '0%', scaleX: 1.0 },
-    exit: { opacity: 0, x: '-2%', scaleX: 1.02 },
-    transition: {
-      duration: 1.0,
-      ease: 'linear',
-    },
-  },
-  {
-    initial: { opacity: 0, y: '-4%' },
-    animate: { opacity: 1, y: '0%' },
-    exit: { opacity: 0, y: '3%' },
-    transition: {
-      duration: 1.1,
-      ease: 'linear',
-    },
-  },
-];
-
-/** Theme configurations for each LUT */
-const THEME_CONFIGS: Record<string, ThemeConfig> = {
-  'Original': {
-    name: 'Original',
-    variants: ORIGINAL_VARIANTS,
-    subtitle: {
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      fontSize: 'text-xl md:text-3xl lg:text-4xl',
-      fontWeight: 'font-normal',
-      textColor: 'text-white',
-      position: 'bottom-right',
-      animation: 'fade-slide',
-      textShadow: '0 4px 10px rgba(0,0,0,0.8)',
-    },
-    effects: {},
-  },
-  "Hollywood '95": {
-    name: "Hollywood '95",
-    variants: HOLLYWOOD_VARIANTS,
-    subtitle: {
-      fontFamily: '"Playfair Display", "Georgia", serif',
-      fontSize: 'text-2xl md:text-4xl lg:text-5xl',
-      fontWeight: 'font-medium',
-      textColor: 'text-amber-100',
-      position: 'bottom-right',
-      animation: 'fade-slide',
-      textShadow: '0 2px 20px rgba(251,191,36,0.4), 0 4px 10px rgba(0,0,0,0.9)',
-      letterSpacing: 'tracking-wide',
-    },
-    effects: {
-      filmGrain: 'light',
-      glow: 'rgba(251,191,36,0.15)',
-    },
-  },
-  'Chungking Express': {
-    name: 'Chungking Express',
-    variants: CHUNGKING_VARIANTS,
-    subtitle: {
-      fontFamily: '"Bebas Neue", "Impact", sans-serif',
-      fontSize: 'text-xl md:text-3xl lg:text-4xl',
-      fontWeight: 'font-bold',
-      textColor: 'text-cyan-300',
-      position: 'top-left',
-      animation: 'glitch',
-      textShadow: '2px 2px 0 rgba(236,72,153,0.7), -2px -2px 0 rgba(6,182,212,0.7), 0 6px 20px rgba(0,0,0,0.8)',
-      textTransform: 'uppercase',
-    },
-    effects: {
-      chromatic: true,
-      filmGrain: 'medium',
-    },
-  },
-  'Film Noir': {
-    name: 'Film Noir',
-    variants: NOIR_VARIANTS,
-    subtitle: {
-      fontFamily: '"Courier New", monospace',
-      fontSize: 'text-xl md:text-3xl lg:text-4xl',
-      fontWeight: 'font-bold',
-      textColor: 'text-white',
-      position: 'bottom-center',
-      animation: 'typewriter',
-      textShadow: '0 0 20px rgba(255,255,255,0.5), 0 4px 10px rgba(0,0,0,1)',
-      textTransform: 'uppercase',
-      letterSpacing: 'tracking-wider',
-    },
-    effects: {
-      vignette: true,
-      filmGrain: 'heavy',
-    },
-  },
-  'Wes Anderson': {
-    name: 'Wes Anderson',
-    variants: WES_VARIANTS,
-    subtitle: {
-      fontFamily: '"Futura", "Century Gothic", sans-serif',
-      fontSize: 'text-lg md:text-2xl lg:text-3xl',
-      fontWeight: 'font-semibold',
-      textColor: 'text-rose-200',
-      position: 'bottom-center',
-      animation: 'bounce',
-      textShadow: '0 2px 8px rgba(0,0,0,0.6)',
-      letterSpacing: 'tracking-wide',
-      textTransform: 'uppercase',
-    },
-    effects: {
-      vignette: true,
-    },
-  },
-  'Tokyo Love Story': {
-    name: 'Tokyo Love Story',
-    variants: TOKYO_VARIANTS,
-    subtitle: {
-      fontFamily: '"Noto Sans JP", "Hiragino Sans", sans-serif',
-      fontSize: 'text-lg md:text-2xl lg:text-3xl',
-      fontWeight: 'font-light',
-      textColor: 'text-pink-200',
-      position: 'bottom-right',
-      animation: 'blur-in',
-      textShadow: '0 4px 16px rgba(251,207,232,0.6), 0 2px 8px rgba(0,0,0,0.5)',
-    },
-    effects: {
-      filmGrain: 'light',
-      glow: 'rgba(251,207,232,0.1)',
-    },
-  },
-  'Cyberpunk 2077': {
-    name: 'Cyberpunk 2077',
-    variants: CYBERPUNK_VARIANTS,
-    subtitle: {
-      fontFamily: '"Share Tech Mono", "Courier New", monospace',
-      fontSize: 'text-xl md:text-3xl lg:text-4xl',
-      fontWeight: 'font-bold',
-      textColor: 'text-fuchsia-400',
-      position: 'bottom-left',
-      animation: 'glitch',
-      textShadow: '0 0 10px rgba(232,121,249,0.8), 0 0 20px rgba(6,182,212,0.6), 0 4px 10px rgba(0,0,0,0.9)',
-      textTransform: 'uppercase',
-    },
-    effects: {
-      scanlines: true,
-      chromatic: true,
-      filmGrain: 'medium',
-    },
-  },
-  "Amélie's World": {
-    name: "Amélie's World",
-    variants: AMELIE_VARIANTS,
-    subtitle: {
-      fontFamily: '"Comic Neue", "Bradley Hand", cursive',
-      fontSize: 'text-xl md:text-3xl lg:text-4xl',
-      fontWeight: 'font-medium',
-      textColor: 'text-green-300',
-      position: 'bottom-right',
-      animation: 'scale-rotate',
-      textShadow: '2px 2px 0 rgba(220,38,38,0.5), 0 4px 12px rgba(0,0,0,0.7)',
-    },
-    effects: {
-      vignette: true,
-      filmGrain: 'medium',
-    },
-  },
-  'Vintage VHS': {
-    name: 'Vintage VHS',
-    variants: VHS_VARIANTS,
-    subtitle: {
-      fontFamily: '"Press Start 2P", "Courier New", monospace',
-      fontSize: 'text-sm md:text-xl lg:text-2xl',
-      fontWeight: 'font-normal',
-      textColor: 'text-yellow-200',
-      position: 'bottom-center',
-      animation: 'typewriter',
-      textShadow: '2px 2px 0 rgba(0,0,0,0.8), 0 0 8px rgba(250,204,21,0.5)',
-    },
-    effects: {
-      scanlines: true,
-      filmGrain: 'heavy',
-    },
-  },
-};
 
 export interface VlogPlayerProps {
   data: VlogData;
@@ -520,173 +152,43 @@ const BlurredBackground = memo(({
 });
 BlurredBackground.displayName = 'BlurredBackground';
 
-/** Cinematic subtitle with theme-based styling */
+/** Optimized subtitle - original smooth animation style without blur */
 const SubtitleDisplay = memo(({ 
   subtitle, 
-  subtitleIndex,
-  style 
+  subtitleIndex 
 }: { 
   subtitle: string; 
   subtitleIndex: number;
-  style: SubtitleStyle;
-}) => {
-  const getAnimationProps = () => {
-    switch (style.animation) {
-      case 'glitch':
-        return {
-          initial: { opacity: 0, x: -10, filter: 'blur(4px)' },
-          animate: { opacity: 1, x: 0, filter: 'blur(0px)' },
-          exit: { opacity: 0, x: 10, filter: 'blur(2px)' },
-          transition: { duration: 0.3, ease: [0.87, 0, 0.13, 1] as const },
-        };
-      case 'typewriter':
-        return {
-          initial: { opacity: 0 },
-          animate: { opacity: 1 },
-          exit: { opacity: 0 },
-          transition: { duration: 0.1 },
-        };
-      case 'bounce':
-        return {
-          initial: { opacity: 0, y: 20, scale: 0.9 },
-          animate: { opacity: 1, y: 0, scale: 1 },
-          exit: { opacity: 0, scale: 0.95 },
-          transition: { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] as const },
-        };
-      case 'blur-in':
-        return {
-          initial: { opacity: 0, filter: 'blur(12px)' },
-          animate: { opacity: 1, filter: 'blur(0px)' },
-          exit: { opacity: 0, filter: 'blur(8px)' },
-          transition: { duration: 2.0, ease: [0.16, 1, 0.3, 1] as const },
-        };
-      case 'scale-rotate':
-        return {
-          initial: { opacity: 0, scale: 0.8, rotate: -5 },
-          animate: { opacity: 1, scale: 1, rotate: 0 },
-          exit: { opacity: 0, scale: 1.1, rotate: 5 },
-          transition: { duration: 1.2, ease: [0.68, -0.55, 0.265, 1.55] as const },
-        };
-      default: // 'fade-slide'
-        return {
-          initial: { opacity: 0, x: 40 },
-          animate: { opacity: 1, x: 0 },
-          exit: { opacity: 0, x: 20 },
-          transition: { delay: 0.4, duration: 1.5, ease: 'easeOut' as const },
-        };
-    }
-  };
-
-  const getPositionClasses = () => {
-    switch (style.position) {
-      case 'bottom-center':
-        return 'bottom-0 left-0 right-0 items-end justify-center pb-16 md:pb-20';
-      case 'top-left':
-        return 'top-0 left-0 right-0 items-start justify-start pt-24 md:pt-32 pl-6 md:pl-16';
-      case 'center':
-        return 'inset-0 items-center justify-center';
-      case 'bottom-left':
-        return 'bottom-0 left-0 right-0 items-end justify-start pb-16 md:pb-20 pl-6 md:pl-16';
-      default: // 'bottom-right'
-        return 'bottom-0 right-0 left-0 items-end justify-end pb-16 md:pb-20 pr-6 md:pr-16 lg:pr-20';
-    }
-  };
-
-  const getAlignmentClasses = () => {
-    if (style.position.includes('left')) return 'text-left items-start';
-    if (style.position.includes('center')) return 'text-center items-center';
-    return 'text-right items-end';
-  };
-
-  const animProps = getAnimationProps();
-
-  return (
-    <div className={`absolute z-30 flex pointer-events-none ${getPositionClasses()}`}>
-      <div className={`max-w-[85vw] md:max-w-xl lg:max-w-2xl flex flex-col ${getAlignmentClasses()}`}>
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={subtitleIndex}
-            {...animProps}
-            className={`${style.fontFamily} ${style.fontSize} ${style.fontWeight} ${style.textColor} leading-relaxed break-words`}
-            style={{
-              fontFamily: style.fontFamily,
-              textShadow: style.textShadow,
-              letterSpacing: style.letterSpacing,
-              textTransform: style.textTransform,
-              writingMode: style.writingMode,
-              lineBreak: 'normal',
-              wordBreak: 'normal',
-            }}
+}) => (
+  <div className="absolute inset-y-0 right-0 z-30 flex items-center justify-end px-6 md:px-16 lg:px-20 pointer-events-none w-full">
+    <div className="max-w-[85vw] md:max-w-xl lg:max-w-2xl text-right">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={subtitleIndex}
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ delay: 0.4, duration: 1.5, ease: 'easeOut' }}
+          className="flex flex-col items-end"
+        >
+          <p
+            className="font-serif italic text-xl md:text-3xl lg:text-4xl text-[#ffffff] leading-relaxed tracking-wide drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] break-words"
+            style={{ lineBreak: 'normal', wordBreak: 'normal' }}
           >
             {subtitle}
-          </motion.p>
-        </AnimatePresence>
-      </div>
+          </p>
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 60, opacity: 0.8 }}
+            transition={{ delay: 0.8, duration: 1.2, ease: 'circOut' }}
+            className="h-[1px] bg-white/60 mt-6 mr-1"
+          />
+        </motion.div>
+      </AnimatePresence>
     </div>
-  );
-});
-SubtitleDisplay.displayName = 'SubtitleDisplay';
-
-/** Visual effects components */
-const VignetteEffect = memo(() => (
-  <div className="absolute inset-0 pointer-events-none z-20 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.7)_100%)]" />
-));
-VignetteEffect.displayName = 'VignetteEffect';
-
-const ScanlineEffect = memo(() => (
-  <div 
-    className="absolute inset-0 z-20 pointer-events-none opacity-20"
-    style={{
-      background: 'linear-gradient(transparent 50%, rgba(0,0,0,0.3) 50%)',
-      backgroundSize: '100% 4px',
-    }}
-  />
-));
-ScanlineEffect.displayName = 'ScanlineEffect';
-
-const ChromaticEffect = memo(({ currentIndex }: { currentIndex: number }) => (
-  <div className="absolute inset-0 z-20 pointer-events-none opacity-30 mix-blend-screen">
-    <motion.div
-      key={currentIndex}
-      initial={{ x: 2 }}
-      animate={{ x: -2 }}
-      transition={{ duration: 0.2, repeat: 1, repeatType: 'reverse' }}
-      className="absolute inset-0 bg-cyan-500/20"
-    />
-    <motion.div
-      key={`${currentIndex}-b`}
-      initial={{ x: -2 }}
-      animate={{ x: 2 }}
-      transition={{ duration: 0.2, repeat: 1, repeatType: 'reverse' }}
-      className="absolute inset-0 bg-red-500/20"
-    />
   </div>
 ));
-ChromaticEffect.displayName = 'ChromaticEffect';
-
-const FilmGrainEffect = memo(({ intensity }: { intensity: 'light' | 'medium' | 'heavy' }) => {
-  const opacityMap = { light: 0.03, medium: 0.06, heavy: 0.12 };
-  return (
-    <div
-      className="absolute inset-0 z-20 pointer-events-none mix-blend-overlay"
-      style={{
-        opacity: opacityMap[intensity],
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-      }}
-    />
-  );
-});
-FilmGrainEffect.displayName = 'FilmGrainEffect';
-
-const GlowEffect = memo(({ color }: { color: string }) => (
-  <div
-    className="absolute inset-0 z-20 pointer-events-none"
-    style={{
-      background: `radial-gradient(circle at center, ${color} 0%, transparent 70%)`,
-    }}
-  />
-));
-GlowEffect.displayName = 'GlowEffect';
+SubtitleDisplay.displayName = 'SubtitleDisplay';
 
 export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
   const { t } = useLocale();
@@ -744,11 +246,6 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
 
   const activeFilter = useMemo(
     () => FILTER_PRESETS.find((f) => f.name === data.filterPreset) ?? FILTER_PRESETS[0],
-    [data.filterPreset]
-  );
-
-  const themeConfig = useMemo(
-    () => THEME_CONFIGS[data.filterPreset] || THEME_CONFIGS['Original'],
     [data.filterPreset]
   );
 
@@ -896,8 +393,8 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
   );
   
   const currentVariant = useMemo(
-    () => themeConfig.variants[currentIndex % themeConfig.variants.length],
-    [currentIndex, themeConfig.variants]
+    () => ANIMATION_VARIANTS[currentIndex % ANIMATION_VARIANTS.length],
+    [currentIndex]
   );
 
   const bgSrc = useMemo(() => {
@@ -1071,7 +568,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] as const, delay: 0.2 }}
+            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
             className="text-center px-6 max-w-[90vw]"
             style={{ willChange: 'opacity, transform' }}
           >
@@ -1089,19 +586,11 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
         </div>
       )}
 
-      {/* Theme-specific visual effects */}
-      {themeConfig.effects.vignette && <VignetteEffect />}
-      {themeConfig.effects.scanlines && <ScanlineEffect />}
-      {themeConfig.effects.chromatic && <ChromaticEffect currentIndex={currentIndex} />}
-      {themeConfig.effects.filmGrain && <FilmGrainEffect intensity={themeConfig.effects.filmGrain} />}
-      {themeConfig.effects.glow && <GlowEffect color={themeConfig.effects.glow} />}
-
-      {/* Cinematic subtitles with theme-based styling */}
+      {/* Subtitles */}
       {data.subtitles.length > 0 && (
         <SubtitleDisplay 
           subtitle={data.subtitles[subtitleIndex]} 
-          subtitleIndex={subtitleIndex}
-          style={themeConfig.subtitle}
+          subtitleIndex={subtitleIndex} 
         />
       )}
 

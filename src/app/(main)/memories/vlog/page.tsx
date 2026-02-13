@@ -441,7 +441,7 @@ export default function VlogPage() {
       <input
         ref={audioInputRef}
         type="file"
-        accept="audio/*,.mp3,.mpc,.m4a,.wav,.ogg,.webm,.aac,.flac"
+        accept="audio/*,.mp3,.m4a,.mpc,.wav,.webm,.aac,.ogg,.flac"
         onChange={(e) => {
           const files = e.target.files;
           if (files?.length) handleAudioSelected(Array.from(files));
@@ -613,7 +613,7 @@ export default function VlogPage() {
                   {t('vlog.videoLinks')}
                 </span>
                 {youtubeIds.length > 0 && (
-                  <span className="text-[10px] text-green-600 dark:text-green-400">
+                  <span className={`text-[10px] ${isDark ? 'text-green-400' : 'text-green-600'}`}>
                     {youtubeIds.length} {t('vlog.clipsAdded')}
                   </span>
                 )}
