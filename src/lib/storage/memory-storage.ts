@@ -13,37 +13,64 @@ import { isDemoDataEnabled } from '../db/utils/environment';
 import type { CarouselItem, NewMemoryInput } from '@/types';
 import { getLocalCinematicItems } from '@/lib/cinematic-storage';
 
-const START_CARD: CarouselItem = {
-  id: 'start-card',
-  title: '12',
-  subtitle: 'OCT',
-  detailTitle: '2023',
-  description: 'JOURNEY START',
-  image: '',
-  color: '#09090b',
-  chord: [130.81, 196, 261.63],
-  coordinates: { lat: 40.3956, lng: -74.1768, name: 'Orbit View', country: 'Space' },
-};
+const MONTH_KEYS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
-const END_CARD: CarouselItem = {
-  id: 'end-card',
-  title: '04',
-  subtitle: 'NOV',
-  detailTitle: '2023',
-  description: 'JOURNEY END',
-  image: '',
-  color: '#09090b',
-  chord: [130.81, 164.81, 196],
-  coordinates: { lat: 40.3956, lng: -74.1768, name: 'Orbit View', country: 'Space' },
-};
+function formatDateForCard(date: Date): { title: string; subtitle: string; detailTitle: string } {
+  const day = date.getDate();
+  const month = MONTH_KEYS[date.getMonth()];
+  const year = String(date.getFullYear());
+  return {
+    title: String(day).padStart(2, '0'),
+    subtitle: month,
+    detailTitle: year,
+  };
+}
+
+function buildStartCard(date: Date): CarouselItem {
+  const { title, subtitle, detailTitle } = formatDateForCard(date);
+  return {
+    id: 'start-card',
+    title,
+    subtitle,
+    detailTitle,
+    description: 'JOURNEY START',
+    image: '',
+    color: '#09090b',
+    chord: [130.81, 196, 261.63],
+    coordinates: { lat: 40.3956, lng: -74.1768, name: 'Orbit View', country: 'Space' },
+  };
+}
+
+function buildEndCard(date: Date): CarouselItem {
+  const { title, subtitle, detailTitle } = formatDateForCard(date);
+  return {
+    id: 'end-card',
+    title,
+    subtitle,
+    detailTitle,
+    description: 'JOURNEY END',
+    image: '',
+    color: '#09090b',
+    chord: [130.81, 164.81, 196],
+    coordinates: { lat: 40.3956, lng: -74.1768, name: 'Orbit View', country: 'Space' },
+  };
+}
 
 /**
- * Build carousel list: start + memories + end (each memory shown once)
- * Note: Demo fallback is now handled by IndexedDB demo data initialization
+ * Build carousel list: start + memories + end (each memory shown once).
+ * - No articles: start and end cards use current time (refreshed each time this runs).
+ * - With articles: start card = first article date, end card = last article date.
  */
 export function buildCarouselItems(memories: CarouselItem[]): CarouselItem[] {
-  const middle = memories.length > 0 ? memories : [];
-  return [START_CARD, ...middle, END_CARD];
+  const now = new Date();
+  if (memories.length === 0) {
+    return [buildStartCard(now), buildEndCard(now)];
+  }
+  const first = memories[0];
+  const last = memories[memories.length - 1];
+  const firstDate = first?.createdAt ? new Date(first.createdAt) : now;
+  const lastDate = last?.createdAt ? new Date(last.createdAt) : now;
+  return [buildStartCard(firstDate), ...memories, buildEndCard(lastDate)];
 }
 
 /**

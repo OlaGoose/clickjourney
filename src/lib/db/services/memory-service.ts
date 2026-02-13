@@ -85,6 +85,7 @@ export function memoryRecordToCarouselItem(record: MemoryRecord): CarouselItem {
     coordinates: coords,
     visibility: record.visibility ?? undefined,
     cinematicScriptJson: record.cinematicScriptJson ?? undefined,
+    createdAt: record.createdAt,
   };
 }
 
