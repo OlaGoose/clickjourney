@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { MapPin, Calendar } from 'lucide-react';
+import { MapPin, Calendar, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { CarouselItem, MemoryVisibility } from '@/types/memory';
@@ -65,6 +65,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
   const defaultScript = useMemo(() => buildDefaultScript(t), [t]);
   const [script, setScript] = useState<DirectorScript>(initialScript || defaultScript);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [activeChapter, setActiveChapter] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isDeleting, setIsDeleting] = useState(false);
   const [visibility, setVisibility] = useState<MemoryVisibility>(memory.visibility ?? 'private');
@@ -182,9 +183,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
   const moreMenuClassDanger = 'w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed';
 
   return (
-    <div className={`fixed inset-0 z-50 overflow-hidden font-sans transition-colors duration-300 flex flex-col ${
-      isDark ? 'bg-[#0a0a0a] text-white' : 'bg-white text-black'
-    }`}>
+    <div className={`fixed inset-0 z-50 overflow-hidden font-sans transition-colors duration-300 flex flex-col ${isDark ? 'dark bg-[#050505] text-white' : 'bg-white text-black'}`}>
       <MemoryDetailHeader
         title={memory.title || script.title || undefined}
         onBack={onBack}
@@ -216,82 +215,82 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
         }
       />
 
-      {/* Hero: date, location, title — match generate view */}
-      <div className="pt-4 px-4 pb-4 flex-shrink-0 max-w-5xl mx-auto w-full">
-        {isEditMode ? (
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-4">
-              <span className={`flex items-center gap-1 text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>
-                <Calendar size={14} />
-                <input
-                  type="text"
-                  value={script.date ?? ''}
-                  onChange={(e) => setScript(s => ({ ...s, date: e.target.value }))}
-                  placeholder={getCurrentDate()}
-                  className={`bg-transparent border-none outline-none w-40 ${isDark ? 'text-white placeholder:text-white/30' : ''}`}
-                />
-              </span>
-              <span className={`flex items-center gap-1 text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>
-                <MapPin size={14} />
+      {/* Main Content — 1:1 structure with AI generate page (single scroll like generate) */}
+      <main className="pt-[44px] flex-1 min-h-0 overflow-y-auto no-scrollbar">
+        {/* Hero Title Section — same as generate: max-w-5xl, py-16 md:py-24, space-y-8 */}
+        <section className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-24">
+          <div className="space-y-8">
+            <div className={`flex flex-wrap items-center gap-6 text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>
+              <div className="flex items-center gap-2">
+                <Calendar size={16} aria-hidden />
+                {isEditMode ? (
+                  <input
+                    type="text"
+                    value={script.date ?? ''}
+                    onChange={(e) => setScript(s => ({ ...s, date: e.target.value }))}
+                    placeholder={getCurrentDate()}
+                    className={`bg-transparent border-none outline-none disabled:cursor-default w-40 ${isDark ? 'text-white placeholder:text-white/30' : ''}`}
+                  />
+                ) : (
+                  <span>{displayDate}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin size={16} aria-hidden />
                 <input
                   type="text"
                   value={script.location}
                   onChange={(e) => setScript(s => ({ ...s, location: e.target.value }))}
-                  placeholder={t('cinematic.location')}
-                  className={`bg-transparent border-none outline-none uppercase tracking-wider ${isDark ? 'text-white placeholder:text-white/30' : ''}`}
+                  disabled={!isEditMode}
+                  className={`bg-transparent border-none outline-none uppercase tracking-wider disabled:cursor-default ${isDark ? 'text-white placeholder:text-white/30' : ''}`}
+                  placeholder={t('cinematic.addPlaceholder')}
                 />
-              </span>
+              </div>
             </div>
-            <input
-              type="text"
-              value={script.title}
-              onChange={(e) => setScript(s => ({ ...s, title: e.target.value }))}
-              className={`w-full bg-transparent text-2xl font-bold border-b ${isDark ? 'border-white/10' : 'border-black/10'} focus:outline-none focus:border-current pb-2`}
-              placeholder={t('common.title')}
-            />
-            <div className={`flex flex-wrap items-center gap-3 text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>
-              <span>{t('cinematic.chapterStyleLabel')}</span>
-              <select
-                value={script.chapterDividerStyle ?? 'number_mood'}
-                onChange={(e) => setScript(s => ({ ...s, chapterDividerStyle: e.target.value as ChapterDividerStyle }))}
-                className={`bg-transparent border rounded px-2 py-1 ${isDark ? 'border-white/20 text-white' : 'border-black/20 text-black'}`}
-              >
-                <option value="number_mood">{t('cinematic.chapterStyleNumberMood')}</option>
-                <option value="minimal_line">{t('cinematic.chapterStyleMinimalLine')}</option>
-                <option value="roman_quote">{t('cinematic.chapterStyleRomanQuote')}</option>
-              </select>
+            <div>
+              <input
+                type="text"
+                value={script.title}
+                onChange={(e) => setScript(s => ({ ...s, title: e.target.value }))}
+                disabled={!isEditMode}
+                className={`w-full bg-transparent border-none outline-none font-serif text-5xl md:text-7xl font-semibold leading-[1.08] tracking-[-0.015em] disabled:cursor-default ${isDark ? 'text-white placeholder:text-white/30' : 'text-black'}`}
+                placeholder={t('cinematic.nameYourJourney')}
+              />
             </div>
-          </div>
-        ) : (
-          <>
-            <div className={`flex flex-wrap items-center gap-4 text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>
-              <span className="flex items-center gap-1">
-                <Calendar size={14} />
-                {displayDate}
-              </span>
-              <span className="flex items-center gap-1">
-                <MapPin size={14} />
-                {script.location}
-              </span>
-            </div>
-            <h1 className="mt-2 text-2xl font-bold">{script.title}</h1>
-            <p className={`mt-1 text-sm ${isDark ? 'text-white/60' : 'text-black/60'}`}>
+            <p className={`text-xl md:text-2xl leading-[1.47] max-w-3xl font-normal ${isDark ? 'text-white/60' : 'text-black/60'}`}>
               {script.blocks.length} {t('cinematic.moments')}, {t('cinematic.oneStory')}
             </p>
-            <div className={`w-24 h-px mt-2 ${isDark ? 'bg-white/20' : 'bg-black/20'}`} />
-          </>
-        )}
-      </div>
+            <div className={`w-24 h-px ${isDark ? 'bg-white/20' : 'bg-black/20'}`} />
+            {isEditMode && (
+              <div className={`pt-4 flex flex-wrap items-center gap-3 text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>
+                <span>{t('cinematic.chapterStyleLabel')}</span>
+                <select
+                  value={script.chapterDividerStyle ?? 'number_mood'}
+                  onChange={(e) => setScript(s => ({ ...s, chapterDividerStyle: e.target.value as ChapterDividerStyle }))}
+                  className={`bg-transparent border rounded px-2 py-1 ${isDark ? 'border-white/20 text-white' : 'border-black/20 text-black'}`}
+                >
+                  <option value="number_mood">{t('cinematic.chapterStyleNumberMood')}</option>
+                  <option value="minimal_line">{t('cinematic.chapterStyleMinimalLine')}</option>
+                  <option value="roman_quote">{t('cinematic.chapterStyleRomanQuote')}</option>
+                </select>
+              </div>
+            )}
+          </div>
+        </section>
 
-      {/* Story Blocks with chapter dividers — same as generate view */}
-      <div className="no-scrollbar flex-1 min-h-0 overflow-y-auto px-4 pb-8">
-        <div className="max-w-4xl mx-auto space-y-12">
+        {/* Story Blocks — same as generate: max-w-7xl, space-y-24 md:space-y-32, pb-32 */}
+        <section className="max-w-7xl mx-auto px-6 md:px-12 space-y-24 md:space-y-32 pb-32">
           {script.blocks.map((block, index) => (
-            <article key={block.id} className="relative">
-              {/* Chapter divider: 3 templates */}
+            <article
+              key={block.id}
+              id={`chapter-${index + 1}`}
+              className={`relative ${activeChapter === block.id ? (isDark ? 'ring-2 ring-white/10 rounded-lg p-4' : 'ring-2 ring-black/10 rounded-lg p-4') : ''}`}
+              onClick={() => isEditMode && setActiveChapter(block.id)}
+            >
+              {/* Chapter divider: 3 templates — same classes as generate (gap-6 mb-8, text-7xl md:text-8xl) */}
               {chapterStyle === 'number_mood' && (
-                <div className="flex items-baseline gap-4 mb-6">
-                  <span className={`text-5xl md:text-6xl font-serif font-bold select-none ${isDark ? 'chapter-number-silver' : 'text-black/20'}`}>
+                <div className="flex items-baseline gap-6 mb-8">
+                  <span className="text-7xl md:text-8xl font-serif font-bold select-none chapter-number-silver">
                     {(index + 1).toString().padStart(2, '0')}
                   </span>
                   {block.mood && (
@@ -302,13 +301,13 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
                 </div>
               )}
               {chapterStyle === 'minimal_line' && (
-                <div className={`chapter-divider-minimal mb-6 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
+                <div className={`chapter-divider-minimal mb-8 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
                   <div className={`chapter-line ${isDark ? 'bg-white/20' : 'bg-black/20'}`} />
                   <span className="chapter-num">{(index + 1).toString().padStart(2, '0')}</span>
                 </div>
               )}
               {chapterStyle === 'roman_quote' && (
-                <div className={`chapter-divider-roman mb-6 ${isDark ? 'text-white/50' : 'text-black/50'}`}>
+                <div className={`chapter-divider-roman mb-8 ${isDark ? 'text-white/50' : 'text-black/50'}`}>
                   <span className="chapter-roman">{toRoman(index + 1)}</span>
                   <div className={`chapter-rule ${isDark ? 'bg-white/25' : 'bg-black/20'}`} />
                   {block.mood && (
@@ -327,21 +326,27 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
               />
             </article>
           ))}
-        </div>
+        </section>
 
-        {/* Ending section — match generate view */}
-        <section className={`max-w-2xl mx-auto pt-16 pb-8 border-t ${isDark ? 'border-white/10' : 'border-black/10'}`}>
-          <div className="text-center space-y-6">
+        {/* Ending Section — same as generate: max-w-5xl, py-24 md:py-32, space-y-8, text-lg md:text-xl, pt-12, ArrowLeft */}
+        <section className={`max-w-5xl mx-auto px-6 md:px-12 py-24 md:py-32 border-t ${isDark ? 'border-white/10' : 'border-black/10'}`}>
+          <div className="text-center space-y-8">
             {isEditMode ? (
-              <>
-                <textarea
-                  value={script.endingQuote ?? ''}
-                  onChange={(e) => setScript(s => ({ ...s, endingQuote: e.target.value }))}
-                  placeholder={t('cinematic.defaultEndingQuote')}
-                  rows={2}
-                  className={`w-full mx-auto text-center bg-transparent border-none outline-none text-base font-light italic resize-none ${isDark ? 'text-white/40 placeholder:text-white/30' : 'text-black/40 placeholder:text-black/30'}`}
-                />
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <textarea
+                value={script.endingQuote ?? ''}
+                onChange={(e) => setScript(s => ({ ...s, endingQuote: e.target.value }))}
+                placeholder={t('cinematic.defaultEndingQuote')}
+                rows={2}
+                className={`w-full max-w-2xl mx-auto text-center bg-transparent border-none outline-none text-lg md:text-xl font-light italic resize-none ${isDark ? 'text-white/40 placeholder:text-white/30' : 'text-black/40 placeholder:text-black/30'}`}
+              />
+            ) : (
+              <p className={`text-lg md:text-xl font-light italic ${isDark ? 'text-white/40' : 'text-black/40'}`}>
+                {endingQuote}
+              </p>
+            )}
+            <div className="pt-12">
+              {isEditMode ? (
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <input
                     type="text"
                     value={script.endingCtaLabel ?? ''}
@@ -357,23 +362,43 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
                     className={`bg-transparent border-none outline-none text-sm text-center max-w-xs ${isDark ? 'text-white/60 placeholder:text-white/30' : 'text-black/60 placeholder:text-black/30'}`}
                   />
                 </div>
-              </>
-            ) : (
-              <>
-                <p className={`text-base font-light italic ${isDark ? 'text-white/40' : 'text-black/40'}`}>
-                  {endingQuote}
-                </p>
+              ) : (
                 <Link
                   href={endingCtaHref}
                   className={`inline-flex items-center gap-2 transition-colors group ${isDark ? 'text-white hover:text-white/60' : 'text-black hover:text-black/60'}`}
                 >
                   <span className="text-sm tracking-wider uppercase">{endingCtaLabel}</span>
+                  <ArrowLeft size={16} className="rotate-180 group-hover:translate-x-1 transition-transform" aria-hidden />
                 </Link>
-              </>
-            )}
+              )}
+            </div>
           </div>
         </section>
-      </div>
+
+        {/* Footer — same as generate */}
+        <footer className={`border-t py-12 ${isDark ? 'border-white/5' : 'border-black/5'}`}>
+          <div className="max-w-7xl mx-auto px-6 md:px-12 text-center">
+            <p className={`text-xs tracking-wide ${isDark ? 'text-white/30' : 'text-black/30'}`}>
+              Created with Orbit Journey · {getCurrentDate()}
+            </p>
+          </div>
+        </footer>
+      </main>
+
+      {/* Chapter nav dots — same as generate when blocks > 3 */}
+      {script.blocks.length > 3 && (
+        <nav className="no-print hidden lg:block fixed right-8 top-1/2 -translate-y-1/2 space-y-3 z-10">
+          {script.blocks.map((block, index) => (
+            <button
+              key={block.id}
+              type="button"
+              onClick={() => document.getElementById(`chapter-${index + 1}`)?.scrollIntoView({ behavior: 'smooth' })}
+              className={`block w-1 h-1 rounded-full transition-all hover:w-2 hover:h-2 ${isDark ? 'bg-white/20 hover:bg-white/60' : 'bg-black/20 hover:bg-black/60'}`}
+              title={`${t('cinematic.moments')} ${index + 1}`}
+            />
+          ))}
+        </nav>
+      )}
     </div>
   );
 }
