@@ -27,6 +27,7 @@ import { blobToBase64 } from '@/lib/utils/imageUtils';
 import {
   VLOG_SESSION_KEY,
   VLOG_STEP_COUNT,
+  FILTER_PRESETS,
   type VlogData,
 } from '@/types/vlog';
 import type { UploadedImage } from '@/types/upload';
@@ -78,9 +79,10 @@ export default function VlogPage() {
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
-  /** Step 2: script + voice */
+  /** Step 2: script + voice + LUT */
   const [subtitleText, setSubtitleText] = useState('');
   const [videoText, setVideoText] = useState('');
+  const [selectedFilterPreset, setSelectedFilterPreset] = useState(FILTER_PRESETS[0]!.name);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const [isPlayingRecorded, setIsPlayingRecorded] = useState(false);
@@ -345,7 +347,7 @@ export default function VlogPage() {
         audio: audioUrl ?? DEFAULT_VLOG_AUDIO_URL,
         recordedAudio: recordedAudioUrl,
         subtitles: artifiedScript,
-        filterPreset,
+        filterPreset: selectedFilterPreset,
         youtubeIds,
       };
       sessionStorage.setItem(VLOG_SESSION_KEY, JSON.stringify(data));
@@ -359,6 +361,7 @@ export default function VlogPage() {
     images,
     memoryLocation,
     subtitleText,
+    selectedFilterPreset,
     audioUrl,
     recordedAudioUrl,
     youtubeIds,
@@ -598,6 +601,32 @@ export default function VlogPage() {
                   )}
                 </div>
               </div>
+            </div>
+
+            <div className="w-full max-w-sm">
+              <label
+                htmlFor="vlog-lut-select"
+                className={`block text-xs font-semibold mb-2 ${isDark ? 'text-white/60' : 'text-gray-500'}`}
+              >
+                {t('vlog.colorGrade')}
+              </label>
+              <select
+                id="vlog-lut-select"
+                value={selectedFilterPreset}
+                onChange={(e) => setSelectedFilterPreset(e.target.value)}
+                className={`w-full rounded-xl border px-4 py-3 pr-10 text-sm font-medium outline-none transition-colors cursor-pointer [color-scheme:auto] ${
+                  isDark
+                    ? 'bg-white/10 border-white/20 text-white focus:bg-white/15 focus:border-white/30'
+                    : 'bg-white/60 border-white/40 text-gray-800 focus:bg-white/80 focus:border-gray-300'
+                }`}
+                aria-label={t('vlog.colorGrade')}
+              >
+                {FILTER_PRESETS.map((preset) => (
+                  <option key={preset.name} value={preset.name}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div

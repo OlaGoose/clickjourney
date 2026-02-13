@@ -152,7 +152,7 @@ const BlurredBackground = memo(({
 });
 BlurredBackground.displayName = 'BlurredBackground';
 
-/** Optimized subtitle with crossfade animation */
+/** Optimized subtitle - original smooth animation style without blur */
 const SubtitleDisplay = memo(({ 
   subtitle, 
   subtitleIndex 
@@ -162,19 +162,14 @@ const SubtitleDisplay = memo(({
 }) => (
   <div className="absolute inset-y-0 right-0 z-30 flex items-center justify-end px-6 md:px-16 lg:px-20 pointer-events-none w-full">
     <div className="max-w-[85vw] md:max-w-xl lg:max-w-2xl text-right">
-      <AnimatePresence initial={false}>
+      <AnimatePresence mode="wait">
         <motion.div
           key={subtitleIndex}
-          initial={{ opacity: 0, x: 30 }}
+          initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 15 }}
-          transition={{ 
-            opacity: { duration: TRANSITION_DURATION, ease: 'easeInOut' },
-            x: { duration: TRANSITION_DURATION, ease: [0.22, 1, 0.36, 1] },
-            delay: 0.3 
-          }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ delay: 0.4, duration: 1.5, ease: 'easeOut' }}
           className="flex flex-col items-end"
-          style={{ willChange: 'opacity, transform' }}
         >
           <p
             className="font-serif italic text-xl md:text-3xl lg:text-4xl text-white leading-relaxed tracking-wide drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] break-words"
@@ -185,7 +180,7 @@ const SubtitleDisplay = memo(({
           <motion.div
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 60, opacity: 0.8 }}
-            transition={{ delay: 0.7, duration: 1.0, ease: 'circOut' }}
+            transition={{ delay: 0.8, duration: 1.2, ease: 'circOut' }}
             className="h-[1px] bg-white/60 mt-6 mr-1"
           />
         </motion.div>
@@ -201,12 +196,10 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [ytReady, setYtReady] = useState(false);
-  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const recordedAudioRef = useRef<HTMLAudioElement>(null);
   const ytPlayersRef = useRef<Map<number, YTPlayer>>(new Map());
   const currentIndexRef = useRef(currentIndex);
-  const autoplayAttemptedRef = useRef(false);
   const imagePreloadCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
   currentIndexRef.current = currentIndex;
 
@@ -219,27 +212,12 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
     };
   }, []);
 
-  const startAudio = useCallback(() => {
+  useLayoutEffect(() => {
+    // Auto-play audio immediately on mount
     const play = (el: HTMLAudioElement | null) =>
       el?.play().catch(() => {});
     play(audioRef.current);
     play(recordedAudioRef.current);
-  }, []);
-
-  useLayoutEffect(() => {
-    if (autoplayAttemptedRef.current) return;
-    autoplayAttemptedRef.current = true;
-    const a = audioRef.current;
-    const r = recordedAudioRef.current;
-    if (!a && !r) return;
-    const p = Promise.all([
-      a ? a.play() : Promise.resolve(),
-      r ? r.play() : Promise.resolve(),
-    ]);
-    p.then(
-      () => setAutoplayBlocked(false),
-      () => setAutoplayBlocked(true)
-    );
   }, []);
 
   const playlist = useMemo(() => {
@@ -427,13 +405,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
 
   const handleExit = useCallback(() => onExit(), [onExit]);
   const handleMute = useCallback(() => setIsMuted((m) => !m), []);
-  const handlePlayPause = useCallback(() => {
-    if (autoplayBlocked) {
-      startAudio();
-      setAutoplayBlocked(false);
-    }
-    setIsPlaying((p) => !p);
-  }, [autoplayBlocked, startAudio]);
+  const handlePlayPause = useCallback(() => setIsPlaying((p) => !p), []);
 
   if (playlist.length === 0) return null;
 
@@ -620,31 +592,6 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
         exitLabel={t('vlog.exit')}
       />
 
-      {/* Tap to play overlay */}
-      {autoplayBlocked && (
-        <div
-          className="absolute inset-0 z-[35] flex items-center justify-center bg-black/40 cursor-pointer"
-          onClick={handlePlayPause}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              handlePlayPause();
-            }
-          }}
-          aria-label={t('vlog.tapToPlay')}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-black/50 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/20 text-white text-lg"
-          >
-            {t('vlog.tapToPlay')}
-          </motion.div>
-        </div>
-      )}
-      
       {/* Play/pause overlay */}
       <div
         className="absolute inset-0 z-40 flex items-center justify-center cursor-pointer"
