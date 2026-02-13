@@ -25,6 +25,8 @@ export interface TravelMemoryRow {
   sort_order: number;
   is_journey_start: boolean;
   is_journey_end: boolean;
+  visibility: 'private' | 'public';
+  cinematic_script_json: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -59,6 +61,8 @@ export function rowToCarouselItem(row: TravelMemoryRow): CarouselItem {
     audioUrls: Array.isArray(row.audio_urls) ? row.audio_urls : [],
     videoUrls: Array.isArray(row.video_urls) ? row.video_urls : [],
     coordinates: coords,
+    visibility: row.visibility ?? undefined,
+    cinematicScriptJson: row.cinematic_script_json ?? undefined,
   };
 }
 
@@ -94,5 +98,7 @@ export function carouselItemToRow(
     sort_order: opts.sortOrder ?? 0,
     is_journey_start: opts.isJourneyStart ?? false,
     is_journey_end: opts.isJourneyEnd ?? false,
+    visibility: item.visibility ?? 'private',
+    cinematic_script_json: item.cinematicScriptJson ?? null,
   };
 }

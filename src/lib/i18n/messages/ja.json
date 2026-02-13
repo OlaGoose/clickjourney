@@ -89,6 +89,11 @@
     "back": "戻る",
     "share": "共有",
     "moreActions": "その他の操作",
+    "visibilityLabel": "公開範囲",
+    "visibilityPublic": "公開",
+    "visibilityPrivate": "非公開",
+    "onlyYouCanSee": "自分のみ表示",
+    "anyoneWithLinkCanView": "リンクを知っている人が閲覧可",
     "deleteConfirm": "この思い出を削除してもよろしいですか？元に戻せません。",
     "deleteFailed": "削除に失敗しました。もう一度お試しください。",
     "untitled": "無題",
@@ -221,6 +226,13 @@
     "actionsMenu": "操作メニュー",
     "location": "場所",
     "moments": "つの瞬間",
-    "oneStory": "一つの物語"
+    "oneStory": "一つの物語",
+    "datePlaceholder": "日付を追加",
+    "defaultEndingQuote": "旅の意味は、目的地ではなく、道すがらの風景にある。",
+    "createNewJourney": "新しい旅を作成",
+    "chapterStyleLabel": "章区切り",
+    "chapterStyleNumberMood": "数字＋ムード",
+    "chapterStyleMinimalLine": "ミニマル線",
+    "chapterStyleRomanQuote": "ローマ数字＋区切り線"
   }
 }

@@ -45,6 +45,9 @@ export enum ViewState {
  */
 export type MemoryType = 'photo-gallery' | 'cinematic' | 'rich-story' | 'video';
 
+/** Who can view this memory: private = only owner, public = anyone with link */
+export type MemoryVisibility = 'private' | 'public';
+
 export interface CarouselItem {
   id: string;
   /** Memory type for discriminated rendering; inferred from content if not set (backward compat) */
@@ -74,6 +77,10 @@ export interface CarouselItem {
   price?: string;
   rating?: number;
   coordinates?: LocationData;
+  /** Share visibility: private = only you, public = anyone with link can view */
+  visibility?: MemoryVisibility;
+  /** DirectorScript JSON for cinematic type (used when loading public shared cinematic) */
+  cinematicScriptJson?: string | null;
 }
 
 /** Input for creating a new memory (no id yet). */

@@ -2,21 +2,26 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useLocale } from '@/lib/i18n';
+import type { MemoryVisibility } from '@/types/memory';
 
 interface MemoryDetailHeaderProps {
   onBack: () => void;
-  onShare?: () => void;
+  /** When set, show visibility control (public/private) instead of share. Only for owner. */
+  visibility?: MemoryVisibility;
+  onVisibilityChange?: (visibility: MemoryVisibility) => void;
   /** Menu content for the "..." dropdown (e.g. Edit, Delete). Clicks on buttons inside will close the menu. */
   moreMenu?: React.ReactNode;
   /** Optional title; when not provided, defaults to localized default. */
   title?: string;
 }
 
-export function MemoryDetailHeader({ onBack, onShare, moreMenu, title }: MemoryDetailHeaderProps) {
+export function MemoryDetailHeader({ onBack, visibility = 'private', onVisibilityChange, moreMenu, title }: MemoryDetailHeaderProps) {
   const { t } = useLocale();
   const displayTitle = title ?? t('memory.defaultTitle');
   const [moreOpen, setMoreOpen] = useState(false);
+  const [visibilityMenuOpen, setVisibilityMenuOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+  const visibilityRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -28,6 +33,17 @@ export function MemoryDetailHeader({ onBack, onShare, moreMenu, title }: MemoryD
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [moreOpen]);
+
+  useEffect(() => {
+    if (!visibilityMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (visibilityRef.current && !visibilityRef.current.contains(e.target as Node)) {
+        setVisibilityMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [visibilityMenuOpen]);
 
   const handleMoreContentClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) setMoreOpen(false);
@@ -62,29 +78,45 @@ export function MemoryDetailHeader({ onBack, onShare, moreMenu, title }: MemoryD
         {displayTitle}
       </span>
       <div className="flex items-center justify-end gap-1">
-        {onShare != null && (
-          <button
-            type="button"
-            onClick={onShare}
-            className="rounded-full p-2 hover:bg-gray-100 text-inherit"
-            aria-label={t('memory.share')}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        {onVisibilityChange != null && (
+          <div className="relative" ref={visibilityRef}>
+            <button
+              type="button"
+              onClick={() => setVisibilityMenuOpen((v) => !v)}
+              className="rounded-full px-2.5 py-1.5 text-[13px] font-medium border border-gray-200 hover:bg-gray-50 text-inherit"
+              aria-label={t('memory.visibilityLabel')}
+              aria-expanded={visibilityMenuOpen}
             >
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-              <polyline points="16 6 12 2 8 6" />
-              <line x1="12" y1="2" x2="12" y2="15" />
-            </svg>
-          </button>
+              {visibility === 'public' ? t('memory.visibilityPublic') : t('memory.visibilityPrivate')}
+            </button>
+            {visibilityMenuOpen && (
+              <div
+                className="absolute right-0 top-full mt-1 min-w-[140px] rounded-lg bg-white py-1 shadow-lg border border-gray-200 text-left text-[#1d1d1f] z-50"
+                role="menu"
+              >
+                <button
+                  type="button"
+                  className={`w-full px-4 py-2 text-left text-[13px] ${visibility === 'private' ? 'font-medium bg-gray-50' : ''}`}
+                  onClick={() => {
+                    onVisibilityChange('private');
+                    setVisibilityMenuOpen(false);
+                  }}
+                >
+                  {t('memory.visibilityPrivate')} — {t('memory.onlyYouCanSee')}
+                </button>
+                <button
+                  type="button"
+                  className={`w-full px-4 py-2 text-left text-[13px] ${visibility === 'public' ? 'font-medium bg-gray-50' : ''}`}
+                  onClick={() => {
+                    onVisibilityChange('public');
+                    setVisibilityMenuOpen(false);
+                  }}
+                >
+                  {t('memory.visibilityPublic')} — {t('memory.anyoneWithLinkCanView')}
+                </button>
+              </div>
+            )}
+          </div>
         )}
         <div className="relative" ref={moreRef}>
           <button

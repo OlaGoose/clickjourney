@@ -20,6 +20,7 @@ export default function MemoryPage() {
 
   const [memory, setMemory] = useState<CarouselItem | null>(null);
   const [script, setScript] = useState<DirectorScript | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,18 +35,35 @@ export default function MemoryPage() {
         setIsLoading(true);
         setError(null);
 
-        const item = await MemoryService.getMemory(id);
-        if (!item) {
-          setError('Memory not found');
-          return;
+        let item: CarouselItem | null = await MemoryService.getMemory(id);
+        if (item) {
+          setIsOwner(true);
+        } else {
+          const res = await fetch(`/api/memories/${id}`);
+          if (res.ok) {
+            item = (await res.json()) as CarouselItem;
+            setIsOwner(false);
+          } else {
+            setError('Memory not found');
+            return;
+          }
         }
+        if (!item) return;
 
         setMemory(item);
 
-        // Load cinematic script if this is a cinematic memory
         const memoryType = inferMemoryType(item);
         if (memoryType === 'cinematic') {
-          const cinematicScript = getScriptForCard(id);
+          let cinematicScript: DirectorScript | null = null;
+          if (item.cinematicScriptJson) {
+            try {
+              cinematicScript = JSON.parse(item.cinematicScriptJson) as DirectorScript;
+            } catch {
+              cinematicScript = getScriptForCard(id);
+            }
+          } else {
+            cinematicScript = getScriptForCard(id);
+          }
           setScript(cinematicScript);
         }
       } catch (e) {
@@ -90,13 +108,13 @@ export default function MemoryPage() {
 
   switch (memoryType) {
     case 'cinematic':
-      return <CinematicDetail memory={memory} script={script} onBack={handleBack} />;
+      return <CinematicDetail memory={memory} script={script} onBack={handleBack} isOwner={isOwner} />;
     case 'rich-story':
-      return <RichStoryDetail memory={memory} onBack={handleBack} shareView={shareView} />;
+      return <RichStoryDetail memory={memory} onBack={handleBack} shareView={shareView} isOwner={isOwner} />;
     case 'video':
-      return <VideoDetail memory={memory} onBack={handleBack} />;
+      return <VideoDetail memory={memory} onBack={handleBack} isOwner={isOwner} />;
     case 'photo-gallery':
     default:
-      return <PhotoGalleryDetail memory={memory} onBack={handleBack} />;
+      return <PhotoGalleryDetail memory={memory} onBack={handleBack} isOwner={isOwner} />;
   }
 }

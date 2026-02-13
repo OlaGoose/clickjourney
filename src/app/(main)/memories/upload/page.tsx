@@ -24,7 +24,7 @@ import { compressMultipleImages } from '@/lib/utils/imageUtils';
 import { useDayNightTheme } from '@/hooks/useDayNightTheme';
 import { useOptionalAuth } from '@/lib/auth';
 import { useLocale } from '@/lib/i18n';
-import { saveMemory } from '@/lib/storage';
+import { saveMemory, updateMemory } from '@/lib/storage';
 import { directorScriptToCarouselItem } from '@/lib/upload-to-memory';
 import { saveCinematicScript, saveLocalCinematic } from '@/lib/cinematic-storage';
 import type { UploadedImage, ImageAnalysis } from '@/types/upload';
@@ -198,6 +198,7 @@ export default function MemoryUploadPage() {
         const { data, error } = await saveMemory(userId, carouselInput);
         if (!error && data?.id) {
           saveCinematicScript(data.id, directorScript);
+          await updateMemory(userId, data.id, { cinematicScriptJson: JSON.stringify(directorScript) });
         }
       } else {
         const tempId = `cinematic-${Date.now()}`;

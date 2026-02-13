@@ -1,17 +1,20 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { CarouselItem } from '@/types/memory';
+import type { CarouselItem, MemoryVisibility } from '@/types/memory';
 import GalleryModal from '@/components/GalleryModal';
 import PhotoGrid from '@/components/PhotoGrid';
 import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { MemoryService } from '@/lib/db/services/memory-service';
+import { updateMemory } from '@/lib/storage';
+import { useOptionalAuth } from '@/lib/auth';
 import { useLocale } from '@/lib/i18n';
 
 interface PhotoGalleryDetailProps {
   memory: CarouselItem;
   onBack: () => void;
+  isOwner?: boolean;
 }
 
 function getGalleryImages(item: CarouselItem): string[] {
@@ -19,49 +22,38 @@ function getGalleryImages(item: CarouselItem): string[] {
   return [];
 }
 
-export function PhotoGalleryDetail({ memory, onBack }: PhotoGalleryDetailProps) {
+export function PhotoGalleryDetail({ memory, onBack, isOwner = false }: PhotoGalleryDetailProps) {
   const router = useRouter();
   const { t } = useLocale();
+  const auth = useOptionalAuth();
+  const userId = auth?.user?.id ?? null;
   const [showGallery, setShowGallery] = useState(false);
   const [initialGalleryIndex, setInitialGalleryIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [visibility, setVisibility] = useState<MemoryVisibility>(memory.visibility ?? 'private');
 
   const title = memory.detailTitle ?? memory.title ?? '';
   const description =
     memory.description ?? t('memory.defaultDescription');
   const images = getGalleryImages(memory);
 
+  useEffect(() => {
+    setVisibility(memory.visibility ?? 'private');
+  }, [memory.visibility]);
+
+  const handleVisibilityChange = useCallback(
+    async (v: MemoryVisibility) => {
+      setVisibility(v);
+      if (!userId) return;
+      await updateMemory(userId, memory.id, { visibility: v });
+    },
+    [userId, memory.id]
+  );
+
   const handleImageClick = (index: number) => {
     setInitialGalleryIndex(index);
     setShowGallery(true);
   };
-
-  const getShareUrl = useCallback(() => {
-    if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/memories/${memory.id}?share=1`;
-  }, [memory.id]);
-
-  const handleShare = useCallback(async () => {
-    const shareUrl = getShareUrl();
-    const shareTitle = title || t('memory.defaultTitle');
-    const shareData = { title: shareTitle, url: shareUrl };
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      const canShare = typeof navigator.canShare === 'function' ? navigator.canShare(shareData) : true;
-      if (canShare) {
-        try {
-          await navigator.share(shareData);
-          return;
-        } catch (err) {
-          if ((err as Error).name === 'AbortError') return;
-        }
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-    } catch {
-      if (typeof window !== 'undefined' && window.open) window.open(shareUrl, '_blank', 'noopener');
-    }
-  }, [getShareUrl, title, t]);
 
   const handleEdit = () => {
     router.push(`/memories/editor?id=${memory.id}`);
@@ -93,20 +85,23 @@ export function PhotoGalleryDetail({ memory, onBack }: PhotoGalleryDetailProps) 
       <div className="fixed inset-0 z-50 flex flex-col animate-fadeIn bg-white font-sans text-black">
         <MemoryDetailHeader
           onBack={onBack}
-          onShare={handleShare}
+          visibility={visibility}
+          onVisibilityChange={isOwner ? handleVisibilityChange : undefined}
           moreMenu={
-            <>
-              <button type="button" onClick={handleEdit} className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100" role="menuitem">{t('common.edit')}</button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                role="menuitem"
-              >
-                {isDeleting ? t('memory.deleting') : t('memory.delete')}
-              </button>
-            </>
+            isOwner ? (
+              <>
+                <button type="button" onClick={handleEdit} className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100" role="menuitem">{t('common.edit')}</button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  role="menuitem"
+                >
+                  {isDeleting ? t('memory.deleting') : t('memory.delete')}
+                </button>
+              </>
+            ) : undefined
           }
         />
 

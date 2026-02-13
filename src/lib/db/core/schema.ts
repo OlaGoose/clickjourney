@@ -45,6 +45,10 @@ export interface MemoryRecord {
   sortOrder: number;
   isJourneyStart: boolean;
   isJourneyEnd: boolean;
+  /** private = only owner; public = anyone with link. Default 'private' for backward compat */
+  visibility?: 'private' | 'public';
+  /** DirectorScript JSON for cinematic; used when syncing public share */
+  cinematicScriptJson?: string | null;
   
   // Timestamps
   createdAt: string;

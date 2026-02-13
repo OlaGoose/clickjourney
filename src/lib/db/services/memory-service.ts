@@ -44,6 +44,8 @@ export function carouselItemToMemoryRecord(
     sortOrder: opts.sortOrder ?? 0,
     isJourneyStart: opts.isJourneyStart ?? false,
     isJourneyEnd: opts.isJourneyEnd ?? false,
+    visibility: item.visibility ?? 'private',
+    cinematicScriptJson: item.cinematicScriptJson ?? null,
   };
 }
 
@@ -81,6 +83,8 @@ export function memoryRecordToCarouselItem(record: MemoryRecord): CarouselItem {
     audioUrls: record.audioUrls,
     videoUrls: record.videoUrls,
     coordinates: coords,
+    visibility: record.visibility ?? undefined,
+    cinematicScriptJson: record.cinematicScriptJson ?? undefined,
   };
 }
 
@@ -114,6 +118,8 @@ export function carouselItemToUpdateInput(partial: Partial<CarouselItem>): Updat
       c?.address ??
       ([c?.name, c?.region, c?.country].filter(Boolean).join(', ') || null);
   }
+  if (partial.visibility !== undefined) input.visibility = partial.visibility;
+  if (partial.cinematicScriptJson !== undefined) input.cinematicScriptJson = partial.cinematicScriptJson;
   return input;
 }
 

@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { MapPin, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import type { CarouselItem } from '@/types/memory';
+import type { CarouselItem, MemoryVisibility } from '@/types/memory';
 import type { DirectorScript, StoryBlock } from '@/types/cinematic';
 import { StaticBlockRenderer } from '@/components/cinematic/StaticBlockRenderer';
+import '@/app/(main)/memories/cinematic/cinematic.css';
 import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { useDayNightTheme } from '@/hooks/useDayNightTheme';
 import { useOptionalAuth } from '@/lib/auth';
 import { useLocale } from '@/lib/i18n';
-import { saveMemory } from '@/lib/storage';
+import { saveMemory, updateMemory } from '@/lib/storage';
 import { directorScriptToCarouselItem } from '@/lib/upload-to-memory';
 import { saveCinematicScript, saveLocalCinematic } from '@/lib/cinematic-storage';
 import { MemoryService } from '@/lib/db/services/memory-service';
@@ -19,6 +20,7 @@ interface CinematicDetailProps {
   memory: CarouselItem;
   script: DirectorScript | null;
   onBack: () => void;
+  isOwner?: boolean;
 }
 
 function buildDefaultScript(t: (key: import('@/lib/i18n/types').MessageKey) => string): DirectorScript {
@@ -41,7 +43,7 @@ function buildDefaultScript(t: (key: import('@/lib/i18n/types').MessageKey) => s
   };
 }
 
-export function CinematicDetail({ memory, script: initialScript, onBack }: CinematicDetailProps) {
+export function CinematicDetail({ memory, script: initialScript, onBack, isOwner = false }: CinematicDetailProps) {
   const router = useRouter();
   const { t, locale } = useLocale();
   const defaultScript = useMemo(() => buildDefaultScript(t), [t]);
@@ -49,37 +51,24 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
   const [isEditMode, setIsEditMode] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [visibility, setVisibility] = useState<MemoryVisibility>(memory.visibility ?? 'private');
 
   const auth = useOptionalAuth();
   const userId = auth?.user?.id ?? null;
   const isDark = useDayNightTheme() === 'dark';
 
-  const getShareUrl = useCallback(() => {
-    if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/memories/${memory.id}?share=1`;
-  }, [memory.id]);
+  useEffect(() => {
+    setVisibility(memory.visibility ?? 'private');
+  }, [memory.visibility]);
 
-  const handleShare = useCallback(async () => {
-    const shareUrl = getShareUrl();
-    const shareTitle = script.title || t('memory.defaultTitle');
-    const shareData = { title: shareTitle, url: shareUrl };
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      const canShare = typeof navigator.canShare === 'function' ? navigator.canShare(shareData) : true;
-      if (canShare) {
-        try {
-          await navigator.share(shareData);
-          return;
-        } catch (err) {
-          if ((err as Error).name === 'AbortError') return;
-        }
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-    } catch {
-      if (typeof window !== 'undefined' && window.open) window.open(shareUrl, '_blank', 'noopener');
-    }
-  }, [getShareUrl, script.title, t]);
+  const handleVisibilityChange = useCallback(
+    async (v: MemoryVisibility) => {
+      setVisibility(v);
+      if (!userId) return;
+      await updateMemory(userId, memory.id, { visibility: v });
+    },
+    [userId, memory.id]
+  );
 
   const handleUpdateBlock = (id: string, updates: Partial<StoryBlock>) => {
     setScript(prev => ({
@@ -98,7 +87,10 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
           setSaveStatus('error');
           return;
         }
-        if (data?.id) saveCinematicScript(data.id, script);
+        if (data?.id) {
+          saveCinematicScript(data.id, script);
+          await updateMemory(userId, data.id, { cinematicScriptJson: JSON.stringify(script) });
+        }
       } else {
         const tempId = `cinematic-${Date.now()}`;
         saveLocalCinematic({ ...carouselInput, id: tempId }, script);
@@ -151,7 +143,8 @@ export function CinematicDetail({ memory, script: initialScript, onBack }: Cinem
       <MemoryDetailHeader
         title={memory.title || script.title || undefined}
         onBack={onBack}
-        onShare={handleShare}
+        visibility={visibility}
+        onVisibilityChange={isOwner ? handleVisibilityChange : undefined}
         moreMenu={
           <>
             <button type="button" onClick={() => setIsEditMode(true)} className={moreMenuClass} role="menuitem">{t('common.edit')}</button>

@@ -99,6 +99,37 @@ textarea:focus {
   color: transparent;
 }
 
+/* Chapter divider: minimal line — thin line + small number above */
+.chapter-divider-minimal .chapter-line {
+  height: 1px;
+  width: 4rem;
+  margin-bottom: 0.5rem;
+}
+.dark .chapter-divider-minimal .chapter-line {
+  background: rgba(255, 255, 255, 0.2);
+}
+.chapter-divider-minimal .chapter-num {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  letter-spacing: 0.15em;
+}
+
+/* Chapter divider: roman quote — roman numeral + decorative rule */
+.chapter-divider-roman .chapter-roman {
+  font-family: Georgia, serif;
+  font-size: 2.5rem;
+  line-height: 1;
+  opacity: 0.5;
+}
+.chapter-divider-roman .chapter-rule {
+  width: 2rem;
+  height: 2px;
+  margin-top: 0.5rem;
+}
+.dark .chapter-divider-roman .chapter-rule {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 /* Chapter Navigation Dots */
 .chapter-nav-dot {
   transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);

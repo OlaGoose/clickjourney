@@ -57,6 +57,8 @@ export interface Database {
           sort_order: number;
           is_journey_start: boolean;
           is_journey_end: boolean;
+          visibility: 'private' | 'public';
+          cinematic_script_json: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -84,6 +86,8 @@ export interface Database {
           sort_order?: number;
           is_journey_start?: boolean;
           is_journey_end?: boolean;
+          visibility?: 'private' | 'public';
+          cinematic_script_json?: string | null;
           created_at?: string;
           updated_at?: string;
         };

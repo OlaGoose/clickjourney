@@ -89,6 +89,11 @@
     "back": "Atrás",
     "share": "Compartir",
     "moreActions": "Más acciones",
+    "visibilityLabel": "Visibilidad",
+    "visibilityPublic": "Público",
+    "visibilityPrivate": "Privado",
+    "onlyYouCanSee": "Solo tú puedes ver",
+    "anyoneWithLinkCanView": "Cualquiera con el enlace puede ver",
     "deleteConfirm": "¿Seguro que quieres eliminar este recuerdo? No se puede deshacer.",
     "deleteFailed": "Error al eliminar. Inténtalo de nuevo.",
     "untitled": "Sin título",
@@ -221,6 +226,13 @@
     "actionsMenu": "Menú de acciones",
     "location": "Ubicación",
     "moments": "momentos",
-    "oneStory": "una historia"
+    "oneStory": "una historia",
+    "datePlaceholder": "Añadir fecha",
+    "defaultEndingQuote": "El sentido del viaje no está en llegar, sino en el camino.",
+    "createNewJourney": "Crear nuevo viaje",
+    "chapterStyleLabel": "Estilo de capítulo",
+    "chapterStyleNumberMood": "Número + mood",
+    "chapterStyleMinimalLine": "Línea mínima",
+    "chapterStyleRomanQuote": "Romano + línea"
   }
 }

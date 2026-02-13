@@ -1,29 +1,31 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ContentBlock } from '@/components/editor/ContentBlock';
 import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { MemoryService } from '@/lib/db/services/memory-service';
+import { updateMemory } from '@/lib/storage';
+import { useOptionalAuth } from '@/lib/auth';
 import { useLocale } from '@/lib/i18n';
-import type { CarouselItem } from '@/types/memory';
-
-const SHARE_FEEDBACK_MS = 2200;
+import type { CarouselItem, MemoryVisibility } from '@/types/memory';
 
 interface RichStoryDetailProps {
   memory: CarouselItem;
   onBack: () => void;
   /** When true, only the content area is shown (no header). Used for shared links. */
   shareView?: boolean;
+  isOwner?: boolean;
 }
 
-/** Renders rich-story memory with same layout as memories/editor (read-only). Header has Share and "..." menu (Edit, Delete). */
-export function RichStoryDetail({ memory, onBack, shareView = false }: RichStoryDetailProps) {
+/** Renders rich-story memory with same layout as memories/editor (read-only). Header has visibility (public/private) and "..." menu (Edit, Delete). */
+export function RichStoryDetail({ memory, onBack, shareView = false, isOwner = false }: RichStoryDetailProps) {
   const router = useRouter();
   const { t } = useLocale();
+  const auth = useOptionalAuth();
+  const userId = auth?.user?.id ?? null;
   const [isDeleting, setIsDeleting] = useState(false);
-  const [shareFeedback, setShareFeedback] = useState<'idle' | 'copied' | 'shared'>('idle');
-  const shareFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [visibility, setVisibility] = useState<MemoryVisibility>(memory.visibility ?? 'private');
 
   const title = memory.detailTitle ?? memory.title ?? '';
   const description = memory.description ?? '';
@@ -32,55 +34,17 @@ export function RichStoryDetail({ memory, onBack, shareView = false }: RichStory
   const richContent = memory.richContent ?? '';
 
   useEffect(() => {
-    return () => {
-      if (shareFeedbackTimerRef.current) clearTimeout(shareFeedbackTimerRef.current);
-    };
-  }, []);
+    setVisibility(memory.visibility ?? 'private');
+  }, [memory.visibility]);
 
-  const clearShareFeedback = useCallback(() => {
-    if (shareFeedbackTimerRef.current) {
-      clearTimeout(shareFeedbackTimerRef.current);
-      shareFeedbackTimerRef.current = null;
-    }
-    setShareFeedback('idle');
-  }, []);
-
-  const getShareUrl = useCallback(() => {
-    if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/memories/${memory.id}?share=1`;
-  }, [memory.id]);
-
-  const handleShare = useCallback(async () => {
-    const shareUrl = getShareUrl();
-    const shareTitle = title || t('memory.defaultTitle');
-    const shareText = description ? description.slice(0, 120) : shareTitle;
-
-    const shareData = { title: shareTitle, text: shareText, url: shareUrl };
-
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      const canShare = typeof navigator.canShare === 'function' ? navigator.canShare(shareData) : true;
-      if (canShare) {
-        try {
-          await navigator.share(shareData);
-          setShareFeedback('shared');
-          shareFeedbackTimerRef.current = setTimeout(clearShareFeedback, SHARE_FEEDBACK_MS);
-          return;
-        } catch (err) {
-          if ((err as Error).name === 'AbortError') return;
-        }
-      }
-    }
-
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setShareFeedback('copied');
-      shareFeedbackTimerRef.current = setTimeout(clearShareFeedback, SHARE_FEEDBACK_MS);
-    } catch {
-      if (typeof window !== 'undefined' && window.open) {
-        window.open(shareUrl, '_blank', 'noopener');
-      }
-    }
-  }, [getShareUrl, title, description, clearShareFeedback, t]);
+  const handleVisibilityChange = useCallback(
+    async (v: MemoryVisibility) => {
+      setVisibility(v);
+      if (!userId) return;
+      await updateMemory(userId, memory.id, { visibility: v });
+    },
+    [userId, memory.id]
+  );
 
   const handleEdit = () => {
     router.push(`/memories/editor?id=${memory.id}`);
@@ -150,38 +114,32 @@ export function RichStoryDetail({ memory, onBack, shareView = false }: RichStory
       <MemoryDetailHeader
         title={title || undefined}
         onBack={onBack}
-        onShare={handleShare}
+        visibility={visibility}
+        onVisibilityChange={isOwner ? handleVisibilityChange : undefined}
         moreMenu={
-          <>
-            <button
-              type="button"
-              onClick={handleEdit}
-              className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100"
-              role="menuitem"
-            >
-              {t('common.edit')}
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              role="menuitem"
-            >
-              {isDeleting ? t('memory.deleting') : t('memory.delete')}
-            </button>
-          </>
+          isOwner ? (
+            <>
+              <button
+                type="button"
+                onClick={handleEdit}
+                className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100"
+                role="menuitem"
+              >
+                {t('common.edit')}
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                role="menuitem"
+              >
+                {isDeleting ? t('memory.deleting') : t('memory.delete')}
+              </button>
+            </>
+          ) : undefined
         }
       />
-      {shareFeedback !== 'idle' && (
-        <div
-          className="absolute left-1/2 -translate-x-1/2 top-12 z-20 px-3 py-1.5 rounded-full bg-white/95 text-[#1d1d1f] text-[13px] font-medium shadow-lg animate-fadeIn pointer-events-none"
-          role="status"
-          aria-live="polite"
-        >
-          {shareFeedback === 'copied' ? t('memory.linkCopied') : t('memory.shared')}
-        </div>
-      )}
 
       {contentBody}
     </div>

@@ -37,6 +37,8 @@ function memoryRecordToRow(record: MemoryRecord): Omit<TravelMemoryRow, 'created
     sort_order: record.sortOrder,
     is_journey_start: record.isJourneyStart,
     is_journey_end: record.isJourneyEnd,
+    visibility: record.visibility ?? 'private',
+    cinematic_script_json: record.cinematicScriptJson ?? null,
   };
 }
 
@@ -68,6 +70,8 @@ function rowToMemoryRecord(row: TravelMemoryRow): MemoryRecord {
     sortOrder: row.sort_order,
     isJourneyStart: row.is_journey_start,
     isJourneyEnd: row.is_journey_end,
+    visibility: row.visibility ?? 'private',
+    cinematicScriptJson: row.cinematic_script_json ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     syncStatus: 'synced',

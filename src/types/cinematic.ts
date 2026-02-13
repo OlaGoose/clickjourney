@@ -21,13 +21,26 @@ export interface StoryBlock {
   mood?: string; // For contextual styling
 }
 
+/** Chapter header style: number+mood, minimal line, or roman+quote. */
+export type ChapterDividerStyle = 'number_mood' | 'minimal_line' | 'roman_quote';
+
 export interface DirectorScript {
   title: string;
   location: string;
+  /** Optional display date for title section (e.g. "2026年2月13日" or ISO). */
+  date?: string;
   /** Optional coordinates from AI (decimal degrees) for globe/location sync */
   latitude?: number;
   longitude?: number;
   blocks: StoryBlock[];
+  /** Chapter divider template: number_mood (default), minimal_line, roman_quote. */
+  chapterDividerStyle?: ChapterDividerStyle;
+  /** Ending section: quote text. */
+  endingQuote?: string;
+  /** Ending section: CTA label (e.g. "创建新旅程"). */
+  endingCtaLabel?: string;
+  /** Ending section: CTA href (default /memories/upload). */
+  endingCtaHref?: string;
 }
 
 // AI Service Types

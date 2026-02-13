@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Edit2 } from 'lucide-react';
 import { EditorHeader } from '@/components/editor/EditorHeader';
@@ -44,6 +44,7 @@ function TravelEditorContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [titleFocused, setTitleFocused] = useState(false);
   const [descriptionFocused, setDescriptionFocused] = useState(false);
+  const saveInProgressRef = useRef(false);
 
   const searchParams = useSearchParams();
   const editId = searchParams.get('id');
@@ -141,6 +142,7 @@ function TravelEditorContent() {
   }, [router, t]);
 
   const handleSave = useCallback(async () => {
+    if (saveInProgressRef.current) return;
     if (!editorData.title.trim()) {
       alert(t('editor.enterTitle'));
       return;
@@ -152,6 +154,7 @@ function TravelEditorContent() {
       return;
     }
 
+    saveInProgressRef.current = true;
     setIsSaving(true);
 
     const locationStr = (editorData.location ?? '').trim();
@@ -195,6 +198,7 @@ function TravelEditorContent() {
       console.error('Failed to save:', error);
       alert(t('editor.saveFailed'));
     } finally {
+      saveInProgressRef.current = false;
       setIsSaving(false);
     }
   }, [editorData, userId, router, editId, t]);

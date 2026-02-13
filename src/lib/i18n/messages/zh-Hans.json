@@ -89,6 +89,11 @@
     "back": "返回",
     "share": "分享",
     "moreActions": "更多操作",
+    "visibilityLabel": "分享范围",
+    "visibilityPublic": "公开",
+    "visibilityPrivate": "私密",
+    "onlyYouCanSee": "仅你可看",
+    "anyoneWithLinkCanView": "获得链接的人可查看",
     "deleteConfirm": "确定要删除这个回忆吗？此操作无法撤销。",
     "deleteFailed": "删除失败，请重试。",
     "untitled": "无标题",
@@ -221,6 +226,13 @@
     "actionsMenu": "操作菜单",
     "location": "地点",
     "moments": "个瞬间",
-    "oneStory": "一个故事"
+    "oneStory": "一个故事",
+    "datePlaceholder": "添加日期",
+    "defaultEndingQuote": "旅行的意义，不在于抵达，而在于沿途的风景",
+    "createNewJourney": "创建新旅程",
+    "chapterStyleLabel": "章节分割线",
+    "chapterStyleNumberMood": "数字 + 情绪",
+    "chapterStyleMinimalLine": "极简线条",
+    "chapterStyleRomanQuote": "罗马数字 + 分隔线"
   }
 }

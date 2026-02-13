@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { MapPin, Calendar, Edit2, Share2, Download, Save, Check, ArrowLeft } from 'lucide-react';
-import { DirectorScript, StoryBlock } from '@/types/cinematic';
+import { DirectorScript, StoryBlock, type ChapterDividerStyle } from '@/types/cinematic';
 import { StaticBlockRenderer } from '@/components/cinematic/StaticBlockRenderer';
 import { NotionTopbar, NotionTopbarButton } from '@/components/NotionTopbar';
 import { useDayNightTheme } from '@/hooks/useDayNightTheme';
@@ -103,15 +103,31 @@ export default function CinematicMemoryPage() {
   }, [script, userId]);
 
   const localeTag = locale === 'zh-Hans' ? 'zh-Hans' : locale === 'ja' ? 'ja' : locale === 'es' ? 'es' : 'en';
-  const getCurrentDate = () => {
-    return new Date().toLocaleDateString(localeTag, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+  const getCurrentDate = () =>
+    new Date().toLocaleDateString(localeTag, { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const displayDate = script.date?.trim() || getCurrentDate();
+  const endingQuote = script.endingQuote?.trim() || t('cinematic.defaultEndingQuote');
+  const endingCtaLabel = script.endingCtaLabel?.trim() || t('cinematic.createNewJourney');
+  const endingCtaHref = script.endingCtaHref?.trim() || '/memories/upload';
+  const chapterStyle: ChapterDividerStyle = script.chapterDividerStyle ?? 'number_mood';
 
   const isDark = useDayNightTheme() === 'dark';
+
+  /** Roman numeral for chapter index (1-based). */
+  function toRoman(n: number): string {
+    const map: [number, string][] = [
+      [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+    ];
+    let s = '';
+    for (const [val, sym] of map) {
+      while (n >= val) {
+        s += sym;
+        n -= val;
+      }
+    }
+    return s;
+  }
 
   if (isLoading) {
     return (
@@ -206,16 +222,26 @@ export default function CinematicMemoryPage() {
 
       {/* Main Content */}
       <main className="pt-[44px]">
-        {/* Hero Title Section - Magazine Style */}
+        {/* Hero Title Section — fixed structure, configurable date + location */}
         <section className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-24">
           <div className="space-y-8">
             <div className={`flex flex-wrap items-center gap-6 text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>
               <div className="flex items-center gap-2">
-                <Calendar size={16} />
-                <span>{getCurrentDate()}</span>
+                <Calendar size={16} aria-hidden />
+                {isEditMode ? (
+                  <input
+                    type="text"
+                    value={script.date ?? ''}
+                    onChange={(e) => setScript(s => ({ ...s, date: e.target.value }))}
+                    placeholder={getCurrentDate()}
+                    className={`bg-transparent border-none outline-none disabled:cursor-default w-40 ${isDark ? 'text-white placeholder:text-white/30' : ''}`}
+                  />
+                ) : (
+                  <span>{displayDate}</span>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                <MapPin size={16} />
+                <MapPin size={16} aria-hidden />
                 <input
                   type="text"
                   value={script.location}
@@ -226,7 +252,6 @@ export default function CinematicMemoryPage() {
                 />
               </div>
             </div>
-
             <div>
               <input
                 type="text"
@@ -237,12 +262,24 @@ export default function CinematicMemoryPage() {
                 placeholder={t('cinematic.nameYourJourney')}
               />
             </div>
-
             <p className={`text-xl md:text-2xl leading-[1.47] max-w-3xl font-normal ${isDark ? 'text-white/60' : 'text-black/60'}`}>
               {script.blocks.length} {t('cinematic.moments')}, {t('cinematic.oneStory')}
             </p>
-
             <div className={`w-24 h-px ${isDark ? 'bg-white/20' : 'bg-black/20'}`} />
+            {isEditMode && (
+              <div className={`pt-4 flex flex-wrap items-center gap-3 text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>
+                <span>{t('cinematic.chapterStyleLabel')}</span>
+                <select
+                  value={script.chapterDividerStyle ?? 'number_mood'}
+                  onChange={(e) => setScript(s => ({ ...s, chapterDividerStyle: e.target.value as ChapterDividerStyle }))}
+                  className={`bg-transparent border rounded px-2 py-1 ${isDark ? 'border-white/20 text-white' : 'border-black/20 text-black'}`}
+                >
+                  <option value="number_mood">{t('cinematic.chapterStyleNumberMood')}</option>
+                  <option value="minimal_line">{t('cinematic.chapterStyleMinimalLine')}</option>
+                  <option value="roman_quote">{t('cinematic.chapterStyleRomanQuote')}</option>
+                </select>
+              </div>
+            )}
           </div>
         </section>
 
@@ -255,16 +292,36 @@ export default function CinematicMemoryPage() {
               className={`relative ${activeChapter === block.id ? (isDark ? 'ring-2 ring-white/10 rounded-lg p-4' : 'ring-2 ring-black/10 rounded-lg p-4') : ''}`}
               onClick={() => isEditMode && setActiveChapter(block.id)}
             >
-              <div className="flex items-baseline gap-6 mb-8">
-                <span className="text-7xl md:text-8xl font-serif font-bold select-none chapter-number-silver">
-                  {(index + 1).toString().padStart(2, '0')}
-                </span>
-                {block.mood && (
-                  <span className={`text-xs tracking-[0.2em] uppercase ${isDark ? 'text-white/30' : 'text-black/30'}`}>
-                    {block.mood}
+              {/* Chapter divider: 3 templates */}
+              {chapterStyle === 'number_mood' && (
+                <div className="flex items-baseline gap-6 mb-8">
+                  <span className="text-7xl md:text-8xl font-serif font-bold select-none chapter-number-silver">
+                    {(index + 1).toString().padStart(2, '0')}
                   </span>
-                )}
-              </div>
+                  {block.mood && (
+                    <span className={`text-xs tracking-[0.2em] uppercase ${isDark ? 'text-white/30' : 'text-black/30'}`}>
+                      {block.mood}
+                    </span>
+                  )}
+                </div>
+              )}
+              {chapterStyle === 'minimal_line' && (
+                <div className={`chapter-divider-minimal mb-8 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
+                  <div className={`chapter-line ${isDark ? 'bg-white/20' : 'bg-black/20'}`} />
+                  <span className="chapter-num">{(index + 1).toString().padStart(2, '0')}</span>
+                </div>
+              )}
+              {chapterStyle === 'roman_quote' && (
+                <div className={`chapter-divider-roman mb-8 ${isDark ? 'text-white/50' : 'text-black/50'}`}>
+                  <span className="chapter-roman">{toRoman(index + 1)}</span>
+                  <div className={`chapter-rule ${isDark ? 'bg-white/25' : 'bg-black/20'}`} />
+                  {block.mood && (
+                    <span className={`block mt-2 text-xs tracking-[0.2em] uppercase ${isDark ? 'text-white/30' : 'text-black/30'}`}>
+                      {block.mood}
+                    </span>
+                  )}
+                </div>
+              )}
 
               <StaticBlockRenderer
                 block={block}
@@ -277,20 +334,49 @@ export default function CinematicMemoryPage() {
           ))}
         </section>
 
-        {/* Ending Section */}
+        {/* Ending Section — configurable quote + CTA */}
         <section className={`max-w-5xl mx-auto px-6 md:px-12 py-24 md:py-32 border-t ${isDark ? 'border-white/10' : 'border-black/10'}`}>
           <div className="text-center space-y-8">
-            <p className={`text-lg md:text-xl font-light italic ${isDark ? 'text-white/40' : 'text-black/40'}`}>
-              旅行的意义，不在于抵达，而在于沿途的风景
-            </p>
+            {isEditMode ? (
+              <textarea
+                value={script.endingQuote ?? ''}
+                onChange={(e) => setScript(s => ({ ...s, endingQuote: e.target.value }))}
+                placeholder={t('cinematic.defaultEndingQuote')}
+                rows={2}
+                className={`w-full max-w-2xl mx-auto text-center bg-transparent border-none outline-none text-lg md:text-xl font-light italic resize-none ${isDark ? 'text-white/40 placeholder:text-white/30' : 'text-black/40 placeholder:text-black/30'}`}
+              />
+            ) : (
+              <p className={`text-lg md:text-xl font-light italic ${isDark ? 'text-white/40' : 'text-black/40'}`}>
+                {endingQuote}
+              </p>
+            )}
             <div className="pt-12">
-              <Link
-                href="/memories/upload"
-                className={`inline-flex items-center gap-2 transition-colors group ${isDark ? 'text-white hover:text-white/60' : 'text-black hover:text-black/60'}`}
-              >
-                <span className="text-sm tracking-wider uppercase">创建新旅程</span>
-                <ArrowLeft size={16} className="rotate-180 group-hover:translate-x-1 transition-transform" />
-              </Link>
+              {isEditMode ? (
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <input
+                    type="text"
+                    value={script.endingCtaLabel ?? ''}
+                    onChange={(e) => setScript(s => ({ ...s, endingCtaLabel: e.target.value }))}
+                    placeholder={t('cinematic.createNewJourney')}
+                    className={`bg-transparent border-none outline-none text-sm tracking-wider uppercase text-center ${isDark ? 'text-white placeholder:text-white/50' : 'text-black placeholder:text-black/50'}`}
+                  />
+                  <input
+                    type="text"
+                    value={script.endingCtaHref ?? ''}
+                    onChange={(e) => setScript(s => ({ ...s, endingCtaHref: e.target.value }))}
+                    placeholder="/memories/upload"
+                    className={`bg-transparent border-none outline-none text-sm text-center max-w-xs ${isDark ? 'text-white/60 placeholder:text-white/30' : 'text-black/60 placeholder:text-black/30'}`}
+                  />
+                </div>
+              ) : (
+                <Link
+                  href={endingCtaHref}
+                  className={`inline-flex items-center gap-2 transition-colors group ${isDark ? 'text-white hover:text-white/60' : 'text-black hover:text-black/60'}`}
+                >
+                  <span className="text-sm tracking-wider uppercase">{endingCtaLabel}</span>
+                  <ArrowLeft size={16} className="rotate-180 group-hover:translate-x-1 transition-transform" aria-hidden />
+                </Link>
+              )}
             </div>
           </div>
         </section>
