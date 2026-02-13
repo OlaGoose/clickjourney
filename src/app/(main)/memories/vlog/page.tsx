@@ -474,10 +474,10 @@ export default function VlogPage() {
               value={memoryLocation}
               onChange={(e) => setMemoryLocation(e.target.value)}
               placeholder={t('upload.locationPlaceholder')}
-              className={`w-full max-w-md text-base rounded-xl px-4 py-3 outline-none transition-colors ${
+              className={`w-full max-w-md text-base rounded-xl px-4 py-3 outline-none transition-colors border border-transparent focus:border ${
                 isDark
-                  ? 'bg-white/10 text-white placeholder:text-white/40 focus:bg-white/15'
-                  : 'bg-white/50 text-gray-800 placeholder:text-gray-400 focus:bg-white'
+                  ? 'bg-white/10 text-white placeholder:text-white/40 focus:bg-white/15 focus:border-white/30'
+                  : 'bg-white/50 text-gray-800 placeholder:text-gray-400 focus:bg-white focus:border-gray-300'
               }`}
               autoFocus
               aria-label={t('upload.locationPlaceholder')}
@@ -492,6 +492,7 @@ export default function VlogPage() {
                 images={images}
                 onDelete={handleDeleteImage}
                 onReplace={handleTriggerReplace}
+                variant={isDark ? 'dark' : 'light'}
               />
             </div>
           </div>
@@ -619,8 +620,10 @@ export default function VlogPage() {
                 )}
               </div>
               <textarea
-                className={`w-full h-16 text-sm rounded-xl p-2 resize-none outline-none ${
-                  isDark ? 'bg-white/5 text-white placeholder:text-white/40' : 'bg-white/50 text-gray-800 placeholder:text-gray-400'
+                className={`w-full h-16 text-sm rounded-xl p-2 resize-none outline-none transition-colors ${
+                  isDark
+                    ? 'bg-white/5 text-white placeholder:text-white/40 focus:bg-white/10 focus:border focus:border-white/20'
+                    : 'bg-white/50 text-gray-800 placeholder:text-gray-400 focus:bg-white/80 focus:border focus:border-gray-300'
                 }`}
                 placeholder={t('vlog.videoInsertsPlaceholder')}
                 value={videoText}
@@ -634,10 +637,12 @@ export default function VlogPage() {
                 id="vlog-lut-select"
                 value={selectedFilterPreset}
                 onChange={(e) => setSelectedFilterPreset(e.target.value)}
-                className={`w-full rounded-xl border px-4 py-3 pr-10 text-sm font-medium outline-none transition-colors cursor-pointer [color-scheme:auto] ${
+                className={`w-full rounded-xl border px-4 py-3 pr-10 text-sm font-medium outline-none transition-colors cursor-pointer ${
+                  isDark ? '[color-scheme:dark]' : '[color-scheme:light]'
+                } ${
                   isDark
-                    ? 'bg-white/10 border-white/20 text-white focus:bg-white/15 focus:border-white/30'
-                    : 'bg-white/60 border-white/40 text-gray-800 focus:bg-white/80 focus:border-gray-300'
+                    ? 'bg-white/10 border border-white/20 text-white focus:bg-white/15 focus:border-white/30'
+                    : 'bg-white/60 border border-white/40 text-gray-800 focus:bg-white/80 focus:border-gray-300'
                 }`}
                 aria-label={t('vlog.colorGrade')}
               >
@@ -681,7 +686,7 @@ export default function VlogPage() {
                   disabled={!isDefault && images.length >= MAX_PHOTOS}
                   className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full transition-all active:scale-95 ${
                     !isDefault && images.length >= MAX_PHOTOS
-                      ? isDark ? 'bg-white/10 text-white/30 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      ? isDark ? 'bg-white/10 text-white/60 cursor-not-allowed border border-white/20' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl'
                   }`}
                 >
@@ -711,7 +716,7 @@ export default function VlogPage() {
                   disabled={isDefault}
                   className={`group flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 ${
                     isDefault
-                      ? isDark ? 'bg-white/10 text-white/30 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      ? isDark ? 'bg-white/10 text-white/60 cursor-not-allowed border border-white/20' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-black hover:bg-gray-800 text-white'
                   }`}
                 >
@@ -726,17 +731,21 @@ export default function VlogPage() {
                 disabled={!canStart}
                 className={`group relative flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 overflow-hidden ${
                   canStart
-                    ? 'bg-black hover:bg-gray-800 text-white'
-                    : isDark ? 'bg-white/10 text-white/30 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    ? isDark
+                      ? 'bg-black hover:bg-gray-800 text-white border border-white/20 shadow-[0_20px_40px_rgba(0,0,0,0.3)]'
+                      : 'bg-black hover:bg-gray-800 text-white'
+                    : isDark
+                      ? 'bg-white/10 text-white/60 cursor-not-allowed border border-white/20'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                <Play size={16} strokeWidth={2.5} />
-                <span className="font-semibold text-[13px]">{t('vlog.startPlayback')}</span>
+                <Play size={16} strokeWidth={2.5} className={canStart ? 'text-white' : undefined} />
+                <span className={`font-semibold text-[13px] ${canStart ? 'text-white' : ''}`}>{t('vlog.startPlayback')}</span>
               </button>
             )}
           </div>
           {currentStep === 2 && !canStart && (
-            <p className={`mt-3 text-xs text-center max-w-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+            <p className={`mt-3 text-xs text-center max-w-sm ${isDark ? 'text-white/70' : 'text-gray-500'}`}>
               {t('vlog.needPhotosAudioSubtitles')}
             </p>
           )}

@@ -499,6 +499,7 @@ export default function MemoryUploadPage() {
                 images={images}
                 onDelete={handleDeleteImage}
                 onReplace={handleTriggerReplace}
+                variant={isDark ? 'dark' : 'light'}
               />
             </div>
           </div>
