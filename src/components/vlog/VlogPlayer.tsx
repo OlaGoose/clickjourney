@@ -92,11 +92,11 @@ const ControlButtons = memo(({
   onExit: () => void;
   exitLabel: string;
 }) => (
-  <div className="absolute top-6 right-6 z-50 flex gap-4 opacity-0 hover:opacity-100 transition-opacity duration-500">
+    <div className="absolute top-6 right-6 z-50 flex gap-4 opacity-0 hover:opacity-100 transition-opacity duration-500">
     <button
       type="button"
       onClick={onMute}
-      className="p-3 bg-black/20 backdrop-blur-md rounded-full text-white/70 hover:text-white hover:bg-black/40 transition-all"
+      className="p-3 bg-black/20 backdrop-blur-md rounded-full text-[#ffffff] hover:bg-black/40 transition-all"
       aria-label={isMuted ? 'Unmute' : 'Mute'}
     >
       {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
@@ -104,7 +104,7 @@ const ControlButtons = memo(({
     <button
       type="button"
       onClick={onExit}
-      className="p-3 bg-black/20 backdrop-blur-md rounded-full text-white/70 hover:text-white hover:bg-red-500/20 hover:text-red-400 transition-all"
+      className="p-3 bg-black/20 backdrop-blur-md rounded-full text-[#ffffff] hover:bg-red-500/20 hover:text-red-400 transition-all"
       aria-label={exitLabel}
     >
       <X size={20} />
@@ -172,7 +172,7 @@ const SubtitleDisplay = memo(({
           className="flex flex-col items-end"
         >
           <p
-            className="font-serif italic text-xl md:text-3xl lg:text-4xl text-white leading-relaxed tracking-wide drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] break-words"
+            className="font-serif italic text-xl md:text-3xl lg:text-4xl text-[#ffffff] leading-relaxed tracking-wide drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] break-words"
             style={{ lineBreak: 'normal', wordBreak: 'normal' }}
           >
             {subtitle}
@@ -213,11 +213,19 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
   }, []);
 
   useLayoutEffect(() => {
-    // Auto-play audio immediately on mount
     const play = (el: HTMLAudioElement | null) =>
       el?.play().catch(() => {});
     play(audioRef.current);
     play(recordedAudioRef.current);
+  }, []);
+
+  // Retry play once after mount (handles ref timing / browser autoplay policy)
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      audioRef.current?.play().catch(() => {});
+      recordedAudioRef.current?.play().catch(() => {});
+    }, 100);
+    return () => clearTimeout(t);
   }, []);
 
   const playlist = useMemo(() => {
@@ -426,6 +434,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
         <audio
           ref={recordedAudioRef}
           src={data.recordedAudio}
+          autoPlay
           preload="auto"
           className="hidden"
           aria-hidden
@@ -548,7 +557,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
         </div>
       </div>
 
-      {/* Location title on first frame */}
+      {/* Location title on first frame - Apple white large title style */}
       {currentIndex === 0 && data.location?.trim() && (
         <div
           className="absolute left-0 right-0 z-30 flex justify-center pointer-events-none"
@@ -564,8 +573,9 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
             style={{ willChange: 'opacity, transform' }}
           >
             <h1
-              className="font-serif font-light text-3xl md:text-5xl lg:text-6xl xl:text-7xl text-white tracking-[0.35em] md:tracking-[0.45em] lg:tracking-[0.5em] uppercase"
+              className="font-semibold text-[34px] md:text-5xl lg:text-6xl text-[#ffffff] tracking-[0.35em] md:tracking-[0.45em] lg:tracking-[0.5em] uppercase"
               style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif',
                 textShadow:
                   '0 0 60px rgba(0,0,0,0.4), 0 0 30px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.8), 0 4px 20px rgba(0,0,0,0.5), 0 8px 40px rgba(0,0,0,0.4)',
               }}
@@ -612,7 +622,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-black/30 backdrop-blur-md p-6 rounded-full border border-white/10 shadow-2xl"
           >
-            <Play size={40} className="fill-white text-white ml-1" />
+            <Play size={40} className="fill-[#ffffff] text-[#ffffff] ml-1" />
           </motion.div>
         )}
       </div>

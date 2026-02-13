@@ -603,32 +603,6 @@ export default function VlogPage() {
               </div>
             </div>
 
-            <div className="w-full max-w-sm">
-              <label
-                htmlFor="vlog-lut-select"
-                className={`block text-xs font-semibold mb-2 ${isDark ? 'text-white/60' : 'text-gray-500'}`}
-              >
-                {t('vlog.colorGrade')}
-              </label>
-              <select
-                id="vlog-lut-select"
-                value={selectedFilterPreset}
-                onChange={(e) => setSelectedFilterPreset(e.target.value)}
-                className={`w-full rounded-xl border px-4 py-3 pr-10 text-sm font-medium outline-none transition-colors cursor-pointer [color-scheme:auto] ${
-                  isDark
-                    ? 'bg-white/10 border-white/20 text-white focus:bg-white/15 focus:border-white/30'
-                    : 'bg-white/60 border-white/40 text-gray-800 focus:bg-white/80 focus:border-gray-300'
-                }`}
-                aria-label={t('vlog.colorGrade')}
-              >
-                {FILTER_PRESETS.map((preset) => (
-                  <option key={preset.name} value={preset.name}>
-                    {preset.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div
               className={`w-full max-w-sm backdrop-blur-2xl rounded-2xl p-4 transition-colors ${
                 isDark ? 'bg-white/10 border border-white/20' : 'bg-white/60 border border-white/40'
@@ -653,6 +627,26 @@ export default function VlogPage() {
                 onChange={(e) => setVideoText(e.target.value)}
                 aria-label={t('vlog.videoLinks')}
               />
+            </div>
+
+            <div className="w-full max-w-sm">
+              <select
+                id="vlog-lut-select"
+                value={selectedFilterPreset}
+                onChange={(e) => setSelectedFilterPreset(e.target.value)}
+                className={`w-full rounded-xl border px-4 py-3 pr-10 text-sm font-medium outline-none transition-colors cursor-pointer [color-scheme:auto] ${
+                  isDark
+                    ? 'bg-white/10 border-white/20 text-white focus:bg-white/15 focus:border-white/30'
+                    : 'bg-white/60 border-white/40 text-gray-800 focus:bg-white/80 focus:border-gray-300'
+                }`}
+                aria-label={t('vlog.colorGrade')}
+              >
+                {FILTER_PRESETS.map((preset) => (
+                  <option key={preset.name} value={preset.name}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         )}
