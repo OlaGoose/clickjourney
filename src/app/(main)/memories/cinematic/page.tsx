@@ -10,9 +10,9 @@ import { NotionTopbar, NotionTopbarButton } from '@/components/NotionTopbar';
 import { useDayNightTheme } from '@/hooks/useDayNightTheme';
 import { useOptionalAuth } from '@/lib/auth';
 import { useLocale } from '@/lib/i18n';
-import { saveMemory } from '@/lib/storage';
+import { saveMemory, updateMemory } from '@/lib/storage';
 import { directorScriptToCarouselItem } from '@/lib/upload-to-memory';
-import { saveCinematicScript, saveLocalCinematic } from '@/lib/cinematic-storage';
+import { saveCinematicScript, saveLocalCinematic, updateLocalCinematic } from '@/lib/cinematic-storage';
 import './cinematic.css';
 
 function buildDefaultScript(t: (key: import('@/lib/i18n/types').MessageKey) => string): DirectorScript {
@@ -46,18 +46,24 @@ export default function CinematicMemoryPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
+  /** When set (from upload generate flow), Save should update this record instead of creating a new one. */
+  const existingMemoryIdRef = useRef<string | null>(null);
 
   const auth = useOptionalAuth();
   const userId = auth?.user?.id ?? null;
 
-  // Load script from sessionStorage
+  // Load script and optional existing memory id from sessionStorage (from upload generate)
   useEffect(() => {
     const loadScript = () => {
       try {
+        const memoryId = sessionStorage.getItem('cinematicMemoryId');
+        if (memoryId) {
+          existingMemoryIdRef.current = memoryId;
+          sessionStorage.removeItem('cinematicMemoryId');
+        }
         const storedScript = sessionStorage.getItem('cinematicScript');
         if (storedScript) {
           const parsedScript = JSON.parse(storedScript);
-          console.log('[Cinematic] Loaded script:', parsedScript);
           setScript(parsedScript);
           sessionStorage.removeItem('cinematicScript');
         }
@@ -78,12 +84,29 @@ export default function CinematicMemoryPage() {
     }));
   };
 
-  /** Save current script to memory carousel (recall cards on home). */
+  /** Save current script to memory carousel (update existing if we came from upload generate, else create new). */
   const handleSaveToMemory = useCallback(async () => {
     setSaveStatus('saving');
+    const existingId = existingMemoryIdRef.current;
     try {
       const carouselInput = directorScriptToCarouselItem(script);
-      if (userId) {
+      if (existingId) {
+        // Already saved once from upload generate — update that record instead of creating a second one
+        if (userId) {
+          const { error } = await updateMemory(userId, existingId, {
+            ...carouselInput,
+            cinematicScriptJson: JSON.stringify(script),
+          });
+          if (error) {
+            setSaveStatus('error');
+            return;
+          }
+          saveCinematicScript(existingId, script);
+        } else {
+          updateLocalCinematic(existingId, { ...carouselInput, id: existingId }, script);
+        }
+        existingMemoryIdRef.current = null;
+      } else if (userId) {
         const { data, error } = await saveMemory(userId, carouselInput);
         if (error) {
           setSaveStatus('error');
@@ -100,7 +123,7 @@ export default function CinematicMemoryPage() {
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 2000);
     }
-  }, [script, userId]);
+  }, [script, userId, router]);
 
   const localeTag = locale === 'zh-Hans' ? 'zh-Hans' : locale === 'ja' ? 'ja' : locale === 'es' ? 'es' : 'en';
   const getCurrentDate = () =>

@@ -57,6 +57,23 @@ export function saveLocalCinematic(item: CarouselItem, script: DirectorScript): 
   }
 }
 
+/** Update an existing local cinematic entry by id (avoids duplicate when re-saving from cinematic page). */
+export function updateLocalCinematic(id: string, item: CarouselItem, script: DirectorScript): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const list = getLocalCinematicRaw();
+    const idx = list.findIndex((e) => e.item.id === id);
+    if (idx >= 0) {
+      list[idx] = { item: { ...item, id }, script };
+    } else {
+      list.push({ item: { ...item, id }, script });
+    }
+    localStorage.setItem(KEY_LOCAL_ITEMS, JSON.stringify(list));
+  } catch (e) {
+    console.warn('updateLocalCinematic failed', e);
+  }
+}
+
 export function getLocalCinematicItems(): CarouselItem[] {
   return getLocalCinematicRaw().map((e) => e.item);
 }

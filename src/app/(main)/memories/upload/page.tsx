@@ -191,21 +191,26 @@ export default function MemoryUploadPage() {
 
       const directorScript: DirectorScript = await response.json();
 
-      // Step 3: Save as memory card and persist script for recall
+      // Step 3: Save as memory card and persist script for recall (only once here)
       setGenerationProgress(100);
       const carouselInput = directorScriptToCarouselItem(directorScript);
+      let savedMemoryId: string | null = null;
       if (userId) {
         const { data, error } = await saveMemory(userId, carouselInput);
         if (!error && data?.id) {
+          savedMemoryId = data.id;
           saveCinematicScript(data.id, directorScript);
           await updateMemory(userId, data.id, { cinematicScriptJson: JSON.stringify(directorScript) });
         }
       } else {
-        const tempId = `cinematic-${Date.now()}`;
-        saveLocalCinematic({ ...carouselInput, id: tempId }, directorScript);
+        savedMemoryId = `cinematic-${Date.now()}`;
+        saveLocalCinematic({ ...carouselInput, id: savedMemoryId }, directorScript);
       }
 
-      // Store in sessionStorage for immediate access on cinematic page
+      // So cinematic page can update this record instead of creating a new one when user clicks Save
+      if (savedMemoryId) {
+        sessionStorage.setItem('cinematicMemoryId', savedMemoryId);
+      }
       sessionStorage.setItem('cinematicScript', JSON.stringify(directorScript));
 
       setTimeout(() => {
