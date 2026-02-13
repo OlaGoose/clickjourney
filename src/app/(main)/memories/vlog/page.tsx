@@ -33,6 +33,10 @@ import type { UploadedImage } from '@/types/upload';
 
 const MAX_PHOTOS = 9;
 
+/** Default soundtrack when user does not upload audio. */
+const DEFAULT_VLOG_AUDIO_URL =
+  'https://cbgwjnevmdekrqfadrmi.supabase.co/storage/v1/object/public/memories/you_dont_talk_anymore.mp3';
+
 function revokeBlobUrlIfNeeded(url: string): void {
   if (typeof url === 'string' && url.startsWith('blob:')) {
     try {
@@ -98,9 +102,7 @@ export default function VlogPage() {
   const youtubeIds = getYoutubeIds(videoText);
   const hasVisualContent = images.length > 0 || youtubeIds.length > 0;
   const canStart =
-    hasVisualContent &&
-    audioUrl !== null &&
-    subtitleText.trim().length > 0;
+    hasVisualContent && subtitleText.trim().length > 0;
 
   const transcribeRecordedAudio = useCallback(async (audioBlob: Blob) => {
     setIsTranscribing(true);
@@ -340,7 +342,7 @@ export default function VlogPage() {
         location: memoryLocation.trim(),
         images: imageUrls,
         videos: videoUrls,
-        audio: audioUrl,
+        audio: audioUrl ?? DEFAULT_VLOG_AUDIO_URL,
         recordedAudio: recordedAudioUrl,
         subtitles: artifiedScript,
         filterPreset,
