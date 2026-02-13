@@ -327,6 +327,35 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     [userId]
   );
 
+  const handleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files?.length) return;
+      const currentBlock = block;
+      if (!currentBlock) return;
+      if (currentBlock.type === 'image') {
+        const list: string[] = [];
+        for (let i = 0; i < files.length && list.length < MAX_IMAGES; i++) {
+          const file = files[i];
+          if (file) {
+            const url = await fileToUrlOrDataUrl(file, { userId });
+            list.push(url);
+          }
+        }
+        setImages((prev) => [...prev, ...list].slice(0, MAX_IMAGES));
+      } else {
+        const file = files[0];
+        if (file) {
+          const url = await fileToUrlOrDataUrl(file, { userId });
+          setContent(url);
+          setFileName(file.name);
+        }
+      }
+      e.target.value = '';
+    },
+    [block, userId]
+  );
+
   /** Template panel: 模版 (待开发) + AI (prompt → preview → 插入) — Apple TV style */
   if (showTypePicker && templatePanelOpen) {
     return (
@@ -778,34 +807,6 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
     }
     onClose();
   };
-
-  const handleFileSelect = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
-      if (!files?.length || !block) return;
-
-      if (block.type === 'image') {
-        const list: string[] = [];
-        for (let i = 0; i < files.length && list.length < MAX_IMAGES; i++) {
-          const file = files[i];
-          if (file) {
-            const url = await fileToUrlOrDataUrl(file, { userId });
-            list.push(url);
-          }
-        }
-        setImages((prev) => [...prev, ...list].slice(0, MAX_IMAGES));
-      } else {
-        const file = files[0];
-        if (file) {
-          const url = await fileToUrlOrDataUrl(file, { userId });
-          setContent(url);
-          setFileName(file.name);
-        }
-      }
-      e.target.value = '';
-    },
-    [block, userId]
-  );
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();

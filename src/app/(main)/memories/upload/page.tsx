@@ -27,7 +27,7 @@ import { useLocale } from '@/lib/i18n';
 import { saveMemory, updateMemory } from '@/lib/storage';
 import { directorScriptToCarouselItem } from '@/lib/upload-to-memory';
 import { saveCinematicScript, saveLocalCinematic } from '@/lib/cinematic-storage';
-import type { UploadedImage, ImageAnalysis } from '@/types/upload';
+import type { UploadedImage } from '@/types/upload';
 import type { DirectorScript } from '@/types/cinematic';
 
 const blobToBase64 = (blob: Blob): Promise<string> => {
@@ -79,10 +79,6 @@ export default function MemoryUploadPage() {
   const [transcript, setTranscript] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
 
-  const [imageAnalyses, setImageAnalyses] = useState<ImageAnalysis[]>([]);
-  const [isAnalyzingImages, setIsAnalyzingImages] = useState(false);
-  const [analysisError, setAnalysisError] = useState(false);
-
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
@@ -98,43 +94,6 @@ export default function MemoryUploadPage() {
 
   const auth = useOptionalAuth();
   const userId = auth?.user?.id ?? null;
-
-  const analyzeImages = useCallback(async () => {
-    if (isDefault) return;
-
-    setIsAnalyzingImages(true);
-    setAnalysisError(false);
-    
-    try {
-      const imageUrls = images.map((img) => img.url);
-      const base64Images = await compressMultipleImages(imageUrls);
-
-      console.log('[Upload] Starting deep image analysis with Gemini 3 Pro...');
-      
-      const response = await fetch('/api/analyze-images', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: base64Images }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('[Upload] Analysis API error:', errorData);
-        throw new Error(errorData.error || 'Image analysis failed');
-      }
-
-      const data = await response.json();
-      setImageAnalyses(data.analyses);
-      console.log('[Upload] ✓ Deep analysis complete:', data.analyses.length, 'images analyzed');
-      console.log('[Upload] Sample analysis:', data.analyses[0]);
-    } catch (error) {
-      console.error('[Upload] ✗ Image analysis failed:', error);
-      setAnalysisError(true);
-      // Don't block the flow - user can still generate without analysis
-    } finally {
-      setIsAnalyzingImages(false);
-    }
-  }, [images, isDefault]);
 
   const generateCinematicMemory = useCallback(async () => {
     if (isDefault) {
@@ -159,22 +118,13 @@ export default function MemoryUploadPage() {
       );
 
       // Step 2: Call AI generation API (30% -> 90%)
-      // Use imageAnalyses if available (preferred), otherwise fall back to sending images
       setGenerationProgress(30);
-      const requestBody = imageAnalyses.length > 0
-        ? {
-            images: base64Images, // Still need images for final DirectorScript
-            imageAnalyses: imageAnalyses,
-            transcript: transcript || '',
-            userContext: '',
-            location: memoryLocation.trim() || undefined,
-          }
-        : {
-            images: base64Images,
-            transcript: transcript || '',
-            userContext: '',
-            location: memoryLocation.trim() || undefined,
-          };
+      const requestBody = {
+        images: base64Images,
+        transcript: transcript || '',
+        userContext: '',
+        location: memoryLocation.trim() || undefined,
+      };
 
       const response = await fetch('/api/generate-cinematic-script', {
         method: 'POST',
@@ -224,7 +174,7 @@ export default function MemoryUploadPage() {
       );
       setIsGenerating(false);
     }
-  }, [images, isDefault, transcript, imageAnalyses, memoryLocation, userId, router, t]);
+  }, [images, isDefault, transcript, memoryLocation, userId, router, t]);
 
   const goToNextStep = useCallback(() => {
     if (currentStep === 0) {
@@ -442,8 +392,6 @@ export default function MemoryUploadPage() {
     setIsPlaying(false);
     setTranscript('');
     setCurrentStep(0);
-    setImageAnalyses([]);
-    setAnalysisError(false);
   }, []);
 
   const handleDismissError = useCallback(() => setGenerationError(null), []);

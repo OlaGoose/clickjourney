@@ -193,7 +193,7 @@
     "openGallery": "Open gallery, view more images"
   },
   "upload": {
-    "locationHeading": "Where was this memory?",
+    "locationHeading": "Where was this journey?",
     "locationPlaceholder": "e.g. Tokyo, Kyoto, Paris…",
     "next": "Next",
     "uploadButton": "Upload",
@@ -234,5 +234,26 @@
     "chapterStyleNumberMood": "Number + mood",
     "chapterStyleMinimalLine": "Minimal line",
     "chapterStyleRomanQuote": "Roman + rule"
+  },
+  "vlog": {
+    "title": "Vlog",
+    "subtitle": "Direct your own memory",
+    "sceneAssets": "Scene assets",
+    "photos": "Photos",
+    "soundtrack": "Soundtrack",
+    "videoLinks": "Video links",
+    "videoInsertsPlaceholder": "Paste YouTube or Shorts links here (one per line)...",
+    "clipsAdded": "clips added",
+    "screenplay": "Screenplay (subtitles)",
+    "screenplayPlaceholder": "Write your travel memories here… record or type, one line per moment.",
+    "artDirection": "Art direction",
+    "colorGrade": "Color grade",
+    "startPlayback": "Start playback",
+    "uploadPhotos": "Upload photos",
+    "uploadSoundtrack": "Upload soundtrack",
+    "filesReady": "files ready",
+    "dropOrClick": "Drag & drop or click to upload",
+    "needPhotosAudioSubtitles": "Add at least one photo or video, a soundtrack, and subtitles to start.",
+    "exit": "Exit"
   }
 }

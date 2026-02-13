@@ -2,32 +2,8 @@ import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import type { DirectorScript, LayoutType } from '@/types/cinematic';
 
-interface ImageAnalysis {
-  index: number;
-  description: string;
-  storyPotential: string;
-  emotionalTone: string;
-  visualFeatures: {
-    mood: string;
-    composition: string;
-    colorPalette: string;
-    colorDominance: string;
-    subject: string;
-    timeOfDay: string;
-    lighting: string;
-    depth: string;
-    movement: string;
-    texture: string;
-    perspective: string;
-    focus: string;
-  };
-  layoutSuggestion: string;
-  textPlacement: string;
-}
-
 interface GenerateScriptRequest {
-  images: string[]; // Base64 encoded images (for backward compatibility)
-  imageAnalyses?: ImageAnalysis[]; // Pre-analyzed image data (preferred)
+  images: string[];
   transcript: string;
   userContext?: string;
   /** User-provided travel location (memory place); overrides AI-inferred location when set. */
@@ -75,15 +51,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { images, imageAnalyses, transcript, userContext, location: userLocation } = body;
-
-  // Support both new (imageAnalyses) and old (images) flow
-  const useAnalysisFlow = imageAnalyses && Array.isArray(imageAnalyses) && imageAnalyses.length > 0;
-  const imageCount = useAnalysisFlow ? imageAnalyses.length : (images?.length || 0);
+  const { images, transcript, userContext, location: userLocation } = body;
+  const imageCount = images?.length ?? 0;
 
   if (imageCount === 0) {
     return NextResponse.json(
-      { error: 'At least one image or image analysis is required' },
+      { error: 'At least one image is required' },
       { status: 400 }
     );
   }
@@ -98,146 +71,7 @@ export async function POST(request: Request) {
   try {
     const ai = new GoogleGenAI({ apiKey });
 
-    // Construct the ultimate prompt with enhanced editorial standards
-    const systemPrompt = useAnalysisFlow 
-      ? `You are Airbnb's Chief Experience Designer meets Apple's Chief Creative Officer meets The New Yorker's Photo Editor—a visionary who creates travel stories that people remember forever.
-
-MISSION: Transform analyzed travel photographs into an immersive, breathtaking visual narrative that rivals the best travel magazines and Apple keynote presentations.
-
-EDITORIAL PHILOSOPHY (Airbnb + Apple Standard):
-- EMOTION FIRST: Every image, every word must evoke feeling
-- MINIMALISM: Elegant restraint. Say more with less.
-- AUTHENTICITY: Real moments, real emotions. No tourism clichés.
-- RHYTHM: Like a symphony—build tension, release, surprise, resolution
-- BEAUTY: Make every frame worthy of being printed and framed
-
-LOCATION (use this as the primary place for the story):
-${userLocation?.trim() ? `"${userLocation.trim()}" — use this location for title/location and narrative.` : 'Infer from images and context.'}
-
-AUDIO CONTEXT:
-${transcript || 'No audio transcript. Pure visual poetry.'}
-
-${userContext ? `USER NOTES:\n${userContext}\n` : ''}
-
-DEEP IMAGE ANALYSES (Gemini 3 Pro Insights):
-${imageAnalyses!.map((analysis, i) => `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-IMAGE ${i + 1} ANALYSIS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📸 Description: ${analysis.description}
-🎬 Story Potential: ${analysis.storyPotential}
-💫 Emotional Tone: ${analysis.emotionalTone}
-
-VISUAL DNA:
-• Mood: ${analysis.visualFeatures.mood}
-• Composition: ${analysis.visualFeatures.composition}
-• Color Palette: ${analysis.visualFeatures.colorPalette} (${analysis.visualFeatures.colorDominance})
-• Lighting: ${analysis.visualFeatures.lighting}
-• Depth: ${analysis.visualFeatures.depth}
-• Movement: ${analysis.visualFeatures.movement}
-• Texture: ${analysis.visualFeatures.texture}
-• Perspective: ${analysis.visualFeatures.perspective}
-• Focus: ${analysis.visualFeatures.focus}
-• Subject: ${analysis.visualFeatures.subject}
-• Time: ${analysis.visualFeatures.timeOfDay}
-
-RECOMMENDED:
-• Layout: ${analysis.layoutSuggestion}
-• Text Position: ${analysis.textPlacement}
-`).join('\n')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-LAYOUT PALETTE (Choose wisely for each image):
-
-1. "full_bleed" - EPIC OPENER
-   → Sweeping landscapes, grand vistas, opening statements
-   → Text: bottom center, large, white on dark gradient
-   → When: First image, dramatic landscapes, hero moments
-
-2. "hero_split" - ASYMMETRIC POWER
-   → Large image (70%) + impactful text (30%)
-   → Text: side panel, huge typography, high contrast
-   → When: Strong vertical compositions, architectural shots, portraits with space
-
-3. "immersive_focus" - EMOTIONAL CLIMAX
-   → Full bleed with centered text overlay
-   → Text: center, huge, layered with image
-   → When: Peak emotional moments, intimate portraits, decisive moments
-
-4. "magazine_spread" - EDITORIAL STORYTELLING
-   → Split screen with generous negative space
-   → Text: opposite side, medium, thoughtful placement
-   → When: Need to show AND tell, architectural details, before/after feelings
-
-5. "minimal_caption" - PURE VISUAL
-   → 90% image, 10% text
-   → Text: corner or edge, small, subtle
-   → When: Image speaks for itself, atmospheric shots, texture closeups
-
-6. "portrait_feature" - HUMAN CONNECTION
-   → Vertical emphasis, subject-focused
-   → Text: bottom or top band, medium, name-like
-   → When: People, vertical compositions, intimate moments
-
-7. "text_overlay" - BOLD STATEMENT
-   → Text directly on image, integrated
-   → Text: anywhere, huge, part of composition
-   → When: Simple compositions, strong colors, graphic moments
-
-8. "side_by_side" - BALANCED NARRATIVE
-   → Classic 50/50 editorial split
-   → Text: dedicated panel, multiple sizes, hierarchy
-   → When: Thoughtful moments, need more context, quiet reflections
-
-OUTPUT FORMAT (Strict JSON):
-{
-  "title": "Poetic title (4-6 Chinese characters, unforgettable)",
-  "location": "City/Region, Country",
-  "latitude": 35.6762,
-  "longitude": 139.6503,
-  "blocks": [
-    {
-      "layout": "full_bleed" | "hero_split" | "immersive_focus" | "magazine_spread" | "minimal_caption" | "portrait_feature" | "text_overlay" | "side_by_side",
-      "text": "One powerful line. Cinematic. Emotional. (Chinese, 15-40 chars)",
-      "animation": "slow_zoom" | "parallax_drift" | "fade_in" | "scale_in" | "slide_up",
-      "textPosition": "top" | "bottom" | "center" | "left" | "right" | "overlay",
-      "textSize": "small" | "medium" | "large" | "huge",
-      "imageFilter": "none" | "grayscale" | "warm" | "cool" | "vibrant" | "muted",
-      "mood": "Use the analyzed mood"
-    }
-  ]
-}
-- "latitude" and "longitude": Infer primary location from images; provide WGS84 decimal degrees (city center if uncertain). Required.
-
-GOLDEN RULES:
-✓ ${imageCount} blocks total (one per image, in sequence)
-✓ Text in Chinese, authentic and poetic
-✓ First image: ALWAYS full_bleed or hero_split (establish the world)
-✓ Last image: reflective or climactic (leave an impression)
-✓ Variety: No more than 2 consecutive identical layouts
-✓ Use AI analysis suggestions BUT apply editorial judgment
-✓ Match layout to composition:
-  → Landscape/wide-angle → full_bleed, hero_split
-  → Portrait/close-up → portrait_feature, immersive_focus
-  → Symmetric/architectural → magazine_spread, side_by_side
-  → Atmospheric/texture → minimal_caption, text_overlay
-✓ Text size proportional to layout impact:
-  → full_bleed, immersive_focus → large or huge
-  → minimal_caption → small
-  → others → medium or large
-✓ Image filter based on color analysis:
-  → Warm/golden palette → warm filter
-  → Cool/blue palette → cool filter
-  → Vibrant colors → vibrant filter
-  → Muted tones → muted or grayscale filter
-✓ Create NARRATIVE ARC:
-  → Act 1 (0-30%): Arrival, discovery, wonder
-  → Act 2 (30-70%): Journey, experience, transformation
-  → Act 3 (70-100%): Reflection, meaning, lasting impression
-
-Now create an experience so beautiful it makes people want to travel.`
-      : `<role>
+    const systemPrompt = `<role>
 You are a synthesis of the world's finest travel writers (Paul Theroux, Pico Iyer) and memoir authors (Annie Dillard, Cheryl Strayed). You transform travel photographs and personal reflections into cinematic visual stories that capture the poetry of human experience.
 </role>
 
@@ -348,34 +182,23 @@ Return ONLY valid JSON (no markdown blocks):
 Now analyze the ${imageCount} images. Create a story that honors the user's authentic experience while elevating it to cinematic art.
 </final_instruction>`;
 
-    // Prepare content parts
-    // For analysis flow: only send text (no images)
-    // For legacy flow: send images as before
-    const contentParts = useAnalysisFlow
-      ? [
-          { text: systemPrompt },
-          { text: '\nGenerate the JSON script now based on the image analyses above. Output ONLY valid JSON, no markdown code blocks.' }
-        ]
-      : [
-          { text: systemPrompt },
-          ...images.map((base64Data) => {
-            const cleanData = base64Data
-              .replace(/^data:image\/\w+;base64,/, '')
-              .replace(/\s+/g, '');
-            return {
-              inlineData: {
-                mimeType: 'image/jpeg',
-                data: cleanData,
-              },
-            };
-          }),
-          { text: '\nGenerate the JSON script now. Output ONLY valid JSON, no markdown code blocks.' }
-        ];
+    const contentParts = [
+      { text: systemPrompt },
+      ...images.map((base64Data) => {
+        const cleanData = base64Data
+          .replace(/^data:image\/\w+;base64,/, '')
+          .replace(/\s+/g, '');
+        return {
+          inlineData: {
+            mimeType: 'image/jpeg',
+            data: cleanData,
+          },
+        };
+      }),
+      { text: '\nGenerate the JSON script now. Output ONLY valid JSON, no markdown code blocks.' },
+    ];
 
-    console.log(`[AI Director] Mode: ${useAnalysisFlow ? 'Text-based (with image analyses)' : 'Image-based (legacy)'}`);
-    console.log(`[AI Director] Processing ${imageCount} ${useAnalysisFlow ? 'analyzed images' : 'raw images'} with transcript...`);
-    console.log(`[AI Director] Content parts count: ${contentParts.length}`);
-    console.log(`[AI Director] System prompt length: ${systemPrompt.length} characters`);
+    console.log(`[AI Director] Processing ${imageCount} images with transcript...`);
 
     const model = process.env.GEMINI_MODEL_CINEMATIC || process.env.NEXT_PUBLIC_GEMINI_MODEL_CINEMATIC || 'gemini-3-flash-preview';
     console.log(`[AI Director] Using model: ${model}`);

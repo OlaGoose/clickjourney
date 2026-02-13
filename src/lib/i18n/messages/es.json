@@ -193,7 +193,7 @@
     "openGallery": "Abrir galería, ver más imágenes"
   },
   "upload": {
-    "locationHeading": "¿Dónde fue este recuerdo?",
+    "locationHeading": "¿Dónde fue este viaje?",
     "locationPlaceholder": "ej. Tokio, Kioto, París…",
     "next": "Siguiente",
     "uploadButton": "Subir",
@@ -234,5 +234,26 @@
     "chapterStyleNumberMood": "Número + mood",
     "chapterStyleMinimalLine": "Línea mínima",
     "chapterStyleRomanQuote": "Romano + línea"
+  },
+  "vlog": {
+    "title": "Vlog",
+    "subtitle": "Dirige tu propio recuerdo",
+    "sceneAssets": "Recursos de escena",
+    "photos": "Fotos",
+    "soundtrack": "Banda sonora",
+    "videoLinks": "Enlaces de vídeo",
+    "videoInsertsPlaceholder": "Pega enlaces de YouTube o Shorts aquí (uno por línea)...",
+    "clipsAdded": "clips añadidos",
+    "screenplay": "Guion (subtítulos)",
+    "screenplayPlaceholder": "Escribe tus recuerdos del viaje… graba o escribe, una línea por momento.",
+    "artDirection": "Dirección artística",
+    "colorGrade": "Corrección de color",
+    "startPlayback": "Iniciar reproducción",
+    "uploadPhotos": "Subir fotos",
+    "uploadSoundtrack": "Subir banda sonora",
+    "filesReady": "archivos listos",
+    "dropOrClick": "Arrastra y suelta o haz clic para subir",
+    "needPhotosAudioSubtitles": "Añade al menos una foto o vídeo, banda sonora y subtítulos para empezar.",
+    "exit": "Salir"
   }
 }

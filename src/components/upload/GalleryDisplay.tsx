@@ -189,21 +189,37 @@ function GalleryDisplayInner({ images, onDelete, onReplace }: GalleryProps) {
                   </div>
                 </div>
               )}
-              
-              {/* Image with blur-up effect */}
-              <img
-                src={img.url}
-                alt={`Gallery ${index + 1}`}
-                className={`w-full h-full object-cover transition-all duration-700 ease-out ${
-                  isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-lg scale-105'
-                }`}
-                onLoad={() => handleImageLoad(img.id)}
-                loading="eager"
-                decoding="async"
-                style={{
-                  willChange: isLoaded ? 'auto' : 'opacity, filter, transform',
-                }}
-              />
+
+              {/* Image or local video (vlog supports both from same upload) */}
+              {img.type === 'video' ? (
+                <video
+                  src={img.url}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  className={`w-full h-full object-cover transition-all duration-700 ease-out ${
+                    isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-lg scale-105'
+                  }`}
+                  onLoadedData={() => handleImageLoad(img.id)}
+                  style={{
+                    willChange: isLoaded ? 'auto' : 'opacity, filter, transform',
+                  }}
+                />
+              ) : (
+                <img
+                  src={img.url}
+                  alt={`Gallery ${index + 1}`}
+                  className={`w-full h-full object-cover transition-all duration-700 ease-out ${
+                    isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-lg scale-105'
+                  }`}
+                  onLoad={() => handleImageLoad(img.id)}
+                  loading="eager"
+                  decoding="async"
+                  style={{
+                    willChange: isLoaded ? 'auto' : 'opacity, filter, transform',
+                  }}
+                />
+              )}
               <div className="absolute inset-0 rounded-[32px] ring-1 ring-black/5 pointer-events-none" />
             </div>
 

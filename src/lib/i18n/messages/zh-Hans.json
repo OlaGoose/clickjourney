@@ -193,7 +193,7 @@
     "openGallery": "打开媒体库，查看更多图片"
   },
   "upload": {
-    "locationHeading": "这段回忆在哪里？",
+    "locationHeading": "这段旅程在哪里？",
     "locationPlaceholder": "例如：东京、京都、巴黎…",
     "next": "下一步",
     "uploadButton": "上传",
@@ -234,5 +234,26 @@
     "chapterStyleNumberMood": "数字 + 情绪",
     "chapterStyleMinimalLine": "极简线条",
     "chapterStyleRomanQuote": "罗马数字 + 分隔线"
+  },
+  "vlog": {
+    "title": "Vlog",
+    "subtitle": "导演你的回忆",
+    "sceneAssets": "场景素材",
+    "photos": "照片",
+    "soundtrack": "配乐",
+    "videoLinks": "视频链接",
+    "videoInsertsPlaceholder": "在此粘贴 YouTube 或 Shorts 链接（每行一个）…",
+    "clipsAdded": "个片段已添加",
+    "screenplay": "旁白（字幕）",
+    "screenplayPlaceholder": "写下这次旅行中最想留住的回忆…可录音或打字，每行一段。",
+    "artDirection": "视觉风格",
+    "colorGrade": "色调",
+    "startPlayback": "开始播放",
+    "uploadPhotos": "上传照片",
+    "uploadSoundtrack": "上传配乐",
+    "filesReady": "个文件已就绪",
+    "dropOrClick": "拖放或点击上传",
+    "needPhotosAudioSubtitles": "请至少添加一张照片或视频、一段配乐和字幕后再开始。",
+    "exit": "退出"
   }
 }

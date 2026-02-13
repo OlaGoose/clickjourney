@@ -193,7 +193,7 @@
     "openGallery": "ギャラリーを開く、さらに画像を見る"
   },
   "upload": {
-    "locationHeading": "この思い出はどこでしたか？",
+    "locationHeading": "この旅はどこでしたか？",
     "locationPlaceholder": "例：東京、京都、パリ…",
     "next": "次へ",
     "uploadButton": "アップロード",
@@ -234,5 +234,26 @@
     "chapterStyleNumberMood": "数字＋ムード",
     "chapterStyleMinimalLine": "ミニマル線",
     "chapterStyleRomanQuote": "ローマ数字＋区切り線"
+  },
+  "vlog": {
+    "title": "Vlog",
+    "subtitle": "思い出を演出する",
+    "sceneAssets": "シーン素材",
+    "photos": "写真",
+    "soundtrack": "サウンドトラック",
+    "videoLinks": "動画リンク",
+    "videoInsertsPlaceholder": "YouTube または Shorts のリンクを貼り付け（1行1リンク）…",
+    "clipsAdded": "クリップ追加済み",
+    "screenplay": "字幕（スクリーンプレイ）",
+    "screenplayPlaceholder": "旅の思い出をここに…録音または入力、1行でひとつの瞬間を。",
+    "artDirection": "アートディレクション",
+    "colorGrade": "カラーグレード",
+    "startPlayback": "再生開始",
+    "uploadPhotos": "写真をアップロード",
+    "uploadSoundtrack": "サウンドトラックをアップロード",
+    "filesReady": "ファイル準備完了",
+    "dropOrClick": "ドラッグ＆ドロップまたはクリックでアップロード",
+    "needPhotosAudioSubtitles": "開始するには、写真または動画・サウンドトラック・字幕を追加してください。",
+    "exit": "終了"
   }
 }
