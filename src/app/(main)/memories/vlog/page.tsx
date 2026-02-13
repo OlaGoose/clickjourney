@@ -351,7 +351,7 @@ export default function VlogPage() {
         youtubeIds,
       };
       sessionStorage.setItem(VLOG_SESSION_KEY, JSON.stringify(data));
-      setTimeout(() => router.push('/memories/vlog/play'), 400);
+      router.push('/memories/vlog/play');
     } catch (err) {
       setGenerationError(err instanceof Error ? err.message : 'Generation failed');
       setIsGenerating(false);

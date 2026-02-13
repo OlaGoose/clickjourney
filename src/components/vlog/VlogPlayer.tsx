@@ -201,31 +201,111 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
   const ytPlayersRef = useRef<Map<number, YTPlayer>>(new Map());
   const currentIndexRef = useRef(currentIndex);
   const imagePreloadCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const audioUnlockedRef = useRef(false);
   currentIndexRef.current = currentIndex;
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
+    
+    // Aggressively try to start audio immediately on mount
+    // This leverages any remaining user interaction context from navigation
+    const immediatePlay = () => {
+      const tryPlay = (el: HTMLAudioElement | null) => {
+        if (!el) return;
+        el.play()
+          .then(() => {
+            audioUnlockedRef.current = true;
+          })
+          .catch(() => {
+            // Will be unlocked on first user interaction
+          });
+      };
+      tryPlay(audioRef.current);
+      tryPlay(recordedAudioRef.current);
+    };
+    
+    // Try immediately
+    immediatePlay();
+    
+    // Also try after a tiny delay in case refs aren't ready
+    const timeout = setTimeout(immediatePlay, 10);
+    
+    // Global interaction listener to unlock audio on ANY user interaction
+    const unlockAudio = () => {
+      if (audioUnlockedRef.current) return;
+      audioUnlockedRef.current = true;
+      
+      const playAudio = (el: HTMLAudioElement | null) => {
+        if (!el) return;
+        el.load();
+        el.play().catch(() => {});
+      };
+      
+      playAudio(audioRef.current);
+      playAudio(recordedAudioRef.current);
+      
+      // Remove listeners after first interaction
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('click', unlockAudio);
+    };
+    
+    // Listen for first touch or click anywhere on the page
+    document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
+    document.addEventListener('click', unlockAudio, { once: true });
+    
     return () => {
+      clearTimeout(timeout);
       document.body.style.overflow = '';
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('click', unlockAudio);
       // Cleanup preloaded images
       imagePreloadCacheRef.current.clear();
     };
   }, []);
 
   useLayoutEffect(() => {
-    const play = (el: HTMLAudioElement | null) =>
-      el?.play().catch(() => {});
+    const play = (el: HTMLAudioElement | null) => {
+      if (!el) return;
+      // Try to play immediately
+      const playPromise = el.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            // Successfully started playing
+            audioUnlockedRef.current = true;
+          })
+          .catch(() => {
+            // Autoplay blocked - will be unlocked on first user interaction
+          });
+      }
+    };
     play(audioRef.current);
     play(recordedAudioRef.current);
   }, []);
 
-  // Retry play once after mount (handles ref timing / browser autoplay policy)
+  // Retry play with multiple attempts (handles ref timing / browser autoplay policy)
   useEffect(() => {
-    const t = window.setTimeout(() => {
-      audioRef.current?.play().catch(() => {});
-      recordedAudioRef.current?.play().catch(() => {});
-    }, 100);
-    return () => clearTimeout(t);
+    const attemptPlay = (el: HTMLAudioElement | null, attempt: number = 0) => {
+      if (!el || attempt >= 3) return;
+      const playPromise = el.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            audioUnlockedRef.current = true;
+          })
+          .catch(() => {
+            // Retry after delay
+            setTimeout(() => attemptPlay(el, attempt + 1), 100 * (attempt + 1));
+          });
+      }
+    };
+    
+    const timeout = setTimeout(() => {
+      attemptPlay(audioRef.current);
+      attemptPlay(recordedAudioRef.current);
+    }, 50);
+    
+    return () => clearTimeout(timeout);
   }, []);
 
   const playlist = useMemo(() => {
@@ -336,8 +416,22 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
     const audio = audioRef.current;
     const recorded = recordedAudioRef.current;
     if (isPlaying) {
-      audio?.play().catch(() => {});
-      recorded?.play().catch(() => {});
+      // Try to play, and on mobile browsers this might fail until first user interaction
+      const tryPlay = (el: HTMLAudioElement | null) => {
+        if (!el) return;
+        const playPromise = el.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              audioUnlockedRef.current = true;
+            })
+            .catch(() => {
+              // Blocked by browser - will be unlocked on user interaction
+            });
+        }
+      };
+      tryPlay(audio);
+      tryPlay(recorded);
     } else {
       audio?.pause();
       recorded?.pause();
@@ -412,8 +506,40 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
   );
 
   const handleExit = useCallback(() => onExit(), [onExit]);
-  const handleMute = useCallback(() => setIsMuted((m) => !m), []);
-  const handlePlayPause = useCallback(() => setIsPlaying((p) => !p), []);
+  const handleMute = useCallback(() => {
+    // On first user interaction, ensure audio is unlocked
+    if (!audioUnlockedRef.current) {
+      audioUnlockedRef.current = true;
+      const playAudio = (el: HTMLAudioElement | null) => {
+        if (!el) return;
+        el.play().catch(() => {});
+      };
+      playAudio(audioRef.current);
+      playAudio(recordedAudioRef.current);
+    }
+    setIsMuted((m) => !m);
+  }, []);
+  const handlePlayPause = useCallback(() => {
+    // On first user interaction, force audio to play (mobile browser requirement)
+    if (!audioUnlockedRef.current) {
+      audioUnlockedRef.current = true;
+      const playAudio = (el: HTMLAudioElement | null) => {
+        if (!el) return;
+        // Force load and play
+        el.load();
+        const playPromise = el.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            // If still blocked, try again after a tiny delay
+            setTimeout(() => el.play().catch(() => {}), 50);
+          });
+        }
+      };
+      playAudio(audioRef.current);
+      playAudio(recordedAudioRef.current);
+    }
+    setIsPlaying((p) => !p);
+  }, []);
 
   if (playlist.length === 0) return null;
 
@@ -425,6 +551,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
           src={data.audio}
           loop
           autoPlay
+          playsInline
           preload="auto"
           className="hidden"
           aria-hidden
@@ -435,6 +562,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
           ref={recordedAudioRef}
           src={data.recordedAudio}
           autoPlay
+          playsInline
           preload="auto"
           className="hidden"
           aria-hidden
