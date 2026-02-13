@@ -42,8 +42,9 @@ export enum ViewState {
  * - cinematic: AI-generated cinematic story with director script
  * - rich-story: Rich text content (markdown/HTML)
  * - video: Video memory collection
+ * - vlog: Short-form cinematic vlog with filters, subtitles, and mixed media
  */
-export type MemoryType = 'photo-gallery' | 'cinematic' | 'rich-story' | 'video';
+export type MemoryType = 'photo-gallery' | 'cinematic' | 'rich-story' | 'video' | 'vlog';
 
 /** Who can view this memory: private = only owner, public = anyone with link */
 export type MemoryVisibility = 'private' | 'public';
@@ -81,6 +82,8 @@ export interface CarouselItem {
   visibility?: MemoryVisibility;
   /** DirectorScript JSON for cinematic type (used when loading public shared cinematic) */
   cinematicScriptJson?: string | null;
+  /** VlogData JSON for vlog type (used for perfect reconstruction on playback and sharing) */
+  vlogDataJson?: string | null;
   /** ISO date string; used for journey start/end card dates when this is first/last memory */
   createdAt?: string;
 }
@@ -94,6 +97,7 @@ export type NewMemoryInput = Omit<CarouselItem, 'id'>;
  */
 export function inferMemoryType(item: CarouselItem): MemoryType {
   if (item.type) return item.type;
+  if (item.vlogDataJson) return 'vlog';
   if (item.videoUrls && item.videoUrls.length > 0) return 'video';
   if (item.richContent && item.richContent.replace(/<[^>]+>/g, '').trim().length > 50) return 'rich-story';
   return 'photo-gallery';

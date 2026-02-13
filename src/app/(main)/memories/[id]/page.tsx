@@ -11,6 +11,7 @@ import { PhotoGalleryDetail } from '@/components/memory-detail/PhotoGalleryDetai
 import { CinematicDetail } from '@/components/memory-detail/CinematicDetail';
 import { RichStoryDetail } from '@/components/memory-detail/RichStoryDetail';
 import { VideoDetail } from '@/components/memory-detail/VideoDetail';
+import { VlogDetail } from '@/components/memory-detail/VlogDetail';
 
 export default function MemoryPage() {
   const router = useRouter();
@@ -117,6 +118,8 @@ export default function MemoryPage() {
   switch (memoryType) {
     case 'cinematic':
       return <CinematicDetail memory={memory} script={script} onBack={handleBack} isOwner={isOwner} />;
+    case 'vlog':
+      return <VlogDetail memory={memory} onBack={handleBack} isOwner={isOwner} />;
     case 'rich-story':
       return <RichStoryDetail memory={memory} onBack={handleBack} shareView={shareView} isOwner={isOwner} />;
     case 'video':

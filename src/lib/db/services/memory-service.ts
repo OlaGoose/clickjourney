@@ -46,6 +46,7 @@ export function carouselItemToMemoryRecord(
     isJourneyEnd: opts.isJourneyEnd ?? false,
     visibility: item.visibility ?? 'private',
     cinematicScriptJson: item.cinematicScriptJson ?? null,
+    vlogDataJson: item.vlogDataJson ?? null,
   };
 }
 
@@ -85,6 +86,7 @@ export function memoryRecordToCarouselItem(record: MemoryRecord): CarouselItem {
     coordinates: coords,
     visibility: record.visibility ?? undefined,
     cinematicScriptJson: record.cinematicScriptJson ?? undefined,
+    vlogDataJson: record.vlogDataJson ?? undefined,
     createdAt: record.createdAt,
   };
 }
@@ -121,6 +123,7 @@ export function carouselItemToUpdateInput(partial: Partial<CarouselItem>): Updat
   }
   if (partial.visibility !== undefined) input.visibility = partial.visibility;
   if (partial.cinematicScriptJson !== undefined) input.cinematicScriptJson = partial.cinematicScriptJson;
+  if (partial.vlogDataJson !== undefined) input.vlogDataJson = partial.vlogDataJson;
   return input;
 }
 

@@ -21,9 +21,12 @@ import { CinematicGenerationLoader } from '@/components/upload/CinematicGenerati
 import { ErrorDisplay } from '@/components/upload/ErrorDisplay';
 import { useDayNightTheme } from '@/hooks/useDayNightTheme';
 import { useLocale } from '@/lib/i18n';
+import { useOptionalAuth } from '@/lib/auth';
 import { DEFAULT_UPLOAD_IMAGES } from '@/lib/upload/constants';
 import { compressImageToBase64 } from '@/lib/utils/imageUtils';
 import { blobToBase64 } from '@/lib/utils/imageUtils';
+import { saveMemory, updateMemory } from '@/lib/storage';
+import { vlogToCarouselItem } from '@/lib/vlog-to-memory';
 import {
   VLOG_SESSION_KEY,
   VLOG_STEP_COUNT,
@@ -68,6 +71,8 @@ function getYoutubeIds(text: string): string[] {
 export default function VlogPage() {
   const router = useRouter();
   const { t } = useLocale();
+  const auth = useOptionalAuth();
+  const userId = auth?.user?.id ?? null;
   const [currentStep, setCurrentStep] = useState(0);
 
   /** Step 0 */
@@ -347,10 +352,33 @@ export default function VlogPage() {
         audio: audioUrl ?? DEFAULT_VLOG_AUDIO_URL,
         recordedAudio: recordedAudioUrl,
         subtitles: artifiedScript,
-        filterPreset: selectedFilterPreset,
+        filterPreset: filterPreset,
         youtubeIds,
       };
+      
+      // Save vlog as memory card (similar to upload/cinematic flow)
+      let savedMemoryId: string | null = null;
+      if (userId) {
+        const carouselInput = vlogToCarouselItem(data);
+        const { data: savedData, error } = await saveMemory(userId, carouselInput);
+        if (!error && savedData?.id) {
+          savedMemoryId = savedData.id;
+          // Store full vlog data JSON for perfect reconstruction on playback
+          await updateMemory(userId, savedData.id, { 
+            vlogDataJson: JSON.stringify(data) 
+          } as any);
+        }
+      } else {
+        // For non-authenticated users, just use session storage
+        savedMemoryId = `vlog-${Date.now()}`;
+      }
+      
+      // Store vlog data for playback page
       sessionStorage.setItem(VLOG_SESSION_KEY, JSON.stringify(data));
+      if (savedMemoryId) {
+        sessionStorage.setItem('vlogMemoryId', savedMemoryId);
+      }
+      
       router.push('/memories/vlog/play');
     } catch (err) {
       setGenerationError(err instanceof Error ? err.message : 'Generation failed');

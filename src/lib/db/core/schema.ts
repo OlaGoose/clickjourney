@@ -6,7 +6,7 @@
 import Dexie, { type Table } from 'dexie';
 
 /** Database version */
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 export const DB_NAME = 'orbit-journey-db';
 
 /**
@@ -49,6 +49,8 @@ export interface MemoryRecord {
   visibility?: 'private' | 'public';
   /** DirectorScript JSON for cinematic; used when syncing public share */
   cinematicScriptJson?: string | null;
+  /** VlogData JSON for vlog type; used for perfect reconstruction on playback and sharing */
+  vlogDataJson?: string | null;
   
   // Timestamps
   createdAt: string;
@@ -102,15 +104,24 @@ export class OrbitJourneyDB extends Dexie {
   constructor() {
     super(DB_NAME);
     
-    this.version(DB_VERSION).stores({
-      // Memories: indexed by userId, sortOrder, syncStatus, and timestamps
+    // Version 1: Initial schema
+    this.version(1).stores({
       memories: 'id, userId, sortOrder, syncStatus, createdAt, updatedAt, [userId+isDeleted], [userId+sortOrder]',
-      
-      // Sync queue: indexed by operation and createdAt for processing order
       syncQueue: 'id, operation, recordId, createdAt, [operation+createdAt]',
-      
-      // Metadata: simple key-value store
       metadata: 'key',
+    });
+    
+    // Version 2: Add vlogDataJson support (no index changes needed, just field addition)
+    this.version(2).stores({
+      memories: 'id, userId, sortOrder, syncStatus, createdAt, updatedAt, [userId+isDeleted], [userId+sortOrder]',
+      syncQueue: 'id, operation, recordId, createdAt, [operation+createdAt]',
+      metadata: 'key',
+    }).upgrade(tx => {
+      // Schema upgrade is automatic - Dexie handles adding new optional fields
+      // No data migration needed as vlogDataJson is optional
+      return tx.table('memories').toCollection().modify(() => {
+        // No-op: just trigger version bump
+      });
     });
   }
 }
