@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   SLIDE_DURATION,
@@ -95,10 +95,13 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [ytReady, setYtReady] = useState(false);
+  /** When browser blocks autoplay, show tap-to-play overlay until first user tap */
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const recordedAudioRef = useRef<HTMLAudioElement>(null);
   const ytPlayersRef = useRef<Map<number, YTPlayer>>(new Map());
   const currentIndexRef = useRef(currentIndex);
+  const autoplayAttemptedRef = useRef(false);
   currentIndexRef.current = currentIndex;
 
   useEffect(() => {
@@ -106,6 +109,30 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
     return () => {
       document.body.style.overflow = '';
     };
+  }, []);
+
+  /** Auto-play audio as soon as mount completes (earliest after user gesture from nav). */
+  const startAudio = useCallback(() => {
+    const play = (el: HTMLAudioElement | null) =>
+      el?.play().catch(() => {});
+    play(audioRef.current);
+    play(recordedAudioRef.current);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (autoplayAttemptedRef.current) return;
+    autoplayAttemptedRef.current = true;
+    const a = audioRef.current;
+    const r = recordedAudioRef.current;
+    if (!a && !r) return;
+    const p = Promise.all([
+      a ? a.play() : Promise.resolve(),
+      r ? r.play() : Promise.resolve(),
+    ]);
+    p.then(
+      () => setAutoplayBlocked(false),
+      () => setAutoplayBlocked(true)
+    );
   }, []);
 
   const playlist = useMemo(() => {
@@ -202,12 +229,11 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
   }, [currentIndex, playlist]);
 
   useEffect(() => {
-    let interval: number;
-    if (isPlaying && playlist.length > 0) {
-      interval = window.setInterval(() => {
-        setCurrentIndex((prev) => (prev + 1) % playlist.length);
-      }, SLIDE_DURATION * 1000);
-    }
+    if (!isPlaying || playlist.length === 0) return;
+    const interval = window.setInterval(
+      () => setCurrentIndex((prev) => (prev + 1) % playlist.length),
+      SLIDE_DURATION * 1000
+    );
     return () => clearInterval(interval);
   }, [isPlaying, playlist.length]);
 
@@ -228,6 +254,17 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
     if (recordedAudioRef.current) recordedAudioRef.current.muted = isMuted;
   }, [isMuted]);
 
+  /** Preload next slide image to avoid frame drops during transition */
+  useEffect(() => {
+    const nextIndex = (currentIndex + 1) % playlist.length;
+    const next = playlist[nextIndex];
+    if (!next || next.type !== 'image') return;
+    const src = next.src;
+    if (!src) return;
+    const img = new Image();
+    img.src = src;
+  }, [currentIndex, playlist]);
+
   const currentItem = playlist[currentIndex];
   const subtitleIndex =
     data.subtitles.length > 0 ? currentIndex % data.subtitles.length : 0;
@@ -239,11 +276,24 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
     if (item.type === 'image') return item.src;
     if (item.type === 'youtube')
       return `https://img.youtube.com/vi/${item.id}/hqdefault.jpg`;
-    if (item.type === 'video') return ''; // no static bg for local video
+    if (item.type === 'video') return '';
     return '';
   };
 
-  const bgSrc = getBackgroundImage(currentItem);
+  const bgSrc = useMemo(
+    () => getBackgroundImage(currentItem),
+    [currentItem]
+  );
+
+  const handleExit = useCallback(() => onExit(), [onExit]);
+  const handleMute = useCallback(() => setIsMuted((m) => !m), []);
+  const handlePlayPause = useCallback(() => {
+    if (autoplayBlocked) {
+      startAudio();
+      setAutoplayBlocked(false);
+    }
+    setIsPlaying((p) => !p);
+  }, [autoplayBlocked, startAudio]);
 
   if (playlist.length === 0) return null;
 
@@ -255,6 +305,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
           src={data.audio}
           loop
           autoPlay
+          preload="auto"
           className="hidden"
           aria-hidden
         />
@@ -263,6 +314,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
         <audio
           ref={recordedAudioRef}
           src={data.recordedAudio}
+          preload="auto"
           className="hidden"
           aria-hidden
         />
@@ -282,6 +334,8 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
               <img
                 src={bgSrc}
                 alt=""
+                decoding="async"
+                fetchPriority="low"
                 className="w-full h-full object-cover filter blur-3xl scale-125 brightness-50"
               />
             </motion.div>
@@ -310,6 +364,8 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
                 <img
                   src={currentItem.src}
                   alt=""
+                  decoding="async"
+                  fetchPriority="high"
                   className="w-full h-full object-cover"
                 />
               </motion.div>
@@ -436,7 +492,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
       <div className="absolute top-6 right-6 z-50 flex gap-4 opacity-0 hover:opacity-100 transition-opacity duration-500">
         <button
           type="button"
-          onClick={() => setIsMuted(!isMuted)}
+          onClick={handleMute}
           className="p-3 bg-black/20 backdrop-blur-md rounded-full text-white/70 hover:text-white hover:bg-black/40 transition-all"
           aria-label={isMuted ? 'Unmute' : 'Mute'}
         >
@@ -444,7 +500,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
         </button>
         <button
           type="button"
-          onClick={onExit}
+          onClick={handleExit}
           className="p-3 bg-black/20 backdrop-blur-md rounded-full text-white/70 hover:text-white hover:bg-red-500/20 hover:text-red-400 transition-all"
           aria-label={t('vlog.exit')}
         >
@@ -452,15 +508,38 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
         </button>
       </div>
 
+      {autoplayBlocked && (
+        <div
+          className="absolute inset-0 z-[35] flex items-center justify-center bg-black/40 cursor-pointer"
+          onClick={handlePlayPause}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handlePlayPause();
+            }
+          }}
+          aria-label={t('vlog.tapToPlay')}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-black/50 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/20 text-white text-lg"
+          >
+            {t('vlog.tapToPlay')}
+          </motion.div>
+        </div>
+      )}
       <div
         className="absolute inset-0 z-40 flex items-center justify-center cursor-pointer"
-        onClick={() => setIsPlaying(!isPlaying)}
+        onClick={handlePlayPause}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            setIsPlaying((p) => !p);
+            handlePlayPause();
           }
         }}
         aria-label={isPlaying ? 'Pause' : 'Play'}

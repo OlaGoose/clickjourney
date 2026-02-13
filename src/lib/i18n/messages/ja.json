@@ -254,6 +254,7 @@
     "filesReady": "ファイル準備完了",
     "dropOrClick": "ドラッグ＆ドロップまたはクリックでアップロード",
     "needPhotosAudioSubtitles": "開始するには、写真または動画・サウンドトラック・字幕を追加してください。",
-    "exit": "終了"
+    "exit": "終了",
+    "tapToPlay": "タップして再生"
   }
 }

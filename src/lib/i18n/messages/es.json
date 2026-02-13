@@ -254,6 +254,7 @@
     "filesReady": "archivos listos",
     "dropOrClick": "Arrastra y suelta o haz clic para subir",
     "needPhotosAudioSubtitles": "Añade al menos una foto o vídeo, banda sonora y subtítulos para empezar.",
-    "exit": "Salir"
+    "exit": "Salir",
+    "tapToPlay": "Toca para reproducir"
   }
 }
