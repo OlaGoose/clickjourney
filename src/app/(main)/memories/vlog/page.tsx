@@ -441,7 +441,7 @@ export default function VlogPage() {
       <input
         ref={audioInputRef}
         type="file"
-        accept="audio/*"
+        accept="audio/*,.mp3,.mpc,.m4a,.wav,.ogg,.webm,.aac,.flac"
         onChange={(e) => {
           const files = e.target.files;
           if (files?.length) handleAudioSelected(Array.from(files));

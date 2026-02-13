@@ -108,7 +108,7 @@ const HOLLYWOOD_VARIANTS: AnimationVariant[] = [
     animate: { opacity: 1, scale: 1.0, x: '0%', y: '0%' },
     exit: { opacity: 0, scale: 0.95 },
     transition: {
-      opacity: { duration: 2.0, ease: [0.25, 0.1, 0.25, 1] },
+      opacity: { duration: 2.0, ease: [0.25, 0.1, 0.25, 1] as const },
       scale: { duration: SLIDE_DURATION + 1.5, ease: 'linear' },
       x: { duration: SLIDE_DURATION + 1.5, ease: 'linear' },
       y: { duration: SLIDE_DURATION + 1.5, ease: 'linear' },
@@ -119,7 +119,7 @@ const HOLLYWOOD_VARIANTS: AnimationVariant[] = [
     animate: { opacity: 1, scale: 1.0, x: '0%', y: '0%' },
     exit: { opacity: 0, scale: 1.05 },
     transition: {
-      opacity: { duration: 1.8, ease: [0.33, 1, 0.68, 1] },
+      opacity: { duration: 1.8, ease: [0.33, 1, 0.68, 1] as const },
       scale: { duration: SLIDE_DURATION + 1, ease: 'linear' },
       x: { duration: SLIDE_DURATION + 1, ease: 'linear' },
       y: { duration: SLIDE_DURATION + 1, ease: 'linear' },
@@ -135,7 +135,7 @@ const CHUNGKING_VARIANTS: AnimationVariant[] = [
     exit: { opacity: 0, x: '-10%', filter: 'blur(4px)' },
     transition: {
       duration: 0.8,
-      ease: [0.76, 0, 0.24, 1],
+      ease: [0.76, 0, 0.24, 1] as const,
     },
   },
   {
@@ -144,7 +144,7 @@ const CHUNGKING_VARIANTS: AnimationVariant[] = [
     exit: { opacity: 0, scale: 0.95, filter: 'blur(3px)' },
     transition: {
       duration: 0.9,
-      ease: [0.87, 0, 0.13, 1],
+      ease: [0.87, 0, 0.13, 1] as const,
     },
   },
 ];
@@ -165,7 +165,7 @@ const NOIR_VARIANTS: AnimationVariant[] = [
     exit: { opacity: 0, x: '100%' },
     transition: {
       duration: 0.6,
-      ease: [0.65, 0, 0.35, 1],
+      ease: [0.65, 0, 0.35, 1] as const,
     },
   },
 ];
@@ -178,7 +178,7 @@ const WES_VARIANTS: AnimationVariant[] = [
     exit: { opacity: 0, scale: 0.9, rotateY: -5 },
     transition: {
       duration: 1.4,
-      ease: [0.34, 1.56, 0.64, 1],
+      ease: [0.34, 1.56, 0.64, 1] as const,
     },
   },
   {
@@ -187,7 +187,7 @@ const WES_VARIANTS: AnimationVariant[] = [
     exit: { opacity: 0, scale: 0.8, y: '-5%' },
     transition: {
       duration: 1.3,
-      ease: [0.22, 1, 0.36, 1],
+      ease: [0.22, 1, 0.36, 1] as const,
     },
   },
 ];
@@ -200,7 +200,7 @@ const TOKYO_VARIANTS: AnimationVariant[] = [
     exit: { opacity: 0, filter: 'blur(8px)' },
     transition: {
       duration: 2.2,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as const,
     },
   },
   {
@@ -209,7 +209,7 @@ const TOKYO_VARIANTS: AnimationVariant[] = [
     exit: { opacity: 0, y: '-5%', filter: 'blur(6px)' },
     transition: {
       duration: 2.0,
-      ease: [0.25, 1, 0.5, 1],
+      ease: [0.25, 1, 0.5, 1] as const,
     },
   },
 ];
@@ -222,7 +222,7 @@ const CYBERPUNK_VARIANTS: AnimationVariant[] = [
     exit: { opacity: 0, x: '-5%', filter: 'hue-rotate(-10deg)' },
     transition: {
       duration: 0.7,
-      ease: [0.9, 0.1, 0.5, 1],
+      ease: [0.9, 0.1, 0.5, 1] as const,
     },
   },
   {
@@ -231,7 +231,7 @@ const CYBERPUNK_VARIANTS: AnimationVariant[] = [
     exit: { opacity: 0, scaleY: 0.98 },
     transition: {
       duration: 0.8,
-      ease: [0.85, 0, 0.15, 1],
+      ease: [0.85, 0, 0.15, 1] as const,
     },
   },
 ];
@@ -244,7 +244,7 @@ const AMELIE_VARIANTS: AnimationVariant[] = [
     exit: { opacity: 0, scale: 1.05, rotate: 2 },
     transition: {
       duration: 1.6,
-      ease: [0.68, -0.55, 0.265, 1.55],
+      ease: [0.68, -0.55, 0.265, 1.55] as const,
     },
   },
   {
@@ -253,7 +253,7 @@ const AMELIE_VARIANTS: AnimationVariant[] = [
     exit: { opacity: 0, scale: 0.92, rotate: -3 },
     transition: {
       duration: 1.5,
-      ease: [0.34, 1.56, 0.64, 1],
+      ease: [0.34, 1.56, 0.64, 1] as const,
     },
   },
 ];
@@ -537,7 +537,7 @@ const SubtitleDisplay = memo(({
           initial: { opacity: 0, x: -10, filter: 'blur(4px)' },
           animate: { opacity: 1, x: 0, filter: 'blur(0px)' },
           exit: { opacity: 0, x: 10, filter: 'blur(2px)' },
-          transition: { duration: 0.3, ease: [0.87, 0, 0.13, 1] },
+          transition: { duration: 0.3, ease: [0.87, 0, 0.13, 1] as const },
         };
       case 'typewriter':
         return {
@@ -551,28 +551,28 @@ const SubtitleDisplay = memo(({
           initial: { opacity: 0, y: 20, scale: 0.9 },
           animate: { opacity: 1, y: 0, scale: 1 },
           exit: { opacity: 0, scale: 0.95 },
-          transition: { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] },
+          transition: { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] as const },
         };
       case 'blur-in':
         return {
           initial: { opacity: 0, filter: 'blur(12px)' },
           animate: { opacity: 1, filter: 'blur(0px)' },
           exit: { opacity: 0, filter: 'blur(8px)' },
-          transition: { duration: 2.0, ease: [0.16, 1, 0.3, 1] },
+          transition: { duration: 2.0, ease: [0.16, 1, 0.3, 1] as const },
         };
       case 'scale-rotate':
         return {
           initial: { opacity: 0, scale: 0.8, rotate: -5 },
           animate: { opacity: 1, scale: 1, rotate: 0 },
           exit: { opacity: 0, scale: 1.1, rotate: 5 },
-          transition: { duration: 1.2, ease: [0.68, -0.55, 0.265, 1.55] },
+          transition: { duration: 1.2, ease: [0.68, -0.55, 0.265, 1.55] as const },
         };
       default: // 'fade-slide'
         return {
           initial: { opacity: 0, x: 40 },
           animate: { opacity: 1, x: 0 },
           exit: { opacity: 0, x: 20 },
-          transition: { delay: 0.4, duration: 1.5, ease: 'easeOut' },
+          transition: { delay: 0.4, duration: 1.5, ease: 'easeOut' as const },
         };
     }
   };
@@ -1071,7 +1071,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] as const, delay: 0.2 }}
             className="text-center px-6 max-w-[90vw]"
             style={{ willChange: 'opacity, transform' }}
           >
