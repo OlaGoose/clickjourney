@@ -55,9 +55,15 @@ export default function MemoryPage() {
         const memoryType = inferMemoryType(item);
         if (memoryType === 'cinematic') {
           let cinematicScript: DirectorScript | null = null;
-          if (item.cinematicScriptJson) {
+          // Prefer script stored on the record (persists across visits; fix "second click loses details")
+          if (item.cinematicScriptJson && item.cinematicScriptJson.trim()) {
             try {
-              cinematicScript = JSON.parse(item.cinematicScriptJson) as DirectorScript;
+              const parsed = JSON.parse(item.cinematicScriptJson) as DirectorScript;
+              if (parsed && Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
+                cinematicScript = parsed;
+              } else {
+                cinematicScript = getScriptForCard(id);
+              }
             } catch {
               cinematicScript = getScriptForCard(id);
             }
@@ -65,6 +71,8 @@ export default function MemoryPage() {
             cinematicScript = getScriptForCard(id);
           }
           setScript(cinematicScript);
+        } else {
+          setScript(null);
         }
       } catch (e) {
         console.error('Failed to load memory:', e);
