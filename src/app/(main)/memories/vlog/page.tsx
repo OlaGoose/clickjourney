@@ -26,6 +26,7 @@ import { DEFAULT_UPLOAD_IMAGES } from '@/lib/upload/constants';
 import { compressImageToBase64 } from '@/lib/utils/imageUtils';
 import { blobToBase64 } from '@/lib/utils/imageUtils';
 import { saveMemory, updateMemory } from '@/lib/storage';
+import { blobUrlToPersistentUrl } from '@/lib/upload-media';
 import { vlogToCarouselItem } from '@/lib/vlog-to-memory';
 import {
   VLOG_SESSION_KEY,
@@ -296,23 +297,42 @@ export default function VlogPage() {
   }, []);
 
   const handleStartPlayback = useCallback(async () => {
-    if (!canStart) return;
+    if (!canStart || isGenerating) return;
     setIsGenerating(true);
     setGenerationProgress(0);
     setGenerationError(null);
     try {
+      setGenerationProgress(5);
+      // Convert all blob URLs to persistent URLs so vlog works after reload and from detail page
+      const uploadOpts = { userId: userId ?? undefined };
+      const imageBlobUrls = images.filter((i) => i.type !== 'video').map((i) => i.url);
+      const videoBlobUrls = images.filter((i) => i.type === 'video').map((i) => i.url);
+      const imageUrls = await Promise.all(
+        imageBlobUrls.map((url) => blobUrlToPersistentUrl(url, { ...uploadOpts, filename: `vlog-img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg` }))
+      );
+      const videoUrls = await Promise.all(
+        videoBlobUrls.map((url) => blobUrlToPersistentUrl(url, { ...uploadOpts, filename: `vlog-vid-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.mp4` }))
+      );
+      let persistentAudio = audioUrl ?? DEFAULT_VLOG_AUDIO_URL;
+      if (audioUrl && audioUrl.startsWith('blob:')) {
+        persistentAudio = await blobUrlToPersistentUrl(audioUrl, { ...uploadOpts, filename: 'vlog-audio.mp3' });
+      }
+      let persistentRecorded: string | null = recordedAudioUrl;
+      if (recordedAudioUrl && recordedAudioUrl.startsWith('blob:')) {
+        persistentRecorded = await blobUrlToPersistentUrl(recordedAudioUrl, { ...uploadOpts, filename: 'vlog-voice.webm' });
+      }
+
       setGenerationProgress(15);
-      const firstImage = images.find((i) => i.type !== 'video');
-      const firstImageUrl = firstImage?.url;
+      const firstImageUrl = imageUrls[0];
       let filterPreset = 'Original';
       let artifiedScript: string[] = subtitleText.split('\n').map((s) => s.trim()).filter(Boolean);
       if (firstImageUrl) {
         const base64Image = await compressImageToBase64(firstImageUrl);
         setGenerationProgress(35);
         let recordedBase64: string | undefined;
-        if (recordedAudioUrl) {
+        if (persistentRecorded) {
           try {
-            const res = await fetch(recordedAudioUrl);
+            const res = await fetch(persistentRecorded);
             const blob = await res.blob();
             recordedBase64 = await blobToBase64(blob);
           } catch {
@@ -342,43 +362,39 @@ export default function VlogPage() {
           }
         }
       }
-      setGenerationProgress(100);
-      const imageUrls = images.filter((i) => i.type !== 'video').map((i) => i.url);
-      const videoUrls = images.filter((i) => i.type === 'video').map((i) => i.url);
+      setGenerationProgress(95);
       const data: VlogData = {
         location: memoryLocation.trim(),
         images: imageUrls,
         videos: videoUrls,
-        audio: audioUrl ?? DEFAULT_VLOG_AUDIO_URL,
-        recordedAudio: recordedAudioUrl,
+        audio: persistentAudio,
+        recordedAudio: persistentRecorded,
         subtitles: artifiedScript,
         filterPreset: filterPreset,
         youtubeIds,
       };
-      
-      // Save vlog as memory card (similar to upload/cinematic flow)
+
+      // Save vlog as memory card (once; duplicate prevented by isGenerating guard)
       let savedMemoryId: string | null = null;
       if (userId) {
         const carouselInput = vlogToCarouselItem(data);
         const { data: savedData, error } = await saveMemory(userId, carouselInput);
         if (!error && savedData?.id) {
           savedMemoryId = savedData.id;
-          // Store full vlog data JSON for perfect reconstruction on playback
-          await updateMemory(userId, savedData.id, { 
-            vlogDataJson: JSON.stringify(data) 
+          await updateMemory(userId, savedData.id, {
+            vlogDataJson: JSON.stringify(data),
           } as any);
         }
       } else {
-        // For non-authenticated users, just use session storage
         savedMemoryId = `vlog-${Date.now()}`;
       }
-      
-      // Store vlog data for playback page
+
       sessionStorage.setItem(VLOG_SESSION_KEY, JSON.stringify(data));
       if (savedMemoryId) {
         sessionStorage.setItem('vlogMemoryId', savedMemoryId);
       }
-      
+
+      setGenerationProgress(100);
       router.push('/memories/vlog/play');
     } catch (err) {
       setGenerationError(err instanceof Error ? err.message : 'Generation failed');
@@ -386,6 +402,7 @@ export default function VlogPage() {
     }
   }, [
     canStart,
+    isGenerating,
     images,
     memoryLocation,
     subtitleText,
@@ -393,6 +410,7 @@ export default function VlogPage() {
     audioUrl,
     recordedAudioUrl,
     youtubeIds,
+    userId,
     router,
   ]);
 
@@ -767,9 +785,9 @@ export default function VlogPage() {
               <button
                 type="button"
                 onClick={goToNextStep}
-                disabled={!canStart}
+                disabled={!canStart || isGenerating}
                 className={`group relative flex items-center gap-1.5 px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 overflow-hidden ${
-                  canStart
+                  canStart && !isGenerating
                     ? 'bg-black hover:bg-gray-800 text-white'
                     : isDark ? 'bg-white/10 text-white/30 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}

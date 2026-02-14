@@ -95,3 +95,28 @@ export async function fileToUrlOrDataUrl(
     reader.readAsDataURL(file);
   });
 }
+
+/**
+ * Convert a blob URL to a persistent URL (Supabase → GCS → data URL).
+ * If the URL is not a blob:, returns it unchanged.
+ * Used when persisting vlog/cinematic media so it works after reload or from detail page.
+ */
+export async function blobUrlToPersistentUrl(
+  url: string,
+  options?: { userId?: string | null; folder?: string; mimeType?: string; filename?: string }
+): Promise<string> {
+  if (!url || typeof url !== 'string' || !url.startsWith('blob:')) {
+    return url;
+  }
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const mime = options?.mimeType ?? blob.type || 'application/octet-stream';
+    const ext = mime.startsWith('image/') ? (mime === 'image/png' ? 'png' : 'jpg') : mime.startsWith('video/') ? 'mp4' : mime.startsWith('audio/') ? 'webm' : 'bin';
+    const file = new File([blob], options?.filename ?? `upload-${Date.now()}.${ext}`, { type: mime });
+    return fileToUrlOrDataUrl(file, options);
+  } catch (e) {
+    console.warn('[upload-media] blobUrlToPersistentUrl failed:', e);
+    return url;
+  }
+}

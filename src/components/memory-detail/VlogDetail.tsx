@@ -134,7 +134,12 @@ export function VlogDetail({ memory, onBack, isOwner }: VlogDetailProps) {
     );
   }
 
+  // Use a persistent URL for hero; blob URLs are invalid after reload and cause hydration/ERR_FILE_NOT_FOUND
   const firstImage = vlogData.images[0] || memory.image;
+  const hasValidHeroUrl =
+    typeof firstImage === 'string' &&
+    firstImage.length > 0 &&
+    !firstImage.startsWith('blob:');
 
   return (
     <div className="fixed inset-0 z-50 bg-black overflow-auto">
@@ -225,13 +230,19 @@ export function VlogDetail({ memory, onBack, isOwner }: VlogDetailProps) {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 pb-32">
-        {/* Hero Image */}
-        <div className="relative w-full aspect-[9/16] md:aspect-video rounded-2xl overflow-hidden mb-6">
+        {/* Hero Image: only render img when URL is persistent (not blob) to avoid hydration and ERR_FILE_NOT_FOUND */}
+        <div className="relative w-full aspect-[9/16] md:aspect-video rounded-2xl overflow-hidden mb-6 bg-black/80">
+          {hasValidHeroUrl ? (
           <img
             src={firstImage}
             alt={memory.title}
             className="w-full h-full object-cover"
           />
+          ) : (
+          <div className="w-full h-full flex items-center justify-center text-white/60 text-center px-6">
+            <span className="text-lg font-medium">{memory.title || 'VLOG'}</span>
+          </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           
           {/* Play Button Overlay */}
