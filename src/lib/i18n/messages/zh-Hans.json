@@ -257,6 +257,7 @@
     "uploadSoundtrack": "上传配乐",
     "filesReady": "个文件已就绪",
     "dropOrClick": "拖放或点击上传",
+    "uploadingMedia": "正在上传媒体",
     "needPhotosAudioSubtitles": "请至少添加一张照片或视频、一段配乐和字幕后再开始。",
     "exit": "退出",
     "tapToPlay": "点击播放"

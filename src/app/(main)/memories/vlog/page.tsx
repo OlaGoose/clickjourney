@@ -109,8 +109,23 @@ export default function VlogPage() {
 
   const youtubeIds = getYoutubeIds(videoText);
   const hasVisualContent = images.length > 0 || youtubeIds.length > 0;
+  
+  // Track upload status: count items still being uploaded (blob URLs not yet replaced with http)
+  const { isUploading, uploadingCount, totalMediaCount } = useMemo(() => {
+    const blobImages = images.filter((i) => i.url.startsWith('blob:'));
+    const hasAudioBlob = audioUrl?.startsWith('blob:') ?? false;
+    const hasRecordedBlob = recordedAudioUrl?.startsWith('blob:') ?? false;
+    const uploading = blobImages.length + (hasAudioBlob ? 1 : 0) + (hasRecordedBlob ? 1 : 0);
+    const total = images.length + (audioUrl ? 1 : 0) + (recordedAudioUrl ? 1 : 0);
+    return {
+      isUploading: uploading > 0,
+      uploadingCount: uploading,
+      totalMediaCount: total,
+    };
+  }, [images, audioUrl, recordedAudioUrl]);
+  
   const canStart =
-    hasVisualContent && subtitleText.trim().length > 0;
+    hasVisualContent && subtitleText.trim().length > 0 && !isUploading;
 
   const TRANSCRIBE_TIMEOUT_MS = 60_000;
 
@@ -352,69 +367,43 @@ export default function VlogPage() {
     setGenerationProgress(0);
     setGenerationError(null);
     try {
-      setGenerationProgress(5);
-      // Prefer already-uploaded storage URLs; fallback to blobUrlToPersistentUrl only for any still blob (e.g. slow upload)
-      const uploadOpts = { userId: userId ?? undefined };
-      const imageList = images.filter((i) => i.type !== 'video').map((i) => i.url);
-      const videoList = images.filter((i) => i.type === 'video').map((i) => i.url);
-      const imageUrls = await Promise.all(
-        imageList.map((url) =>
-          url.startsWith('http')
-            ? Promise.resolve(url)
-            : blobUrlToPersistentUrl(url, { ...uploadOpts, filename: `vlog-img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg` })
-        )
+      setGenerationProgress(10);
+      // All media should already be uploaded (http URLs) since canStart checks !isUploading
+      const imageUrls = images.filter((i) => i.type !== 'video').map((i) => i.url);
+      const videoUrls = images.filter((i) => i.type === 'video').map((i) => i.url);
+      const persistentAudio = audioUrl ?? DEFAULT_VLOG_AUDIO_URL;
+      const persistentRecorded = recordedAudioUrl;
+      
+      // Sanity check: ensure no blob URLs (should never happen if canStart works correctly)
+      const hasBlobUrl = [...imageUrls, ...videoUrls, persistentAudio, persistentRecorded].some(
+        (url) => url && typeof url === 'string' && url.startsWith('blob:')
       );
-      const videoUrls = await Promise.all(
-        videoList.map((url) =>
-          url.startsWith('http')
-            ? Promise.resolve(url)
-            : blobUrlToPersistentUrl(url, { ...uploadOpts, filename: `vlog-vid-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.mp4` })
-        )
-      );
-      let persistentAudio = audioUrl ?? DEFAULT_VLOG_AUDIO_URL;
-      if (audioUrl && audioUrl.startsWith('blob:')) {
-        persistentAudio = await blobUrlToPersistentUrl(audioUrl, { ...uploadOpts, filename: 'vlog-audio.mp3' });
-      }
-      let persistentRecorded: string | null = recordedAudioUrl;
-      if (recordedAudioUrl && recordedAudioUrl.startsWith('blob:')) {
-        persistentRecorded = await blobUrlToPersistentUrl(recordedAudioUrl, { ...uploadOpts, filename: 'vlog-voice.webm' });
+      if (hasBlobUrl) {
+        throw new Error('请等待媒体上传完成后再试');
       }
 
-      setGenerationProgress(25);
+      setGenerationProgress(30);
       const firstImageUrl = imageUrls[0];
       let filterPreset = 'Original';
       let artifiedScript: string[] = subtitleText.split('\n').map((s) => s.trim()).filter(Boolean);
-      // Use imageUrl when already persistent (server fetches image); avoids heavy client base64 on real devices
+      // Use imageUrl (server fetches image); no heavy client-side base64 on real devices
       if (firstImageUrl && subtitleText.trim()) {
-        setGenerationProgress(45);
+        setGenerationProgress(50);
         const body: Record<string, unknown> = {
           location: memoryLocation.trim() || undefined,
           scriptText: subtitleText.trim(),
+          imageUrl: firstImageUrl,
         };
-        if (firstImageUrl.startsWith('http')) {
-          body.imageUrl = firstImageUrl;
-          if (persistentRecorded && persistentRecorded.startsWith('http')) body.recordedAudioUrl = persistentRecorded;
-        } else {
-          const base64Image = await compressImageToBase64(firstImageUrl);
-          body.image = base64Image;
-          if (persistentRecorded) {
-            try {
-              const res = await fetch(persistentRecorded);
-              const blob = await res.blob();
-              body.recordedAudioBase64 = await blobToBase64(blob);
-              body.recordedMimeType = 'audio/webm';
-            } catch {
-              // optional
-            }
-          }
+        if (persistentRecorded && persistentRecorded.startsWith('http')) {
+          body.recordedAudioUrl = persistentRecorded;
         }
-        setGenerationProgress(65);
+        setGenerationProgress(70);
         const res = await fetch('/api/vlog-style-and-script', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
-        setGenerationProgress(85);
+        setGenerationProgress(90);
         if (res.ok) {
           const data = await res.json();
           filterPreset = data.filterPreset ?? 'Original';
@@ -866,7 +855,9 @@ export default function VlogPage() {
           </div>
           {currentStep === 2 && !canStart && (
             <p className={`mt-3 text-xs text-center max-w-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-              {t('vlog.needPhotosAudioSubtitles')}
+              {isUploading 
+                ? `${t('vlog.uploadingMedia') || '正在上传媒体'} (${totalMediaCount - uploadingCount}/${totalMediaCount})`
+                : t('vlog.needPhotosAudioSubtitles')}
             </p>
           )}
         </div>
