@@ -17,6 +17,11 @@ export interface VlogFormState {
   subtitleText: string;
   videoText: string;
   selectedFilterPreset: string;
+  // Media URLs (can be blob: or http:)
+  imageUrls: Array<{ id: string; url: string; type: 'image' | 'video' }>;
+  audioUrl: string | null;
+  recordedAudioUrl: string | null;
+  isDefault: boolean; // Track if using default images
   updatedAt: number;
 }
 

@@ -128,7 +128,7 @@ export default function VlogPage() {
   const youtubeIds = getYoutubeIds(videoText);
   
   // Track upload status: count items still being uploaded (blob URLs not yet replaced with http)
-  const { isUploading, uploadingCount, totalMediaCount, hasReadyVisualContent } = useMemo(() => {
+  const { isUploading, uploadingCount, totalMediaCount, hasReadyVisualContent, hasAnyVisualContent } = useMemo(() => {
     const blobImages = images.filter((i) => i.url.startsWith('blob:'));
     const readyImages = images.filter((i) => i.url.startsWith('http'));
     const hasAudioBlob = audioUrl?.startsWith('blob:') ?? false;
@@ -136,17 +136,20 @@ export default function VlogPage() {
     const uploading = blobImages.length + (hasAudioBlob ? 1 : 0) + (hasRecordedBlob ? 1 : 0);
     const total = images.length + (audioUrl ? 1 : 0) + (recordedAudioUrl ? 1 : 0);
     const hasYoutube = getYoutubeIds(videoText).length > 0;
+    const allImages = images.filter((i) => !isDefault || i.url !== DEFAULT_UPLOAD_IMAGES[0]?.url);
     return {
       isUploading: uploading > 0,
       uploadingCount: uploading,
       totalMediaCount: total,
       hasReadyVisualContent: readyImages.length > 0 || hasYoutube,
+      hasAnyVisualContent: allImages.length > 0 || hasYoutube,
     };
-  }, [images, audioUrl, recordedAudioUrl, videoText]);
+  }, [images, audioUrl, recordedAudioUrl, videoText, isDefault]);
   
-  // Allow starting if有至少一个已上传完成的媒体（http）和字幕，即使还有其他项在上传
+  // Allow starting if有视觉内容（http URLs 或本地 blob URLs）和字幕
+  // 支持本地预览，即使文件还没上传完成
   const canStart =
-    hasReadyVisualContent && subtitleText.trim().length > 0;
+    hasAnyVisualContent && subtitleText.trim().length > 0;
 
   const TRANSCRIBE_TIMEOUT_MS = 60_000;
 
@@ -297,19 +300,90 @@ export default function VlogPage() {
         ]);
         
         if (!cancelled) {
-          // Restore form state
+          // Restore form state (text fields)
           if (formState) {
             setCurrentStep(formState.currentStep);
             setMemoryLocation(formState.memoryLocation);
             setSubtitleText(formState.subtitleText);
             setVideoText(formState.videoText);
             setSelectedFilterPreset(formState.selectedFilterPreset);
+            setIsDefault(formState.isDefault ?? true);
+            
+            // Restore media from saved state
+            if (formState.imageUrls && formState.imageUrls.length > 0) {
+              setImages(formState.imageUrls.map(img => ({
+                id: img.id,
+                url: img.url,
+                type: img.type,
+              })));
+            }
+            if (formState.audioUrl) {
+              setAudioUrl(formState.audioUrl);
+            }
+            if (formState.recordedAudioUrl) {
+              setRecordedAudioUrl(formState.recordedAudioUrl);
+            }
           }
           
-          // Show resume dialog if有未完成上传
+          // If there are pending uploads in cache, merge with restored state
           if (pending.length > 0) {
+            const uploadOpts = { userId: userId ?? undefined };
+            
+            // Resume uploads automatically in background
+            for (const item of pending) {
+              if (item.status === 'completed' && item.url) {
+                // Already uploaded, just update state with persistent URL
+                if (item.type === 'image' || item.type === 'video') {
+                  setImages((prev) =>
+                    prev.map((img) => (img.id === item.id ? { ...img, url: item.url! } : img))
+                  );
+                } else if (item.type === 'audio') {
+                  setAudioUrl(item.url);
+                } else if (item.type === 'recorded') {
+                  setRecordedAudioUrl(item.url);
+                }
+              } else {
+                // Need to upload, create blob and start upload
+                const blobUrl = URL.createObjectURL(item.file);
+                
+                if (item.type === 'image' || item.type === 'video') {
+                  // Add to images if not already there
+                  setImages((prev) => {
+                    const exists = prev.some(img => img.id === item.id);
+                    if (exists) return prev;
+                    return [...prev, { id: item.id, url: blobUrl, type: item.type as 'image' | 'video' }];
+                  });
+                  setIsDefault(false);
+                } else if (item.type === 'audio' && !formState?.audioUrl) {
+                  setAudioUrl(blobUrl);
+                } else if (item.type === 'recorded' && !formState?.recordedAudioUrl) {
+                  setRecordedAudioUrl(blobUrl);
+                }
+                
+                // Start upload in background
+                uploadToSupabaseStorage(item.file, uploadOpts).then((persistentUrl) => {
+                  if (!persistentUrl) return;
+                  
+                  if (item.type === 'image' || item.type === 'video') {
+                    setImages((prev) =>
+                      prev.map((img) => (img.id === item.id ? { ...img, url: persistentUrl } : img))
+                    );
+                  } else if (item.type === 'audio') {
+                    setAudioUrl(persistentUrl);
+                  } else if (item.type === 'recorded') {
+                    setRecordedAudioUrl(persistentUrl);
+                  }
+                  
+                  updateUploadCacheItem(item.id, { status: 'completed', url: persistentUrl }).catch(console.warn);
+                  revokeBlobUrlIfNeeded(blobUrl);
+                }).catch((err) => {
+                  console.warn('[vlog] Auto-resume upload failed:', item.id, err);
+                });
+              }
+            }
+            
             setPendingCache(pending);
-            setShowResumeDialog(true);
+            // Don't show resume dialog - auto-resume in background instead
           }
         }
       } catch (err) {
@@ -320,7 +394,7 @@ export default function VlogPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [userId]);
 
   // Auto-save form state when it changes
   useEffect(() => {
@@ -331,10 +405,14 @@ export default function VlogPage() {
         subtitleText,
         videoText,
         selectedFilterPreset,
+        imageUrls: images.map((img) => ({ id: img.id, url: img.url, type: img.type ?? 'image' })),
+        audioUrl,
+        recordedAudioUrl,
+        isDefault,
       }).catch(console.warn);
     }, 500); // Debounce 500ms
     return () => clearTimeout(timeoutId);
-  }, [currentStep, memoryLocation, subtitleText, videoText, selectedFilterPreset]);
+  }, [currentStep, memoryLocation, subtitleText, videoText, selectedFilterPreset, images, audioUrl, recordedAudioUrl, isDefault]);
 
   // Resume uploads from cache
   const handleResumeUploads = useCallback(async () => {
@@ -409,37 +487,26 @@ export default function VlogPage() {
     await clearUploadCache();
   }, []);
 
-  // Cancel single upload
+  // Cancel single upload: stop cloud upload but keep local blob for preview
   const handleCancelUpload = useCallback((id: string, type: 'image' | 'video' | 'audio' | 'recorded') => {
-    if (type === 'image' || type === 'video') {
-      setImages((prev) => prev.filter((img) => img.id !== id));
-    } else if (type === 'audio') {
-      setAudioUrl(null);
-    } else if (type === 'recorded') {
-      setRecordedAudioUrl(null);
-    }
+    // Only remove from upload cache, keep the blob URL in state for local preview
     updateUploadCacheItem(id, { status: 'cancelled' }).catch(console.warn);
     removeUploadCacheItem(id).catch(console.warn);
+    // Note: We keep the media in state so users can still use local preview mode
   }, []);
 
-  // Cancel all uploads
+  // Cancel all uploads: stop cloud uploads but keep local blobs for preview
   const handleCancelAllUploads = useCallback(() => {
     const blobImages = images.filter((i) => i.url.startsWith('blob:'));
     blobImages.forEach((img) => {
       updateUploadCacheItem(img.id, { status: 'cancelled' }).catch(console.warn);
       removeUploadCacheItem(img.id).catch(console.warn);
     });
-    setImages((prev) => prev.filter((i) => !i.url.startsWith('blob:')));
-    
-    if (audioUrl?.startsWith('blob:')) {
-      setAudioUrl(null);
-    }
-    if (recordedAudioUrl?.startsWith('blob:')) {
-      setRecordedAudioUrl(null);
-    }
+    // Don't remove from state - keep blobs for local preview
+    // User can still generate vlog with local media
     
     setShowUploadManager(false);
-  }, [images, audioUrl, recordedAudioUrl]);
+  }, [images]);
 
   const handleStartClick = useCallback(() => {
     setReplaceTargetId(null);
@@ -561,13 +628,19 @@ export default function VlogPage() {
     setGenerationError(null);
     try {
       setGenerationProgress(10);
-      // Only use successfully uploaded media (http URLs); ignore blob (still uploading or cancelled)
-      const imageUrls = images
-        .filter((i) => i.type !== 'video' && i.url.startsWith('http'))
+      // Use all media (http URLs and blob URLs for local preview)
+      const allImageUrls = images
+        .filter((i) => i.type !== 'video')
         .map((i) => i.url);
-      const videoUrls = images
-        .filter((i) => i.type === 'video' && i.url.startsWith('http'))
+      const allVideoUrls = images
+        .filter((i) => i.type === 'video')
         .map((i) => i.url);
+      const hasHttpImages = allImageUrls.some(url => url.startsWith('http'));
+      const hasHttpVideos = allVideoUrls.some(url => url.startsWith('http'));
+      
+      // For AI generation and database saving, prefer http URLs
+      const imageUrls = allImageUrls.filter((url) => url.startsWith('http'));
+      const videoUrls = allVideoUrls.filter((url) => url.startsWith('http'));
       const persistentAudio =
         audioUrl && audioUrl.startsWith('http') ? audioUrl : DEFAULT_VLOG_AUDIO_URL;
       const persistentRecorded =
@@ -577,7 +650,8 @@ export default function VlogPage() {
       const firstImageUrl = imageUrls[0];
       let filterPreset = 'Original';
       let artifiedScript: string[] = subtitleText.split('\n').map((s) => s.trim()).filter(Boolean);
-      // Use imageUrl (server fetches image); no heavy client-side base64 on real devices
+      
+      // Try AI generation only if we have uploaded (http) image
       if (firstImageUrl && subtitleText.trim()) {
         setGenerationProgress(50);
         const body: Record<string, unknown> = {
@@ -607,20 +681,25 @@ export default function VlogPage() {
       // LUT: use user selection when they chose a preset; otherwise use AI recommendation
       const finalFilterPreset =
         selectedFilterPreset !== 'Original' ? selectedFilterPreset : filterPreset;
+      
+      // Use all media for playback (including local blobs for preview)
+      // But only save to database if we have persistent (http) URLs
+      const useLocalPreview = !hasHttpImages && !hasHttpVideos;
       const data: VlogData = {
         location: memoryLocation.trim(),
-        images: imageUrls,
-        videos: videoUrls,
-        audio: persistentAudio,
-        recordedAudio: persistentRecorded,
+        images: useLocalPreview ? allImageUrls : imageUrls,
+        videos: useLocalPreview ? allVideoUrls : videoUrls,
+        audio: audioUrl || persistentAudio,
+        recordedAudio: recordedAudioUrl || persistentRecorded,
         subtitles: artifiedScript,
         filterPreset: finalFilterPreset,
         youtubeIds,
       };
 
-      // Save vlog as memory card (once; duplicate prevented by isGenerating guard)
+      // Save vlog as memory card (only if using persistent URLs, not local blobs)
       let savedMemoryId: string | null = null;
-      if (userId) {
+      if (!useLocalPreview && userId) {
+        // Save to database (has persistent URLs)
         const carouselInput = vlogToCarouselItem(data);
         const { data: savedData, error } = await saveMemory(userId, carouselInput);
         if (!error && savedData?.id) {
@@ -629,9 +708,11 @@ export default function VlogPage() {
             vlogDataJson: JSON.stringify(data),
           } as any);
         }
-      } else {
+      } else if (!useLocalPreview && !userId) {
+        // No user login but has persistent URLs
         savedMemoryId = `vlog-${Date.now()}`;
       }
+      // If useLocalPreview, skip database save (blob URLs won't persist across sessions)
 
       setGenerationProgress(100);
 
@@ -642,9 +723,10 @@ export default function VlogPage() {
       ]).catch(console.warn);
 
       // Redirect by id so this vlog has a stable play URL and does not overwrite others
-      if (savedMemoryId && userId) {
+      if (savedMemoryId && userId && !useLocalPreview) {
         router.push(`/memories/vlog/play?id=${encodeURIComponent(savedMemoryId)}`);
       } else {
+        // Local preview or no saved ID: use sessionStorage
         sessionStorage.setItem(VLOG_SESSION_KEY, JSON.stringify(data));
         if (savedMemoryId) sessionStorage.setItem('vlogMemoryId', savedMemoryId);
         router.push('/memories/vlog/play');
@@ -1144,8 +1226,8 @@ export default function VlogPage() {
             </div>
 
             <div className="space-y-3 mb-4">
-              {/* Uploading Images/Videos */}
-              {images.filter((i) => i.url.startsWith('blob:')).map((img) => (
+              {/* Uploading Images/Videos (only show items that are actively uploading in cache) */}
+              {images.filter((i) => i.url.startsWith('blob:') && pendingCache?.some(c => c.id === i.id)).map((img) => (
                 <div
                   key={img.id}
                   className={`flex items-center justify-between p-3 rounded-lg ${
@@ -1172,8 +1254,8 @@ export default function VlogPage() {
                 </div>
               ))}
 
-              {/* Uploading Audio */}
-              {audioUrl?.startsWith('blob:') && (
+              {/* Uploading Audio (only show if actively uploading in cache) */}
+              {audioUrl?.startsWith('blob:') && pendingCache?.some(c => c.type === 'audio') && (
                 <div
                   className={`flex items-center justify-between p-3 rounded-lg ${
                     isDark ? 'bg-white/5' : 'bg-gray-50'
@@ -1199,8 +1281,8 @@ export default function VlogPage() {
                 </div>
               )}
 
-              {/* Uploading Recorded Audio */}
-              {recordedAudioUrl?.startsWith('blob:') && (
+              {/* Uploading Recorded Audio (only show if actively uploading in cache) */}
+              {recordedAudioUrl?.startsWith('blob:') && pendingCache?.some(c => c.type === 'recorded') && (
                 <div
                   className={`flex items-center justify-between p-3 rounded-lg ${
                     isDark ? 'bg-white/5' : 'bg-gray-50'
