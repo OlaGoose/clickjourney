@@ -8,17 +8,28 @@ import { carouselItemToVlogData } from '@/lib/vlog-to-memory';
 import { VLOG_SESSION_KEY, type VlogData } from '@/types/vlog';
 import type { CarouselItem } from '@/types/memory';
 
+/** Normalize API response so we have camelCase (API may return snake_case from DB). */
+function normalizeMemoryFromApi(raw: Record<string, unknown>): CarouselItem {
+  const item = { ...raw } as CarouselItem;
+  if (item.vlogDataJson == null && (raw.vlog_data_json != null)) item.vlogDataJson = raw.vlog_data_json as string;
+  if (item.type == null && raw.type != null) item.type = raw.type as CarouselItem['type'];
+  if (item.image == null && raw.image_url != null) item.image = raw.image_url as string;
+  return item;
+}
+
 function normalizeVlogData(parsed: Partial<VlogData> | null): VlogData | null {
-  if (!parsed || !Array.isArray(parsed.subtitles) || !Array.isArray(parsed.youtubeIds)) return null;
+  if (!parsed || typeof parsed !== 'object') return null;
+  const subtitles = Array.isArray(parsed.subtitles) ? parsed.subtitles : [];
+  const youtubeIds = Array.isArray(parsed.youtubeIds) ? parsed.youtubeIds : [];
   return {
     location: typeof parsed.location === 'string' ? parsed.location : '',
     images: Array.isArray(parsed.images) ? parsed.images : [],
     videos: Array.isArray(parsed.videos) ? parsed.videos : [],
     audio: parsed.audio ?? null,
     recordedAudio: parsed.recordedAudio ?? null,
-    subtitles: parsed.subtitles,
+    subtitles,
     filterPreset: parsed.filterPreset ?? 'Original',
-    youtubeIds: parsed.youtubeIds,
+    youtubeIds,
   };
 }
 
@@ -46,15 +57,19 @@ function VlogPlayContent() {
       // Shared view or link with id: try API first so unauthenticated users can load public vlogs
       try {
         const res = await fetch(`/api/memories/${id}`);
-        if (res.ok) item = (await res.json()) as CarouselItem;
+        if (res.ok) {
+          const raw = (await res.json()) as Record<string, unknown>;
+          item = normalizeMemoryFromApi(raw);
+        }
       } catch {
         // ignore
       }
       if (!item) item = await MemoryService.getMemory(id);
       if (!item) return null;
       if (item.type !== 'vlog') return null;
-      const vlogData = item.vlogDataJson
-        ? normalizeVlogData(JSON.parse(item.vlogDataJson) as Partial<VlogData>)
+      const vlogJson = item.vlogDataJson;
+      const vlogData = vlogJson
+        ? normalizeVlogData(JSON.parse(vlogJson) as Partial<VlogData>)
         : carouselItemToVlogData(item);
       return vlogData ?? null;
     },
