@@ -1,6 +1,6 @@
 /**
  * Shared pool of reliable demo gallery image URLs.
- * Used for fallback in MemoryDetail and for demo carousel items (0–8 images).
+ * Used for demo carousel items (0–8 images).
  * Picsum IDs are stable and avoid cross-origin/loading issues.
  */
 

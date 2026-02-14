@@ -10,7 +10,7 @@ import type { CarouselItem } from '@/types/memory';
 
 /** Normalize API response so we have camelCase (API may return snake_case from DB). */
 function normalizeMemoryFromApi(raw: Record<string, unknown>): CarouselItem {
-  const item = { ...raw } as CarouselItem;
+  const item = { ...raw } as unknown as CarouselItem;
   if (item.vlogDataJson == null && (raw.vlog_data_json != null)) item.vlogDataJson = raw.vlog_data_json as string;
   if (item.type == null && raw.type != null) item.type = raw.type as CarouselItem['type'];
   if (item.image == null && raw.image_url != null) item.image = raw.image_url as string;
