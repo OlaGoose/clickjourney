@@ -10,6 +10,7 @@ import { useLocale } from '@/lib/i18n';
 import { useOptionalAuth } from '@/lib/auth';
 import { updateMemory } from '@/lib/storage';
 import { MemoryService } from '@/lib/db/services/memory-service';
+import { copyMemoryShareLink } from '@/lib/share-link';
 
 interface VlogDetailProps {
   memory: CarouselItem;
@@ -66,22 +67,11 @@ export function VlogDetail({ memory, onBack, isOwner }: VlogDetailProps) {
       if (!userId) return;
       await updateMemory(userId, memory.id, { visibility: v });
       
-      // If setting to public, show share link
+      // If setting to public, copy share link to clipboard
       if (v === 'public') {
-        const shareUrl = `${window.location.origin}/memories/${memory.id}`;
-        try {
-          if (navigator.share) {
-            await navigator.share({
-              title: memory.title,
-              text: memory.description || `Check out my vlog: ${memory.title}`,
-              url: shareUrl,
-            });
-          } else {
-            await navigator.clipboard.writeText(shareUrl);
-            alert(t('memory.linkCopied') || 'Share link copied to clipboard!');
-          }
-        } catch (error) {
-          console.error('Failed to share:', error);
+        const copied = await copyMemoryShareLink(memory.id);
+        if (copied) {
+          alert(t('memory.linkCopied') || '链接已复制');
         }
       }
     },

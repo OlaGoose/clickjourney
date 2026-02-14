@@ -9,6 +9,7 @@ import PhotoGrid from '@/components/PhotoGrid';
 import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { MemoryService } from '@/lib/db/services/memory-service';
 import { updateMemory } from '@/lib/storage';
+import { copyMemoryShareLink } from '@/lib/share-link';
 import { useOptionalAuth } from '@/lib/auth';
 import { useLocale } from '@/lib/i18n';
 
@@ -49,8 +50,12 @@ export function PhotoGalleryDetail({ memory, onBack, isOwner = false, shareView 
       setVisibility(v);
       if (!userId) return;
       await updateMemory(userId, memory.id, { visibility: v });
+      if (v === 'public') {
+        const copied = await copyMemoryShareLink(memory.id);
+        if (copied) alert(t('memory.linkCopied'));
+      }
     },
-    [userId, memory.id]
+    [userId, memory.id, t]
   );
 
   const handleImageClick = (index: number) => {

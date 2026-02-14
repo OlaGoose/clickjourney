@@ -13,6 +13,7 @@ import { useDayNightTheme } from '@/hooks/useDayNightTheme';
 import { useOptionalAuth } from '@/lib/auth';
 import { useLocale } from '@/lib/i18n';
 import { saveMemory, updateMemory } from '@/lib/storage';
+import { copyMemoryShareLink } from '@/lib/share-link';
 import { directorScriptToCarouselItem } from '@/lib/upload-to-memory';
 import { saveCinematicScript, saveLocalCinematic, updateLocalCinematic } from '@/lib/cinematic-storage';
 import { MemoryService } from '@/lib/db/services/memory-service';
@@ -99,8 +100,12 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
       setVisibility(v);
       if (!userId) return;
       await updateMemory(userId, memory.id, { visibility: v });
+      if (v === 'public') {
+        const copied = await copyMemoryShareLink(memory.id);
+        if (copied) alert(t('memory.linkCopied'));
+      }
     },
-    [userId, memory.id]
+    [userId, memory.id, t]
   );
 
   const handleUpdateBlock = (id: string, updates: Partial<StoryBlock>) => {
