@@ -323,20 +323,6 @@ export function VlogDetail({ memory, onBack, isOwner }: VlogDetailProps) {
           )}
         </div>
       </div>
-
-      {/* Fixed Bottom Play Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black to-transparent">
-        <div className="max-w-4xl mx-auto">
-          <button
-            type="button"
-            onClick={handlePlay}
-            className="w-full py-4 rounded-full bg-white text-black font-semibold text-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
-          >
-            <Play size={20} className="fill-black" />
-            {t('vlog.playVlog') || 'Play Vlog'}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
