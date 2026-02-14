@@ -22,6 +22,8 @@ interface CinematicDetailProps {
   script: DirectorScript | null;
   onBack: () => void;
   isOwner?: boolean;
+  /** When true (public share), hide header and show read-only content only. */
+  shareView?: boolean;
 }
 
 function buildDefaultScript(t: (key: import('@/lib/i18n/types').MessageKey) => string): DirectorScript {
@@ -59,7 +61,7 @@ function toRoman(n: number): string {
   return s;
 }
 
-export function CinematicDetail({ memory, script: initialScript, onBack, isOwner = false }: CinematicDetailProps) {
+export function CinematicDetail({ memory, script: initialScript, onBack, isOwner = false, shareView = false }: CinematicDetailProps) {
   const router = useRouter();
   const { t, locale } = useLocale();
   const defaultScript = useMemo(() => buildDefaultScript(t), [t]);
@@ -182,48 +184,67 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
   const moreMenuClass = 'w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100';
   const moreMenuClassDanger = 'w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed';
 
+  const readOnly = shareView;
+  const effectiveEditMode = readOnly ? false : isEditMode;
+
   return (
     <div className={`fixed inset-0 z-50 overflow-hidden font-sans transition-colors duration-300 flex flex-col ${isDark ? 'dark bg-[#050505] text-white' : 'bg-white text-black'}`}>
-      <MemoryDetailHeader
-        title={memory.title || script.title || undefined}
-        onBack={onBack}
-        visibility={visibility}
-        onVisibilityChange={isOwner ? handleVisibilityChange : undefined}
-        moreMenu={
-          <>
-            <button type="button" onClick={() => setIsEditMode(true)} className={moreMenuClass} role="menuitem">{t('common.edit')}</button>
-            <button
-              type="button"
-              onClick={handleSaveToMemory}
-              disabled={saveStatus === 'saving'}
-              className={moreMenuClass}
-              role="menuitem"
-            >
-              {saveStatus === 'saving' ? t('cinematic.saving') : saveStatus === 'saved' ? t('cinematic.saved') : t('common.save')}
-            </button>
-            <button type="button" className={moreMenuClass} role="menuitem">{t('common.download')}</button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className={moreMenuClassDanger}
-              role="menuitem"
-            >
-              {isDeleting ? t('memory.deleting') : t('memory.delete')}
-            </button>
-          </>
-        }
-      />
+      {!shareView && (
+        <MemoryDetailHeader
+          title={memory.title || script.title || undefined}
+          onBack={onBack}
+          visibility={visibility}
+          onVisibilityChange={isOwner ? handleVisibilityChange : undefined}
+          moreMenu={
+            <>
+              <button type="button" onClick={() => setIsEditMode(true)} className={moreMenuClass} role="menuitem">{t('common.edit')}</button>
+              <button
+                type="button"
+                onClick={handleSaveToMemory}
+                disabled={saveStatus === 'saving'}
+                className={moreMenuClass}
+                role="menuitem"
+              >
+                {saveStatus === 'saving' ? t('cinematic.saving') : saveStatus === 'saved' ? t('cinematic.saved') : t('common.save')}
+              </button>
+              <button type="button" className={moreMenuClass} role="menuitem">{t('common.download')}</button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className={moreMenuClassDanger}
+                role="menuitem"
+              >
+                {isDeleting ? t('memory.deleting') : t('memory.delete')}
+              </button>
+            </>
+          }
+        />
+      )}
+
+      {/* Share view: minimal back so viewer can leave */}
+      {shareView && (
+        <div className={`absolute top-0 left-0 z-20 p-4 ${isDark ? 'text-white/80' : 'text-black/80'}`}>
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-2 hover:opacity-100 opacity-80 transition-opacity"
+          >
+            <ArrowLeft size={20} aria-hidden />
+            <span className="text-sm font-medium">{t('memory.back') || 'Back'}</span>
+          </button>
+        </div>
+      )}
 
       {/* Main Content — 1:1 structure with AI generate page (single scroll like generate) */}
-      <main className="pt-[44px] flex-1 min-h-0 overflow-y-auto no-scrollbar">
+      <main className={`flex-1 min-h-0 overflow-y-auto no-scrollbar ${shareView ? 'pt-4' : 'pt-[44px]'}`}>
         {/* Hero Title Section — same as generate: max-w-5xl, py-16 md:py-24, space-y-8 */}
         <section className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-24">
           <div className="space-y-8">
             <div className={`flex flex-wrap items-center gap-6 text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>
               <div className="flex items-center gap-2">
                 <Calendar size={16} aria-hidden />
-                {isEditMode ? (
+                {effectiveEditMode ? (
                   <input
                     type="text"
                     value={script.date ?? ''}
@@ -241,7 +262,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
                   type="text"
                   value={script.location}
                   onChange={(e) => setScript(s => ({ ...s, location: e.target.value }))}
-                  disabled={!isEditMode}
+                  disabled={!effectiveEditMode}
                   className={`bg-transparent border-none outline-none uppercase tracking-wider disabled:cursor-default ${isDark ? 'text-white placeholder:text-white/30' : ''}`}
                   placeholder={t('cinematic.addPlaceholder')}
                 />
@@ -252,7 +273,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
                 type="text"
                 value={script.title}
                 onChange={(e) => setScript(s => ({ ...s, title: e.target.value }))}
-                disabled={!isEditMode}
+                disabled={!effectiveEditMode}
                 className={`w-full bg-transparent border-none outline-none font-serif text-5xl md:text-7xl font-semibold leading-[1.08] tracking-[-0.015em] disabled:cursor-default ${isDark ? 'text-white placeholder:text-white/30' : 'text-black'}`}
                 placeholder={t('cinematic.nameYourJourney')}
               />
@@ -261,7 +282,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
               {script.blocks.length} {t('cinematic.moments')}, {t('cinematic.oneStory')}
             </p>
             <div className={`w-24 h-px ${isDark ? 'bg-white/20' : 'bg-black/20'}`} />
-            {isEditMode && (
+            {effectiveEditMode && (
               <div className={`pt-4 flex flex-wrap items-center gap-3 text-sm ${isDark ? 'text-white/50' : 'text-black/50'}`}>
                 <span>{t('cinematic.chapterStyleLabel')}</span>
                 <select
@@ -285,7 +306,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
               key={block.id}
               id={`chapter-${index + 1}`}
               className={`relative ${activeChapter === block.id ? (isDark ? 'ring-2 ring-white/10 rounded-lg p-4' : 'ring-2 ring-black/10 rounded-lg p-4') : ''}`}
-              onClick={() => isEditMode && setActiveChapter(block.id)}
+              onClick={() => effectiveEditMode && setActiveChapter(block.id)}
             >
               {/* Chapter divider: 3 templates — same classes as generate (gap-6 mb-8, text-7xl md:text-8xl) */}
               {chapterStyle === 'number_mood' && (
@@ -320,7 +341,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
               <StaticBlockRenderer
                 block={block}
                 index={index}
-                isEditMode={isEditMode}
+                isEditMode={effectiveEditMode}
                 onUpdate={handleUpdateBlock}
                 isDark={isDark}
               />
@@ -331,7 +352,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
         {/* Ending Section — same as generate: max-w-5xl, py-24 md:py-32, space-y-8, text-lg md:text-xl, pt-12, ArrowLeft */}
         <section className={`max-w-5xl mx-auto px-6 md:px-12 py-24 md:py-32 border-t ${isDark ? 'border-white/10' : 'border-black/10'}`}>
           <div className="text-center space-y-8">
-            {isEditMode ? (
+            {effectiveEditMode ? (
               <textarea
                 value={script.endingQuote ?? ''}
                 onChange={(e) => setScript(s => ({ ...s, endingQuote: e.target.value }))}
@@ -345,7 +366,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
               </p>
             )}
             <div className="pt-12">
-              {isEditMode ? (
+              {effectiveEditMode ? (
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <input
                     type="text"

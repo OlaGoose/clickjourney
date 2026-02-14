@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import type { CarouselItem, MemoryVisibility } from '@/types/memory';
 import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { MemoryService } from '@/lib/db/services/memory-service';
@@ -13,9 +14,11 @@ interface VideoDetailProps {
   memory: CarouselItem;
   onBack: () => void;
   isOwner?: boolean;
+  /** When true (public share), hide header and show read-only content only. */
+  shareView?: boolean;
 }
 
-export function VideoDetail({ memory, onBack, isOwner = false }: VideoDetailProps) {
+export function VideoDetail({ memory, onBack, isOwner = false, shareView = false }: VideoDetailProps) {
   const router = useRouter();
   const { t } = useLocale();
   const auth = useOptionalAuth();
@@ -67,29 +70,44 @@ export function VideoDetail({ memory, onBack, isOwner = false }: VideoDetailProp
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col animate-fadeIn bg-black font-sans text-white">
-      <MemoryDetailHeader
-        onBack={onBack}
-        visibility={visibility}
-        onVisibilityChange={isOwner ? handleVisibilityChange : undefined}
-        moreMenu={
-          isOwner ? (
-            <>
-              <button type="button" onClick={handleEdit} className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100" role="menuitem">{t('common.edit')}</button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                role="menuitem"
-              >
-                {isDeleting ? t('memory.deleting') : t('memory.delete')}
-              </button>
-            </>
-          ) : undefined
-        }
-      />
+      {!shareView && (
+        <MemoryDetailHeader
+          onBack={onBack}
+          visibility={visibility}
+          onVisibilityChange={isOwner ? handleVisibilityChange : undefined}
+          moreMenu={
+            isOwner ? (
+              <>
+                <button type="button" onClick={handleEdit} className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100" role="menuitem">{t('common.edit')}</button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  role="menuitem"
+                >
+                  {isDeleting ? t('memory.deleting') : t('memory.delete')}
+                </button>
+              </>
+            ) : undefined
+          }
+        />
+      )}
 
-      <div className="flex-1 overflow-hidden">
+      {shareView && (
+        <div className="absolute top-0 left-0 z-20 p-4 text-white/80">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-2 hover:opacity-100 opacity-80 transition-opacity"
+          >
+            <ArrowLeft size={20} aria-hidden />
+            <span className="text-sm font-medium">{t('memory.back') || 'Back'}</span>
+          </button>
+        </div>
+      )}
+
+      <div className={`flex-1 overflow-hidden ${shareView ? 'pt-4' : ''}`}>
         {videos.length > 0 ? (
           <div className="flex h-full flex-col">
             <div className="relative flex-1 bg-black">

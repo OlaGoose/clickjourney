@@ -17,13 +17,15 @@ export default function MemoryPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
-  const shareView = searchParams.get('share') === '1';
-
   const [memory, setMemory] = useState<CarouselItem | null>(null);
   const [script, setScript] = useState<DirectorScript | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Public share: no header, read-only. For vlog we redirect to play page to open directly playing.
+  const shareView =
+    (!!memory && !isOwner && memory.visibility === 'public') || searchParams.get('share') === '1';
 
   useEffect(() => {
     if (!id) {
@@ -86,6 +88,15 @@ export default function MemoryPage() {
     loadMemory();
   }, [id]);
 
+  // Shared public vlog: open directly to play page (no header, auto-play)
+  useEffect(() => {
+    if (!memory || !id || error) return;
+    const type = inferMemoryType(memory);
+    if (type === 'vlog' && shareView) {
+      router.replace(`/memories/vlog/play?id=${encodeURIComponent(id)}&share=1`);
+    }
+  }, [memory, id, shareView, error, router]);
+
   const handleBack = () => {
     router.back();
   };
@@ -115,17 +126,55 @@ export default function MemoryPage() {
 
   const memoryType = inferMemoryType(memory);
 
+  // Shared vlog: redirect to play page (no detail flash)
+  if (memoryType === 'vlog' && shareView) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      </div>
+    );
+  }
+
   switch (memoryType) {
     case 'cinematic':
-      return <CinematicDetail memory={memory} script={script} onBack={handleBack} isOwner={isOwner} />;
+      return (
+        <CinematicDetail
+          memory={memory}
+          script={script}
+          onBack={handleBack}
+          isOwner={isOwner}
+          shareView={shareView}
+        />
+      );
     case 'vlog':
       return <VlogDetail memory={memory} onBack={handleBack} isOwner={isOwner} />;
     case 'rich-story':
-      return <RichStoryDetail memory={memory} onBack={handleBack} shareView={shareView} isOwner={isOwner} />;
+      return (
+        <RichStoryDetail
+          memory={memory}
+          onBack={handleBack}
+          shareView={shareView}
+          isOwner={isOwner}
+        />
+      );
     case 'video':
-      return <VideoDetail memory={memory} onBack={handleBack} isOwner={isOwner} />;
+      return (
+        <VideoDetail
+          memory={memory}
+          onBack={handleBack}
+          isOwner={isOwner}
+          shareView={shareView}
+        />
+      );
     case 'photo-gallery':
     default:
-      return <PhotoGalleryDetail memory={memory} onBack={handleBack} isOwner={isOwner} />;
+      return (
+        <PhotoGalleryDetail
+          memory={memory}
+          onBack={handleBack}
+          isOwner={isOwner}
+          shareView={shareView}
+        />
+      );
   }
 }

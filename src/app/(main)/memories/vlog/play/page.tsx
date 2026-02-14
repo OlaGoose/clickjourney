@@ -34,6 +34,7 @@ function VlogPlayContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const idFromQuery = searchParams.get('id');
+  const isSharedView = searchParams.get('share') === '1';
 
   const [data, setData] = useState<VlogData | null>(null);
   const [memoryId, setMemoryId] = useState<string | null>(idFromQuery || null);
@@ -106,12 +107,16 @@ function VlogPlayContent() {
   }, [idFromQuery, loadByMemoryId, router]);
 
   const handleExit = useCallback(() => {
+    if (isSharedView) {
+      router.push('/');
+      return;
+    }
     if (memoryId && memoryId.startsWith('vlog-') === false) {
       router.push(`/memories/${memoryId}`);
     } else {
       router.push('/memories/vlog');
     }
-  }, [memoryId, router]);
+  }, [memoryId, isSharedView, router]);
 
   if (loading || data === null) {
     return (

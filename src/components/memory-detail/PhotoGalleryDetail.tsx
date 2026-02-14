@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import type { CarouselItem, MemoryVisibility } from '@/types/memory';
 import GalleryModal from '@/components/GalleryModal';
 import PhotoGrid from '@/components/PhotoGrid';
@@ -15,6 +16,8 @@ interface PhotoGalleryDetailProps {
   memory: CarouselItem;
   onBack: () => void;
   isOwner?: boolean;
+  /** When true (public share), hide header and show read-only content only. */
+  shareView?: boolean;
 }
 
 function getGalleryImages(item: CarouselItem): string[] {
@@ -22,7 +25,7 @@ function getGalleryImages(item: CarouselItem): string[] {
   return [];
 }
 
-export function PhotoGalleryDetail({ memory, onBack, isOwner = false }: PhotoGalleryDetailProps) {
+export function PhotoGalleryDetail({ memory, onBack, isOwner = false, shareView = false }: PhotoGalleryDetailProps) {
   const router = useRouter();
   const { t } = useLocale();
   const auth = useOptionalAuth();
@@ -83,29 +86,44 @@ export function PhotoGalleryDetail({ memory, onBack, isOwner = false }: PhotoGal
   return (
     <>
       <div className="fixed inset-0 z-50 flex flex-col animate-fadeIn bg-white font-sans text-black">
-        <MemoryDetailHeader
-          onBack={onBack}
-          visibility={visibility}
-          onVisibilityChange={isOwner ? handleVisibilityChange : undefined}
-          moreMenu={
-            isOwner ? (
-              <>
-                <button type="button" onClick={handleEdit} className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100" role="menuitem">{t('common.edit')}</button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  role="menuitem"
-                >
-                  {isDeleting ? t('memory.deleting') : t('memory.delete')}
-                </button>
-              </>
-            ) : undefined
-          }
-        />
+        {!shareView && (
+          <MemoryDetailHeader
+            onBack={onBack}
+            visibility={visibility}
+            onVisibilityChange={isOwner ? handleVisibilityChange : undefined}
+            moreMenu={
+              isOwner ? (
+                <>
+                  <button type="button" onClick={handleEdit} className="w-full px-4 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-gray-100" role="menuitem">{t('common.edit')}</button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="w-full px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    role="menuitem"
+                  >
+                    {isDeleting ? t('memory.deleting') : t('memory.delete')}
+                  </button>
+                </>
+              ) : undefined
+            }
+          />
+        )}
 
-        <div className="no-scrollbar flex-1 overflow-y-auto px-4 pb-8">
+        {shareView && (
+          <div className="absolute top-0 left-0 z-20 p-4 text-black/80">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex items-center gap-2 hover:opacity-100 opacity-80 transition-opacity"
+            >
+              <ArrowLeft size={20} aria-hidden />
+              <span className="text-sm font-medium">{t('memory.back') || 'Back'}</span>
+            </button>
+          </div>
+        )}
+
+        <div className={`no-scrollbar flex-1 overflow-y-auto px-4 pb-8 ${shareView ? 'pt-12' : ''}`}>
           <div className="px-0 py-4">
             <h1 className="text-xl font-semibold text-black">{title}</h1>
             <p className="mt-3 whitespace-pre-wrap text-gray-800">{description}</p>

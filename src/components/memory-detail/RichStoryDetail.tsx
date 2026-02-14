@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { ContentBlock } from '@/components/editor/ContentBlock';
 import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { MemoryService } from '@/lib/db/services/memory-service';
@@ -103,8 +104,18 @@ export function RichStoryDetail({ memory, onBack, shareView = false, isOwner = f
 
   if (shareView) {
     return (
-      <div className="min-h-screen flex flex-col font-sans bg-[#fbfbfd] text-[#1d1d1f]">
-        {contentBody}
+      <div className="min-h-screen flex flex-col font-sans bg-[#fbfbfd] text-[#1d1d1f] relative">
+        <div className="absolute top-0 left-0 z-20 p-4 text-[#1d1d1f]/80">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-2 hover:opacity-100 opacity-80 transition-opacity"
+          >
+            <ArrowLeft size={20} aria-hidden />
+            <span className="text-sm font-medium">{t('memory.back') || 'Back'}</span>
+          </button>
+        </div>
+        <div className="pt-12">{contentBody}</div>
       </div>
     );
   }
