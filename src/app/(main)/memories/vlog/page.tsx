@@ -389,13 +389,16 @@ export default function VlogPage() {
         savedMemoryId = `vlog-${Date.now()}`;
       }
 
-      sessionStorage.setItem(VLOG_SESSION_KEY, JSON.stringify(data));
-      if (savedMemoryId) {
-        sessionStorage.setItem('vlogMemoryId', savedMemoryId);
-      }
-
       setGenerationProgress(100);
-      router.push('/memories/vlog/play');
+
+      // Redirect by id so this vlog has a stable play URL and does not overwrite others
+      if (savedMemoryId && userId) {
+        router.push(`/memories/vlog/play?id=${encodeURIComponent(savedMemoryId)}`);
+      } else {
+        sessionStorage.setItem(VLOG_SESSION_KEY, JSON.stringify(data));
+        if (savedMemoryId) sessionStorage.setItem('vlogMemoryId', savedMemoryId);
+        router.push('/memories/vlog/play');
+      }
     } catch (err) {
       setGenerationError(err instanceof Error ? err.message : 'Generation failed');
       setIsGenerating(false);

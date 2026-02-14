@@ -6,7 +6,6 @@ import { Play, Loader2 } from 'lucide-react';
 import type { CarouselItem, MemoryVisibility } from '@/types/memory';
 import type { VlogData } from '@/types/vlog';
 import { carouselItemToVlogData } from '@/lib/vlog-to-memory';
-import { VLOG_SESSION_KEY } from '@/types/vlog';
 import { useLocale } from '@/lib/i18n';
 import { useOptionalAuth } from '@/lib/auth';
 import { updateMemory } from '@/lib/storage';
@@ -55,11 +54,9 @@ export function VlogDetail({ memory, onBack, isOwner }: VlogDetailProps) {
   }, [memory.visibility]);
 
   const handlePlay = () => {
-    if (vlogData) {
-      // Store vlog data in session storage and navigate to play page
-      sessionStorage.setItem(VLOG_SESSION_KEY, JSON.stringify(vlogData));
-      sessionStorage.setItem('vlogMemoryId', memory.id);
-      router.push('/memories/vlog/play');
+    if (vlogData && memory.id) {
+      // Play by memory id so URL is stable and does not overwrite other vlogs
+      router.push(`/memories/vlog/play?id=${encodeURIComponent(memory.id)}`);
     }
   };
 
