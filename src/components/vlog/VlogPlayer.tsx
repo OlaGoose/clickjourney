@@ -193,6 +193,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const recordedAudioRef = useRef<HTMLAudioElement>(null);
   const ytPlayersRef = useRef<Map<number, YTPlayer>>(new Map());
+  const videoRefsRef = useRef<Map<number, HTMLVideoElement>>(new Map());
   const currentIndexRef = useRef(currentIndex);
   const imagePreloadCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const audioUnlockedRef = useRef(false);
@@ -206,13 +207,20 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
     const immediatePlay = () => {
       const tryPlay = (el: HTMLAudioElement | null) => {
         if (!el) return;
-        el.play()
-          .then(() => {
-            audioUnlockedRef.current = true;
-          })
-          .catch(() => {
-            // Will be unlocked on first user interaction
-          });
+        // Ensure audio is loaded first
+        el.load();
+        const playPromise = el.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              audioUnlockedRef.current = true;
+              console.log('[VlogPlayer] Audio started successfully');
+            })
+            .catch((err) => {
+              console.log('[VlogPlayer] Audio autoplay blocked:', err.message);
+              // Will be unlocked on first user interaction
+            });
+        }
       };
       tryPlay(audioRef.current);
       tryPlay(recordedAudioRef.current);
@@ -221,18 +229,26 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
     // Try immediately
     immediatePlay();
     
-    // Also try after a tiny delay in case refs aren't ready
-    const timeout = setTimeout(immediatePlay, 10);
+    // Also try after delays in case refs aren't ready or first attempt failed
+    const timeouts = [
+      setTimeout(immediatePlay, 10),
+      setTimeout(immediatePlay, 50),
+      setTimeout(immediatePlay, 100),
+    ];
     
     // Global interaction listener to unlock audio on ANY user interaction
     const unlockAudio = () => {
       if (audioUnlockedRef.current) return;
       audioUnlockedRef.current = true;
+      console.log('[VlogPlayer] Audio unlocked by user interaction');
       
       const playAudio = (el: HTMLAudioElement | null) => {
         if (!el) return;
         el.load();
-        el.play().catch(() => {});
+        const playPromise = el.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {});
+        }
       };
       
       playAudio(audioRef.current);
@@ -241,19 +257,23 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
       // Remove listeners after first interaction
       document.removeEventListener('touchstart', unlockAudio);
       document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
     };
     
-    // Listen for first touch or click anywhere on the page
+    // Listen for first touch, click, or keypress anywhere on the page
     document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
     document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
     
     return () => {
-      clearTimeout(timeout);
+      timeouts.forEach(clearTimeout);
       document.body.style.overflow = '';
       document.removeEventListener('touchstart', unlockAudio);
       document.removeEventListener('click', unlockAudio);
-      // Cleanup preloaded images
+      document.removeEventListener('keydown', unlockAudio);
+      // Cleanup preloaded images and videos
       imagePreloadCacheRef.current.clear();
+      videoRefsRef.current.clear();
     };
   }, []);
 
@@ -394,6 +414,15 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
     const item = playlist[currentIndex];
     if (item?.type === 'youtube') {
       ytPlayersRef.current.get(currentIndex)?.playVideo();
+    } else if (item?.type === 'video') {
+      // Ensure video plays when switching to it
+      const videoEl = videoRefsRef.current.get(currentIndex);
+      if (videoEl) {
+        videoEl.currentTime = 0; // Reset to start
+        videoEl.play().catch(() => {
+          // Autoplay might be blocked, will be unlocked on user interaction
+        });
+      }
     }
   }, [currentIndex, playlist]);
 
@@ -626,11 +655,20 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
                 style={{ willChange: 'opacity, transform' }}
               >
                 <video
+                  ref={(el) => {
+                    if (el) {
+                      videoRefsRef.current.set(currentIndex, el);
+                      // Force play on mount
+                      el.play().catch(() => {});
+                    }
+                  }}
                   key={currentItem.src}
                   src={currentItem.src}
                   autoPlay
                   muted
+                  loop
                   playsInline
+                  preload="auto"
                   className="w-full h-full object-cover"
                 />
               </motion.div>

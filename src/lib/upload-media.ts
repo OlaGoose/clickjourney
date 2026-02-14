@@ -15,13 +15,21 @@ export async function uploadToSupabaseStorage(
   file: File,
   options?: { userId?: string | null; folder?: string }
 ): Promise<string | null> {
-  if (!supabase) return null;
+  if (!supabase) {
+    console.warn('[upload-media] Supabase client not initialized');
+    return null;
+  }
 
   try {
+    const fileSizeMB = file.size / 1024 / 1024;
+    console.log(`[upload-media] Starting upload: ${file.name} (${fileSizeMB.toFixed(2)}MB, ${file.type})`);
+    
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').slice(0, 80);
     const uid = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const pathFolder = options?.userId ? `${options.userId}` : options?.folder ?? 'anonymous';
     const path = `${pathFolder}/${uid}-${safeName}`;
+
+    console.log(`[upload-media] Upload path: ${path}`);
 
     const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file, {
       cacheControl: '3600',
@@ -29,14 +37,26 @@ export async function uploadToSupabaseStorage(
     });
 
     if (error) {
-      console.warn('[upload-media] Supabase upload failed:', error.message);
+      console.error('[upload-media] Supabase upload failed:', {
+        name: file.name,
+        size: fileSizeMB.toFixed(2) + 'MB',
+        type: file.type,
+        error: error.message,
+        details: error,
+      });
       return null;
     }
 
     const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+    console.log(`[upload-media] Upload successful: ${file.name} → ${data.publicUrl}`);
     return data.publicUrl;
   } catch (e) {
-    console.warn('[upload-media] Supabase upload error:', e);
+    console.error('[upload-media] Supabase upload error:', {
+      name: file.name,
+      size: (file.size / 1024 / 1024).toFixed(2) + 'MB',
+      type: file.type,
+      error: e,
+    });
     return null;
   }
 }

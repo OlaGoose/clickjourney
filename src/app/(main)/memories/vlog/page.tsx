@@ -128,7 +128,7 @@ export default function VlogPage() {
   const youtubeIds = getYoutubeIds(videoText);
   
   // Track upload status: count items still being uploaded (blob URLs not yet replaced with http)
-  const { isUploading, uploadingCount, totalMediaCount, hasReadyVisualContent, hasAnyVisualContent } = useMemo(() => {
+  const { isUploading, uploadingCount, totalMediaCount, hasReadyVisualContent } = useMemo(() => {
     const blobImages = images.filter((i) => i.url.startsWith('blob:'));
     const readyImages = images.filter((i) => i.url.startsWith('http'));
     const hasAudioBlob = audioUrl?.startsWith('blob:') ?? false;
@@ -136,20 +136,17 @@ export default function VlogPage() {
     const uploading = blobImages.length + (hasAudioBlob ? 1 : 0) + (hasRecordedBlob ? 1 : 0);
     const total = images.length + (audioUrl ? 1 : 0) + (recordedAudioUrl ? 1 : 0);
     const hasYoutube = getYoutubeIds(videoText).length > 0;
-    const allImages = images.filter((i) => !isDefault || i.url !== DEFAULT_UPLOAD_IMAGES[0]?.url);
     return {
       isUploading: uploading > 0,
       uploadingCount: uploading,
       totalMediaCount: total,
       hasReadyVisualContent: readyImages.length > 0 || hasYoutube,
-      hasAnyVisualContent: allImages.length > 0 || hasYoutube,
     };
-  }, [images, audioUrl, recordedAudioUrl, videoText, isDefault]);
+  }, [images, audioUrl, recordedAudioUrl, videoText]);
   
-  // Allow starting if有视觉内容（http URLs 或本地 blob URLs）和字幕
-  // 支持本地预览，即使文件还没上传完成
+  // 只有全部文件上传完成（无正在上传的 blob）且有字幕时，才可点击生成；可随时取消上传
   const canStart =
-    hasAnyVisualContent && subtitleText.trim().length > 0;
+    hasReadyVisualContent && subtitleText.trim().length > 0 && !isUploading;
 
   const TRANSCRIBE_TIMEOUT_MS = 60_000;
 
@@ -553,16 +550,26 @@ export default function VlogPage() {
         if (isDefault) setIsDefault(false);
         const targetId = replaceTargetId;
         setReplaceTargetId(null);
+        const mediaType = isVideo ? 'video' : 'image';
+        console.log(`[vlog] Uploading ${mediaType} (replace):`, file.name, `(${(file.size / 1024 / 1024).toFixed(2)}MB)`);
         // Save to cache
-        saveUploadCacheItem(targetId, file, isVideo ? 'video' : 'image').catch(console.warn);
-        uploadToSupabaseStorage(file, uploadOpts).then((persistentUrl) => {
-          if (!persistentUrl) return;
-          setImages((prev) =>
-            prev.map((img) => (img.id === targetId ? { ...img, url: persistentUrl } : img))
-          );
-          updateUploadCacheItem(targetId, { status: 'completed', url: persistentUrl }).catch(console.warn);
-          revokeBlobUrlIfNeeded(newBlobUrl);
-        });
+        saveUploadCacheItem(targetId, file, mediaType).catch(console.warn);
+        uploadToSupabaseStorage(file, uploadOpts)
+          .then((persistentUrl) => {
+            if (!persistentUrl) {
+              console.error(`[vlog] Upload failed for ${mediaType} (replace):`, file.name);
+              return;
+            }
+            console.log(`[vlog] Upload successful for ${mediaType} (replace):`, file.name, '→', persistentUrl);
+            setImages((prev) =>
+              prev.map((img) => (img.id === targetId ? { ...img, url: persistentUrl } : img))
+            );
+            updateUploadCacheItem(targetId, { status: 'completed', url: persistentUrl }).catch(console.warn);
+            revokeBlobUrlIfNeeded(newBlobUrl);
+          })
+          .catch((err) => {
+            console.error(`[vlog] Upload error for ${mediaType} (replace):`, file.name, err);
+          });
       } else {
         const currentImages = isDefault ? [] : images;
         const remaining = MAX_PHOTOS - currentImages.length;
@@ -582,16 +589,25 @@ export default function VlogPage() {
           const id = newImages[index]!.id;
           const blobUrl = newImages[index]!.url;
           const type = newImages[index]!.type || 'image';
+          console.log(`[vlog] Uploading ${type}:`, file.name, `(${(file.size / 1024 / 1024).toFixed(2)}MB)`);
           // Save to cache
           saveUploadCacheItem(id, file, type as 'image' | 'video').catch(console.warn);
-          uploadToSupabaseStorage(file, uploadOpts).then((persistentUrl) => {
-            if (!persistentUrl) return;
-            setImages((prev) =>
-              prev.map((img) => (img.id === id ? { ...img, url: persistentUrl } : img))
-            );
-            updateUploadCacheItem(id, { status: 'completed', url: persistentUrl }).catch(console.warn);
-            revokeBlobUrlIfNeeded(blobUrl);
-          });
+          uploadToSupabaseStorage(file, uploadOpts)
+            .then((persistentUrl) => {
+              if (!persistentUrl) {
+                console.error(`[vlog] Upload failed for ${type}:`, file.name);
+                return;
+              }
+              console.log(`[vlog] Upload successful for ${type}:`, file.name, '→', persistentUrl);
+              setImages((prev) =>
+                prev.map((img) => (img.id === id ? { ...img, url: persistentUrl } : img))
+              );
+              updateUploadCacheItem(id, { status: 'completed', url: persistentUrl }).catch(console.warn);
+              revokeBlobUrlIfNeeded(blobUrl);
+            })
+            .catch((err) => {
+              console.error(`[vlog] Upload error for ${type}:`, file.name, err);
+            });
         });
       }
       e.target.value = '';
