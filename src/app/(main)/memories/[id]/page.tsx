@@ -38,10 +38,23 @@ export default function MemoryPage() {
         setIsLoading(true);
         setError(null);
 
-        let item: CarouselItem | null = await MemoryService.getMemory(id);
-        if (item) {
-          setIsOwner(true);
-        } else {
+        const isShare = searchParams.get('share') === '1';
+        let item: CarouselItem | null = null;
+
+        // Public share: try API first so unauthenticated users can load (no login required; RLS allows visibility=public)
+        if (isShare) {
+          const res = await fetch(`/api/memories/${id}`);
+          if (res.ok) {
+            item = (await res.json()) as CarouselItem;
+            setIsOwner(false);
+          }
+        }
+        // Owner or not share: try local first (IndexedDB)
+        if (!item) {
+          item = await MemoryService.getMemory(id);
+          if (item) setIsOwner(true);
+        }
+        if (!item) {
           const res = await fetch(`/api/memories/${id}`);
           if (res.ok) {
             item = (await res.json()) as CarouselItem;
@@ -86,7 +99,7 @@ export default function MemoryPage() {
     }
 
     loadMemory();
-  }, [id]);
+  }, [id, searchParams]);
 
   // Shared public vlog: open directly to play page (no header, auto-play)
   useEffect(() => {

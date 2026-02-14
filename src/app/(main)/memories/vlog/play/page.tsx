@@ -42,15 +42,15 @@ function VlogPlayContent() {
 
   const loadByMemoryId = useCallback(
     async (id: string): Promise<VlogData | null> => {
-      let item: CarouselItem | null = await MemoryService.getMemory(id);
-      if (!item) {
-        try {
-          const res = await fetch(`/api/memories/${id}`);
-          if (res.ok) item = (await res.json()) as CarouselItem;
-        } catch {
-          // ignore
-        }
+      let item: CarouselItem | null = null;
+      // Shared view or link with id: try API first so unauthenticated users can load public vlogs
+      try {
+        const res = await fetch(`/api/memories/${id}`);
+        if (res.ok) item = (await res.json()) as CarouselItem;
+      } catch {
+        // ignore
       }
+      if (!item) item = await MemoryService.getMemory(id);
       if (!item) return null;
       if (item.type !== 'vlog') return null;
       const vlogData = item.vlogDataJson
@@ -75,7 +75,7 @@ function VlogPlayContent() {
             return;
           }
           if (!cancelled && !vlogData) {
-            router.replace(`/memories/${idFromQuery}`);
+            router.replace(isSharedView ? `/memories/${idFromQuery}?share=1` : `/memories/${idFromQuery}`);
             return;
           }
         }

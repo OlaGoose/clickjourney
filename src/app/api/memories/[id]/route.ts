@@ -5,11 +5,9 @@ import type { TravelMemoryRow } from '@/lib/storage/types';
 
 /**
  * GET /api/memories/[id]
- * Returns a memory by id. RLS applies: only returns if the memory is
- * - owned by the current user, or
- * - demo (user_id IS NULL), or
- * - public (visibility = 'public').
- * Used when viewing a shared link (e.g. non-owner or anonymous).
+ * Returns a memory by id. No authentication required; RLS on travel_memories
+ * allows SELECT for: owner, demo (user_id IS NULL), or public (visibility = 'public').
+ * Used when viewing a shared link (anonymous or non-owner).
  */
 export async function GET(
   _request: NextRequest,
@@ -21,6 +19,7 @@ export async function GET(
   }
 
   try {
+    // createClient() uses request cookies; when no session, behaves as anon — RLS allows public/demo
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('travel_memories')

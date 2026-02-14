@@ -172,17 +172,11 @@ const SubtitleDisplay = memo(({
           className="flex flex-col items-end"
         >
           <p
-            className="font-serif italic text-xl md:text-3xl lg:text-4xl text-[#ffffff] leading-relaxed tracking-wide drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] break-words"
+            className="font-serif text-[1.5rem] md:text-[2.25rem] lg:text-[2.7rem] text-[#ffffff] leading-relaxed tracking-wide drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] break-words no-underline"
             style={{ lineBreak: 'normal', wordBreak: 'normal' }}
           >
             {subtitle}
           </p>
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 60, opacity: 0.8 }}
-            transition={{ delay: 0.8, duration: 1.2, ease: 'circOut' }}
-            className="h-[1px] bg-white/60 mt-6 mr-1"
-          />
         </motion.div>
       </AnimatePresence>
     </div>
@@ -701,7 +695,7 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
             style={{ willChange: 'opacity, transform' }}
           >
             <h1
-              className="font-semibold text-[34px] md:text-5xl lg:text-6xl text-[#ffffff] tracking-[0.35em] md:tracking-[0.45em] lg:tracking-[0.5em] uppercase"
+              className="font-semibold text-[41px] md:text-[58px] lg:text-[72px] text-[#ffffff] tracking-[0.35em] md:tracking-[0.45em] lg:tracking-[0.5em] uppercase"
               style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif',
                 textShadow:
