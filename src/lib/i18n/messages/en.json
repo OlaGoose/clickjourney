@@ -259,6 +259,10 @@
     "dropOrClick": "Drag & drop or click to upload",
     "uploadingMedia": "Uploading media",
     "needPhotosAudioSubtitles": "Add at least one photo or video, a soundtrack, and subtitles to start.",
+    "resumeUploadTitle": "Incomplete uploads detected",
+    "resumeUploadMessage": "Found incomplete files. Continue uploading?",
+    "resumeUpload": "Resume",
+    "discardCache": "Discard",
     "exit": "Exit",
     "tapToPlay": "Tap to play"
   }

@@ -259,6 +259,10 @@
     "dropOrClick": "拖放或点击上传",
     "uploadingMedia": "正在上传媒体",
     "needPhotosAudioSubtitles": "请至少添加一张照片或视频、一段配乐和字幕后再开始。",
+    "resumeUploadTitle": "检测到未完成的上传",
+    "resumeUploadMessage": "发现未完成的文件，是否继续上传？",
+    "resumeUpload": "继续上传",
+    "discardCache": "放弃并清空",
     "exit": "退出",
     "tapToPlay": "点击播放"
   }

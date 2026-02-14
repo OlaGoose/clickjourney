@@ -35,6 +35,14 @@ import {
   type VlogData,
 } from '@/types/vlog';
 import type { UploadedImage } from '@/types/upload';
+import {
+  getPendingUploads,
+  saveUploadCacheItem,
+  updateUploadCacheItem,
+  clearUploadCache,
+  cleanupOldCache,
+  type UploadCacheItem,
+} from '@/lib/vlog-upload-cache';
 
 const MAX_PHOTOS = 9;
 
@@ -107,6 +115,10 @@ export default function VlogPage() {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
+  /** Upload cache: resume interrupted uploads */
+  const [pendingCache, setPendingCache] = useState<UploadCacheItem[] | null>(null);
+  const [showResumeDialog, setShowResumeDialog] = useState(false);
+
   const youtubeIds = getYoutubeIds(videoText);
   const hasVisualContent = images.length > 0 || youtubeIds.length > 0;
   
@@ -174,9 +186,13 @@ export default function VlogPage() {
         stream.getTracks().forEach((tr) => tr.stop());
         transcribeRecordedAudio(blob);
         const file = new File([blob], 'vlog-voice.webm', { type: 'audio/webm' });
+        const recordedId = `recorded-${Date.now()}`;
+        // Save to cache
+        saveUploadCacheItem(recordedId, file, 'recorded').catch(console.warn);
         uploadToSupabaseStorage(file, { userId: userId ?? undefined }).then((persistentUrl) => {
           if (persistentUrl) {
             setRecordedAudioUrl(persistentUrl);
+            updateUploadCacheItem(recordedId, { status: 'completed', url: persistentUrl }).catch(console.warn);
             revokeBlobUrlIfNeeded(url);
           }
         });
@@ -260,6 +276,100 @@ export default function VlogPage() {
     return () => audio.removeEventListener('ended', onEnded);
   }, [recordedAudioUrl]);
 
+  // Check for pending uploads on mount and cleanup old cache
+  useEffect(() => {
+    let cancelled = false;
+    async function checkPendingUploads() {
+      try {
+        await cleanupOldCache(); // Remove uploads older than 24h
+        const pending = await getPendingUploads();
+        if (!cancelled && pending.length > 0) {
+          setPendingCache(pending);
+          setShowResumeDialog(true);
+        }
+      } catch (err) {
+        console.warn('[vlog] Failed to check pending uploads:', err);
+      }
+    }
+    checkPendingUploads();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Resume uploads from cache
+  const handleResumeUploads = useCallback(async () => {
+    if (!pendingCache || pendingCache.length === 0) return;
+    setShowResumeDialog(false);
+    const uploadOpts = { userId: userId ?? undefined };
+
+    // Group by type
+    const cachedImages = pendingCache.filter((item) => item.type === 'image' || item.type === 'video');
+    const cachedAudio = pendingCache.find((item) => item.type === 'audio');
+    const cachedRecorded = pendingCache.find((item) => item.type === 'recorded');
+
+    // Restore images/videos to state
+    if (cachedImages.length > 0) {
+      const restoredImages: UploadedImage[] = cachedImages.map((item) => ({
+        id: item.id,
+        url: item.url || URL.createObjectURL(item.file), // Use cached URL if available, else blob
+        type: item.type === 'video' ? 'video' : 'image',
+      }));
+      setImages(restoredImages);
+      setIsDefault(false);
+
+      // Resume upload for pending items
+      for (const item of cachedImages) {
+        if (item.status === 'completed' && item.url) continue; // Already uploaded
+        const blobUrl = URL.createObjectURL(item.file);
+        uploadToSupabaseStorage(item.file, uploadOpts).then((persistentUrl) => {
+          if (!persistentUrl) return;
+          setImages((prev) =>
+            prev.map((img) => (img.id === item.id ? { ...img, url: persistentUrl } : img))
+          );
+          updateUploadCacheItem(item.id, { status: 'completed', url: persistentUrl });
+          revokeBlobUrlIfNeeded(blobUrl);
+        });
+      }
+    }
+
+    // Restore audio
+    if (cachedAudio) {
+      const audioBlob = cachedAudio.url || URL.createObjectURL(cachedAudio.file);
+      setAudioUrl(audioBlob);
+      if (cachedAudio.status !== 'completed' || !cachedAudio.url) {
+        uploadToSupabaseStorage(cachedAudio.file, uploadOpts).then((persistentUrl) => {
+          if (!persistentUrl) return;
+          setAudioUrl(persistentUrl);
+          updateUploadCacheItem(cachedAudio.id, { status: 'completed', url: persistentUrl });
+          revokeBlobUrlIfNeeded(audioBlob);
+        });
+      }
+    }
+
+    // Restore recorded audio
+    if (cachedRecorded) {
+      const recordedBlob = cachedRecorded.url || URL.createObjectURL(cachedRecorded.file);
+      setRecordedAudioUrl(recordedBlob);
+      if (cachedRecorded.status !== 'completed' || !cachedRecorded.url) {
+        uploadToSupabaseStorage(cachedRecorded.file, uploadOpts).then((persistentUrl) => {
+          if (!persistentUrl) return;
+          setRecordedAudioUrl(persistentUrl);
+          updateUploadCacheItem(cachedRecorded.id, { status: 'completed', url: persistentUrl });
+          revokeBlobUrlIfNeeded(recordedBlob);
+        });
+      }
+    }
+
+    setPendingCache(null);
+  }, [pendingCache, userId]);
+
+  const handleDiscardCache = useCallback(async () => {
+    setShowResumeDialog(false);
+    setPendingCache(null);
+    await clearUploadCache();
+  }, []);
+
   const handleStartClick = useCallback(() => {
     setReplaceTargetId(null);
     fileInputRef.current?.click();
@@ -303,12 +413,16 @@ export default function VlogPage() {
           );
         });
         if (isDefault) setIsDefault(false);
+        const targetId = replaceTargetId;
         setReplaceTargetId(null);
+        // Save to cache
+        saveUploadCacheItem(targetId, file, isVideo ? 'video' : 'image').catch(console.warn);
         uploadToSupabaseStorage(file, uploadOpts).then((persistentUrl) => {
           if (!persistentUrl) return;
           setImages((prev) =>
-            prev.map((img) => (img.id === replaceTargetId ? { ...img, url: persistentUrl } : img))
+            prev.map((img) => (img.id === targetId ? { ...img, url: persistentUrl } : img))
           );
+          updateUploadCacheItem(targetId, { status: 'completed', url: persistentUrl }).catch(console.warn);
           revokeBlobUrlIfNeeded(newBlobUrl);
         });
       } else {
@@ -329,11 +443,15 @@ export default function VlogPage() {
         toAdd.forEach((file, index) => {
           const id = newImages[index]!.id;
           const blobUrl = newImages[index]!.url;
+          const type = newImages[index]!.type || 'image';
+          // Save to cache
+          saveUploadCacheItem(id, file, type as 'image' | 'video').catch(console.warn);
           uploadToSupabaseStorage(file, uploadOpts).then((persistentUrl) => {
             if (!persistentUrl) return;
             setImages((prev) =>
               prev.map((img) => (img.id === id ? { ...img, url: persistentUrl } : img))
             );
+            updateUploadCacheItem(id, { status: 'completed', url: persistentUrl }).catch(console.warn);
             revokeBlobUrlIfNeeded(blobUrl);
           });
         });
@@ -348,13 +466,17 @@ export default function VlogPage() {
       const file = files[0];
       if (!file) return;
       const blobUrl = URL.createObjectURL(file);
+      const audioId = `audio-${Date.now()}`;
       setAudioUrl((prev) => {
         if (prev) revokeBlobUrlIfNeeded(prev);
         return blobUrl;
       });
+      // Save to cache
+      saveUploadCacheItem(audioId, file, 'audio').catch(console.warn);
       uploadToSupabaseStorage(file, { userId: userId ?? undefined }).then((persistentUrl) => {
         if (!persistentUrl) return;
         setAudioUrl(persistentUrl);
+        updateUploadCacheItem(audioId, { status: 'completed', url: persistentUrl }).catch(console.warn);
         revokeBlobUrlIfNeeded(blobUrl);
       });
     },
@@ -444,6 +566,9 @@ export default function VlogPage() {
 
       setGenerationProgress(100);
 
+      // Clear upload cache on success
+      await clearUploadCache().catch(console.warn);
+
       // Redirect by id so this vlog has a stable play URL and does not overwrite others
       if (savedMemoryId && userId) {
         router.push(`/memories/vlog/play?id=${encodeURIComponent(savedMemoryId)}`);
@@ -515,6 +640,48 @@ export default function VlogPage() {
         onRetry={handleStartPlayback}
         onDismiss={handleDismissError}
       />
+
+      {/* Resume Upload Dialog */}
+      {showResumeDialog && pendingCache && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div
+            className={`max-w-md w-full rounded-2xl p-6 shadow-2xl ${
+              isDark ? 'bg-gray-900 border border-white/10' : 'bg-white'
+            }`}
+          >
+            <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {t('vlog.resumeUploadTitle') || '检测到未完成的上传'}
+            </h3>
+            <p className={`text-sm mb-4 ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+              {t('vlog.resumeUploadMessage') || `发现 ${pendingCache.length} 个未完成的文件，是否继续上传？刷新或关闭页面前上传已自动保存。`}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleResumeUploads}
+                className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-colors ${
+                  isDark
+                    ? 'bg-white text-black hover:bg-gray-100'
+                    : 'bg-black text-white hover:bg-gray-800'
+                }`}
+              >
+                {t('vlog.resumeUpload') || '继续上传'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDiscardCache}
+                className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-colors ${
+                  isDark
+                    ? 'bg-white/10 text-white hover:bg-white/20'
+                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                }`}
+              >
+                {t('vlog.discardCache') || '放弃并清空'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <header
         className="fixed top-0 left-0 right-0 z-50 flex flex-col"

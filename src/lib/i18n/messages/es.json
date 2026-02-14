@@ -259,6 +259,10 @@
     "dropOrClick": "Arrastra y suelta o haz clic para subir",
     "uploadingMedia": "Subiendo medios",
     "needPhotosAudioSubtitles": "Añade al menos una foto o vídeo, banda sonora y subtítulos para empezar.",
+    "resumeUploadTitle": "Subidas incompletas detectadas",
+    "resumeUploadMessage": "Se encontraron archivos incompletos. ¿Continuar subiendo?",
+    "resumeUpload": "Continuar",
+    "discardCache": "Descartar",
     "exit": "Salir",
     "tapToPlay": "Toca para reproducir"
   }

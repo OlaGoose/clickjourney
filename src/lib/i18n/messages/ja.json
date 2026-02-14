@@ -259,6 +259,10 @@
     "dropOrClick": "ドラッグ＆ドロップまたはクリックでアップロード",
     "uploadingMedia": "メディアをアップロード中",
     "needPhotosAudioSubtitles": "開始するには、写真または動画・サウンドトラック・字幕を追加してください。",
+    "resumeUploadTitle": "未完了のアップロードを検出",
+    "resumeUploadMessage": "未完了のファイルが見つかりました。アップロードを続けますか？",
+    "resumeUpload": "続ける",
+    "discardCache": "破棄",
     "exit": "終了",
     "tapToPlay": "タップして再生"
   }
