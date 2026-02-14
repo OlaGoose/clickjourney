@@ -303,23 +303,39 @@ export default function VlogPage() {
     setGenerationError(null);
     try {
       setGenerationProgress(5);
-      // Convert all blob URLs to persistent URLs so vlog works after reload and from detail page
+      // Convert blob URLs to persistent URLs one-by-one so progress moves on slow devices (avoids stuck at 5%)
       const uploadOpts = { userId: userId ?? undefined };
       const imageBlobUrls = images.filter((i) => i.type !== 'video').map((i) => i.url);
       const videoBlobUrls = images.filter((i) => i.type === 'video').map((i) => i.url);
-      const imageUrls = await Promise.all(
-        imageBlobUrls.map((url) => blobUrlToPersistentUrl(url, { ...uploadOpts, filename: `vlog-img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg` }))
-      );
-      const videoUrls = await Promise.all(
-        videoBlobUrls.map((url) => blobUrlToPersistentUrl(url, { ...uploadOpts, filename: `vlog-vid-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.mp4` }))
-      );
+      const totalUploads = Math.max(1, imageBlobUrls.length + videoBlobUrls.length + (audioUrl?.startsWith('blob:') ? 1 : 0) + (recordedAudioUrl?.startsWith('blob:') ? 1 : 0));
+      const uploadProgressSpan = 10; // 5% -> 15%
+      let uploadDone = 0;
+
+      const imageUrls: string[] = [];
+      for (let i = 0; i < imageBlobUrls.length; i++) {
+        const url = await blobUrlToPersistentUrl(imageBlobUrls[i]!, { ...uploadOpts, filename: `vlog-img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg` });
+        imageUrls.push(url);
+        uploadDone += 1;
+        setGenerationProgress(5 + (uploadDone / totalUploads) * uploadProgressSpan);
+      }
+      const videoUrls: string[] = [];
+      for (let i = 0; i < videoBlobUrls.length; i++) {
+        const url = await blobUrlToPersistentUrl(videoBlobUrls[i]!, { ...uploadOpts, filename: `vlog-vid-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.mp4` });
+        videoUrls.push(url);
+        uploadDone += 1;
+        setGenerationProgress(5 + (uploadDone / totalUploads) * uploadProgressSpan);
+      }
       let persistentAudio = audioUrl ?? DEFAULT_VLOG_AUDIO_URL;
       if (audioUrl && audioUrl.startsWith('blob:')) {
         persistentAudio = await blobUrlToPersistentUrl(audioUrl, { ...uploadOpts, filename: 'vlog-audio.mp3' });
+        uploadDone += 1;
+        setGenerationProgress(5 + (uploadDone / totalUploads) * uploadProgressSpan);
       }
       let persistentRecorded: string | null = recordedAudioUrl;
       if (recordedAudioUrl && recordedAudioUrl.startsWith('blob:')) {
         persistentRecorded = await blobUrlToPersistentUrl(recordedAudioUrl, { ...uploadOpts, filename: 'vlog-voice.webm' });
+        uploadDone += 1;
+        setGenerationProgress(5 + (uploadDone / totalUploads) * uploadProgressSpan);
       }
 
       setGenerationProgress(15);
@@ -327,6 +343,8 @@ export default function VlogPage() {
       let filterPreset = 'Original';
       let artifiedScript: string[] = subtitleText.split('\n').map((s) => s.trim()).filter(Boolean);
       if (firstImageUrl) {
+        await new Promise((r) => setTimeout(r, 0)); // yield so 15% paints before heavy work (helps on slow devices)
+        setGenerationProgress(18);
         const base64Image = await compressImageToBase64(firstImageUrl);
         setGenerationProgress(35);
         let recordedBase64: string | undefined;
@@ -340,19 +358,43 @@ export default function VlogPage() {
           }
         }
         setGenerationProgress(50);
-        const res = await fetch('/api/vlog-style-and-script', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: memoryLocation.trim() || undefined,
-            image: base64Image,
-            scriptText: subtitleText.trim(),
-            ...(recordedBase64 && {
-              recordedAudioBase64: recordedBase64,
-              recordedMimeType: 'audio/webm',
+
+        const API_TIMEOUT_MS = 90000;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+        let progressInterval: ReturnType<typeof setInterval> | null = null;
+        const startProgress = Date.now();
+        progressInterval = setInterval(() => {
+          const elapsed = (Date.now() - startProgress) / 1000;
+          const bump = Math.min(Math.floor(elapsed / 2) * 3, 32);
+          setGenerationProgress((p) => Math.min(p, 50 + bump));
+        }, 2000);
+
+        let res: Response;
+        try {
+          res = await fetch('/api/vlog-style-and-script', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              location: memoryLocation.trim() || undefined,
+              image: base64Image,
+              scriptText: subtitleText.trim(),
+              ...(recordedBase64 && {
+                recordedAudioBase64: recordedBase64,
+                recordedMimeType: 'audio/webm',
+              }),
             }),
-          }),
-        });
+            signal: controller.signal,
+          });
+        } catch (fetchErr) {
+          if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+            throw new Error('Request timed out. Please check your network and try again.');
+          }
+          throw fetchErr;
+        } finally {
+          clearTimeout(timeoutId);
+          if (progressInterval) clearInterval(progressInterval);
+        }
         setGenerationProgress(85);
         if (res.ok) {
           const data = await res.json();
