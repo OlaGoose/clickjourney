@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
-/** POST: transcribe audio (base64) to Chinese text via Gemini. */
+/** POST: transcribe audio to Chinese text via Gemini. Accepts JSON (base64) or multipart/form-data (audio file). */
 export async function POST(request: Request) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) {
@@ -19,20 +19,43 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { base64?: string; mimeType?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
+  let base64: string;
+  let mimeType: string;
 
-  const base64 = body.base64;
-  const mimeType = body.mimeType ?? 'audio/webm';
-  if (!base64 || typeof base64 !== 'string') {
-    return NextResponse.json(
-      { error: 'Missing or invalid base64 audio' },
-      { status: 400 }
-    );
+  const contentType = request.headers.get('content-type') ?? '';
+  if (contentType.includes('multipart/form-data')) {
+    try {
+      const formData = await request.formData();
+      const file = formData.get('audio');
+      const mimeField = formData.get('mimeType');
+      mimeType = typeof mimeField === 'string' ? mimeField : 'audio/webm';
+      if (!file || !(file instanceof Blob)) {
+        return NextResponse.json(
+          { error: 'Missing or invalid audio file (use field name "audio")' },
+          { status: 400 }
+        );
+      }
+      const buf = Buffer.from(await file.arrayBuffer());
+      base64 = buf.toString('base64');
+    } catch (e) {
+      console.warn('[Transcribe] FormData parse error:', e);
+      return NextResponse.json({ error: 'Invalid multipart body' }, { status: 400 });
+    }
+  } else {
+    let body: { base64?: string; mimeType?: string };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+    base64 = body.base64 ?? '';
+    mimeType = body.mimeType ?? 'audio/webm';
+    if (!base64 || typeof base64 !== 'string') {
+      return NextResponse.json(
+        { error: 'Missing or invalid base64 audio' },
+        { status: 400 }
+      );
+    }
   }
 
   const model = process.env.GEMINI_MODEL_STT || process.env.NEXT_PUBLIC_GEMINI_MODEL_STT || 'gemini-2.5-flash';

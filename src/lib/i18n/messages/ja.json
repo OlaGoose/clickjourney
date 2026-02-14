@@ -202,6 +202,7 @@
     "uploadOnePhotoFirst": "まず1枚以上の写真をアップロードしてください",
     "maxNinePhotos": "最大9枚までアップロードできます",
     "transcriptUnavailable": "録音を文字起こしできませんでした",
+    "transcriptTimeout": "文字起こしがタイムアウトしました。もう一度お試しください",
     "transcribePrompt": "文字起こしがありません。録音して「文字起こし」をクリックしてください。",
     "micPermissionDenied": "マイクへのアクセスが拒否されました。設定を確認してください。",
     "recordingStop": "録音を停止",

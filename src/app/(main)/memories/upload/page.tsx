@@ -265,18 +265,21 @@ export default function MemoryUploadPage() {
     [replaceTargetId, isDefault, images, t]
   );
 
+  const TRANSCRIBE_TIMEOUT_MS = 60_000;
+
   const transcribeAudio = useCallback(async (audioBlob: Blob) => {
     setIsTranscribing(true);
     setTranscript('');
+    const ac = new AbortController();
+    const timeoutId = setTimeout(() => ac.abort(), TRANSCRIBE_TIMEOUT_MS);
     try {
-      const base64Data = await blobToBase64(audioBlob);
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice.webm');
+      formData.append('mimeType', 'audio/webm');
       const res = await fetch('/api/transcribe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          base64: base64Data,
-          mimeType: 'audio/webm',
-        }),
+        signal: ac.signal,
+        body: formData,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -284,9 +287,11 @@ export default function MemoryUploadPage() {
         return;
       }
       setTranscript(data.text ?? '');
-    } catch {
-      setTranscript(t('upload.transcriptUnavailable'));
+    } catch (err) {
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      setTranscript(isAbort ? t('upload.transcriptTimeout') ?? '转写超时，请重试' : t('upload.transcriptUnavailable'));
     } finally {
+      clearTimeout(timeoutId);
       setIsTranscribing(false);
     }
   }, [t]);
@@ -354,14 +359,18 @@ export default function MemoryUploadPage() {
   const handleTranscribeClick = useCallback(async () => {
     if (!audioUrl) return;
     setIsTranscribing(true);
+    const ac = new AbortController();
+    const timeoutId = setTimeout(() => ac.abort(), TRANSCRIBE_TIMEOUT_MS);
     try {
       const res = await fetch(audioUrl);
       const blob = await res.blob();
-      const base64Data = await blobToBase64(blob);
+      const formData = new FormData();
+      formData.append('audio', blob, 'voice.webm');
+      formData.append('mimeType', 'audio/webm');
       const apiRes = await fetch('/api/transcribe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64: base64Data, mimeType: 'audio/webm' }),
+        signal: ac.signal,
+        body: formData,
       });
       const data = await apiRes.json();
       if (apiRes.ok) {
@@ -369,9 +378,11 @@ export default function MemoryUploadPage() {
       } else {
         setTranscript(data?.error ?? t('upload.transcriptUnavailable'));
       }
-    } catch {
-      setTranscript(t('upload.transcriptUnavailable'));
+    } catch (err) {
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      setTranscript(isAbort ? t('upload.transcriptTimeout') ?? '转写超时，请重试' : t('upload.transcriptUnavailable'));
     } finally {
+      clearTimeout(timeoutId);
       setIsTranscribing(false);
     }
   }, [audioUrl, t]);

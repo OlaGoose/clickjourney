@@ -202,6 +202,7 @@
     "uploadOnePhotoFirst": "Sube al menos una foto primero",
     "maxNinePhotos": "Puedes subir como máximo 9 fotos",
     "transcriptUnavailable": "No se pudo transcribir la grabación",
+    "transcriptTimeout": "Tiempo de espera agotado. Inténtalo de nuevo",
     "transcribePrompt": "Sin transcripción. Graba y pulsa Transcribir.",
     "micPermissionDenied": "Acceso al micrófono denegado. Revisa los permisos.",
     "recordingStop": "Detener grabación",

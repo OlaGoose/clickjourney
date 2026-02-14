@@ -202,6 +202,7 @@
     "uploadOnePhotoFirst": "Please upload at least one photo first",
     "maxNinePhotos": "You can upload at most 9 photos",
     "transcriptUnavailable": "Could not transcribe recording",
+    "transcriptTimeout": "Transcription timed out, please try again",
     "transcribePrompt": "No transcript available. Record and click Transcribe.",
     "micPermissionDenied": "Microphone access denied. Please check permissions.",
     "recordingStop": "Stop recording",

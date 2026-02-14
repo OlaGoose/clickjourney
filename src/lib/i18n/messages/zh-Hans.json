@@ -202,6 +202,7 @@
     "uploadOnePhotoFirst": "请先上传至少一张照片",
     "maxNinePhotos": "最多只能上传 9 张照片",
     "transcriptUnavailable": "无法识别录音内容",
+    "transcriptTimeout": "转写超时，请重试",
     "transcribePrompt": "暂无文字稿。录制后点击「转写」。",
     "micPermissionDenied": "无法访问麦克风，请检查权限设置。",
     "recordingStop": "停止录音",
