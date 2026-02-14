@@ -215,23 +215,34 @@ export function VlogDetail({ memory, onBack, isOwner }: VlogDetailProps) {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 pb-32">
-        {/* Hero Image: only render img when URL is persistent (not blob) to avoid hydration and ERR_FILE_NOT_FOUND */}
-        <div className="relative w-full aspect-[9/16] md:aspect-video rounded-2xl overflow-hidden mb-6 bg-black/80">
+      {/* Hero: cover image with location + first subtitle at bottom-left */}
+      <div className="max-w-4xl mx-auto px-4 pb-24">
+        <div className="relative w-full aspect-[9/16] md:aspect-video rounded-2xl overflow-hidden bg-black/80">
           {hasValidHeroUrl ? (
-          <img
-            src={firstImage}
-            alt={memory.title}
-            className="w-full h-full object-cover"
-          />
+            <img
+              src={firstImage}
+              alt={memory.title}
+              className="w-full h-full object-cover"
+            />
           ) : (
-          <div className="w-full h-full flex items-center justify-center text-white/60 text-center px-6">
-            <span className="text-lg font-medium">{memory.title || 'VLOG'}</span>
-          </div>
+            <div className="w-full h-full flex items-center justify-center text-white/60 text-center px-6">
+              <span className="text-lg font-medium">{memory.title || 'VLOG'}</span>
+            </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+          {/* Location + first subtitle: bottom-left overlay */}
+          <div className="absolute left-4 right-4 bottom-4 text-left pointer-events-none">
+            {(vlogData.location || memory.title) && (
+              <p className="text-white font-semibold text-lg drop-shadow-md">
+                {vlogData.location || memory.title}
+              </p>
+            )}
+            {vlogData.subtitles[0] && (
+              <p className="text-white/95 text-sm mt-0.5 italic drop-shadow-md">
+                {vlogData.subtitles[0]}
+              </p>
+            )}
+          </div>
           {/* Play Button Overlay */}
           <button
             type="button"
@@ -242,85 +253,6 @@ export function VlogDetail({ memory, onBack, isOwner }: VlogDetailProps) {
               <Play size={40} className="fill-white text-white ml-1" />
             </div>
           </button>
-        </div>
-
-        {/* Info */}
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-              {memory.title}
-            </h1>
-            <p className="text-white/60 text-sm uppercase tracking-wide">
-              {memory.category || 'VLOG'}
-            </p>
-          </div>
-
-          {memory.description && (
-            <p className="text-white/80 text-lg leading-relaxed">
-              {memory.description}
-            </p>
-          )}
-
-          {/* Subtitles Preview */}
-          {vlogData.subtitles.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-white/60 text-sm uppercase tracking-wide">
-                {t('vlog.subtitles') || 'Subtitles'}
-              </h3>
-              <div className="space-y-2">
-                {vlogData.subtitles.slice(0, 3).map((subtitle, idx) => (
-                  <p key={idx} className="text-white/70 italic">
-                    "{subtitle}"
-                  </p>
-                ))}
-                {vlogData.subtitles.length > 3 && (
-                  <p className="text-white/50 text-sm">
-                    +{vlogData.subtitles.length - 3} more...
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Media Count */}
-          <div className="flex gap-6 text-white/60 text-sm">
-            {vlogData.images.length > 0 && (
-              <div>
-                <span className="font-semibold text-white">{vlogData.images.length}</span> {t('vlog.photos') || 'Photos'}
-              </div>
-            )}
-            {vlogData.videos.length > 0 && (
-              <div>
-                <span className="font-semibold text-white">{vlogData.videos.length}</span> {t('vlog.videos') || 'Videos'}
-              </div>
-            )}
-            {vlogData.youtubeIds.length > 0 && (
-              <div>
-                <span className="font-semibold text-white">{vlogData.youtubeIds.length}</span> YouTube Clips
-              </div>
-            )}
-          </div>
-
-          {/* Filter Info */}
-          {vlogData.filterPreset && vlogData.filterPreset !== 'Original' && (
-            <div className="flex items-center gap-2 text-white/60 text-sm">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 8v8m-4-4h8" />
-              </svg>
-              <span>Filter: <span className="text-white font-medium">{vlogData.filterPreset}</span></span>
-            </div>
-          )}
         </div>
       </div>
     </div>
