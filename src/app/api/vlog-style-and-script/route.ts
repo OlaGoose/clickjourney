@@ -4,15 +4,28 @@ import { FILTER_PRESETS } from '@/types/vlog';
 
 const FILTER_NAMES = FILTER_PRESETS.map((p) => p.name);
 
+/** Fetch a public URL and return base64 (no data URI prefix). Used for imageUrl/recordedAudioUrl from Supabase storage. */
+async function fetchUrlToBase64(url: string): Promise<string> {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
+  const buf = await res.arrayBuffer();
+  const base64 = Buffer.from(buf).toString('base64');
+  return base64;
+}
+
 interface RequestBody {
   location?: string;
   /** Single image as base64 (no data URL prefix or stripped). */
-  image: string;
+  image?: string;
+  /** Public image URL (e.g. Supabase storage). Server fetches and converts to base64; avoids large client payload on real devices. */
+  imageUrl?: string;
   /** User's screenplay/script text (plain or newline-separated lines). */
   scriptText: string;
   /** Optional: user voice recording base64 for mood analysis. */
   recordedAudioBase64?: string;
   recordedMimeType?: string;
+  /** Optional: public URL of recorded audio (e.g. Supabase storage). Server fetches and converts. */
+  recordedAudioUrl?: string;
 }
 
 interface ApiResponse {
@@ -40,13 +53,45 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { location, image, scriptText, recordedAudioBase64, recordedMimeType } = body;
-  const cleanImage = typeof image === 'string' ? image.replace(/^data:image\/\w+;base64,/, '').replace(/\s+/g, '') : '';
-  if (!cleanImage || !scriptText || typeof scriptText !== 'string') {
+  const { location, image, imageUrl, scriptText, recordedAudioBase64, recordedMimeType, recordedAudioUrl } = body;
+  if (!scriptText || typeof scriptText !== 'string') {
     return NextResponse.json(
-      { error: 'image and scriptText are required' },
+      { error: 'scriptText is required' },
       { status: 400 }
     );
+  }
+  let cleanImage: string;
+  if (imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('http')) {
+    try {
+      cleanImage = await fetchUrlToBase64(imageUrl);
+    } catch (e) {
+      console.warn('[vlog-style-and-script] fetch imageUrl failed:', e);
+      return NextResponse.json(
+        { error: 'Failed to fetch image from URL' },
+        { status: 400 }
+      );
+    }
+  } else if (image && typeof image === 'string') {
+    cleanImage = image.replace(/^data:image\/\w+;base64,/, '').replace(/\s+/g, '');
+  } else {
+    return NextResponse.json(
+      { error: 'image or imageUrl is required' },
+      { status: 400 }
+    );
+  }
+  if (!cleanImage) {
+    return NextResponse.json(
+      { error: 'image or imageUrl is required' },
+      { status: 400 }
+    );
+  }
+  let recordedBase64 = typeof recordedAudioBase64 === 'string' ? recordedAudioBase64 : undefined;
+  if (!recordedBase64 && recordedAudioUrl && typeof recordedAudioUrl === 'string' && recordedAudioUrl.startsWith('http')) {
+    try {
+      recordedBase64 = await fetchUrlToBase64(recordedAudioUrl);
+    } catch {
+      // optional voice analysis
+    }
   }
 
   const model = process.env.GEMINI_MODEL_CINEMATIC || process.env.NEXT_PUBLIC_GEMINI_MODEL_CINEMATIC || 'gemini-2.5-flash';

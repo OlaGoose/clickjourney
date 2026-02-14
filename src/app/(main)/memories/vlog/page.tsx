@@ -26,7 +26,7 @@ import { DEFAULT_UPLOAD_IMAGES } from '@/lib/upload/constants';
 import { compressImageToBase64 } from '@/lib/utils/imageUtils';
 import { blobToBase64 } from '@/lib/utils/imageUtils';
 import { saveMemory, updateMemory } from '@/lib/storage';
-import { blobUrlToPersistentUrl } from '@/lib/upload-media';
+import { blobUrlToPersistentUrl, uploadToSupabaseStorage } from '@/lib/upload-media';
 import { vlogToCarouselItem } from '@/lib/vlog-to-memory';
 import {
   VLOG_SESSION_KEY,
@@ -150,6 +150,13 @@ export default function VlogPage() {
         setRecordedAudioUrl(url);
         stream.getTracks().forEach((tr) => tr.stop());
         transcribeRecordedAudio(blob);
+        const file = new File([blob], 'vlog-voice.webm', { type: 'audio/webm' });
+        uploadToSupabaseStorage(file, { userId: userId ?? undefined }).then((persistentUrl) => {
+          if (persistentUrl) {
+            setRecordedAudioUrl(persistentUrl);
+            revokeBlobUrlIfNeeded(url);
+          }
+        });
       };
       recorder.start();
       setIsRecording(true);
@@ -161,7 +168,7 @@ export default function VlogPage() {
     } catch {
       alert(t('upload.micPermissionDenied'));
     }
-  }, [transcribeRecordedAudio, t]);
+  }, [transcribeRecordedAudio, t, userId]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
@@ -251,21 +258,30 @@ export default function VlogPage() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
       if (!files?.length) return;
+      const uploadOpts = { userId: userId ?? undefined };
       if (replaceTargetId) {
         const file = files[0];
         if (!file) return;
+        const newBlobUrl = URL.createObjectURL(file);
+        const isVideo = file.type.startsWith('video/');
         setImages((prev) => {
           const prevImg = prev.find((img) => img.id === replaceTargetId);
           if (prevImg?.url) revokeBlobUrlIfNeeded(prevImg.url);
-          const isVideo = file.type.startsWith('video/');
           return prev.map((img) =>
             img.id === replaceTargetId
-              ? { ...img, url: URL.createObjectURL(file), type: (isVideo ? 'video' : 'image') as 'image' | 'video' }
+              ? { ...img, url: newBlobUrl, type: (isVideo ? 'video' : 'image') as 'image' | 'video' }
               : img
           );
         });
         if (isDefault) setIsDefault(false);
         setReplaceTargetId(null);
+        uploadToSupabaseStorage(file, uploadOpts).then((persistentUrl) => {
+          if (!persistentUrl) return;
+          setImages((prev) =>
+            prev.map((img) => (img.id === replaceTargetId ? { ...img, url: persistentUrl } : img))
+          );
+          revokeBlobUrlIfNeeded(newBlobUrl);
+        });
       } else {
         const currentImages = isDefault ? [] : images;
         const remaining = MAX_PHOTOS - currentImages.length;
@@ -281,20 +297,40 @@ export default function VlogPage() {
         }));
         setImages([...currentImages, ...newImages]);
         setIsDefault(false);
+        toAdd.forEach((file, index) => {
+          const id = newImages[index]!.id;
+          const blobUrl = newImages[index]!.url;
+          uploadToSupabaseStorage(file, uploadOpts).then((persistentUrl) => {
+            if (!persistentUrl) return;
+            setImages((prev) =>
+              prev.map((img) => (img.id === id ? { ...img, url: persistentUrl } : img))
+            );
+            revokeBlobUrlIfNeeded(blobUrl);
+          });
+        });
       }
       e.target.value = '';
     },
-    [replaceTargetId, isDefault, images]
+    [replaceTargetId, isDefault, images, userId]
   );
 
-  const handleAudioSelected = useCallback((files: File[]) => {
-    const file = files[0];
-    if (!file) return;
-    setAudioUrl((prev) => {
-      if (prev) revokeBlobUrlIfNeeded(prev);
-      return URL.createObjectURL(file);
-    });
-  }, []);
+  const handleAudioSelected = useCallback(
+    (files: File[]) => {
+      const file = files[0];
+      if (!file) return;
+      const blobUrl = URL.createObjectURL(file);
+      setAudioUrl((prev) => {
+        if (prev) revokeBlobUrlIfNeeded(prev);
+        return blobUrl;
+      });
+      uploadToSupabaseStorage(file, { userId: userId ?? undefined }).then((persistentUrl) => {
+        if (!persistentUrl) return;
+        setAudioUrl(persistentUrl);
+        revokeBlobUrlIfNeeded(blobUrl);
+      });
+    },
+    [userId]
+  );
 
   const handleStartPlayback = useCallback(async () => {
     if (!canStart || isGenerating) return;
@@ -303,98 +339,67 @@ export default function VlogPage() {
     setGenerationError(null);
     try {
       setGenerationProgress(5);
-      // Convert blob URLs to persistent URLs one-by-one so progress moves on slow devices (avoids stuck at 5%)
+      // Prefer already-uploaded storage URLs; fallback to blobUrlToPersistentUrl only for any still blob (e.g. slow upload)
       const uploadOpts = { userId: userId ?? undefined };
-      const imageBlobUrls = images.filter((i) => i.type !== 'video').map((i) => i.url);
-      const videoBlobUrls = images.filter((i) => i.type === 'video').map((i) => i.url);
-      const totalUploads = Math.max(1, imageBlobUrls.length + videoBlobUrls.length + (audioUrl?.startsWith('blob:') ? 1 : 0) + (recordedAudioUrl?.startsWith('blob:') ? 1 : 0));
-      const uploadProgressSpan = 10; // 5% -> 15%
-      let uploadDone = 0;
-
-      const imageUrls: string[] = [];
-      for (let i = 0; i < imageBlobUrls.length; i++) {
-        const url = await blobUrlToPersistentUrl(imageBlobUrls[i]!, { ...uploadOpts, filename: `vlog-img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg` });
-        imageUrls.push(url);
-        uploadDone += 1;
-        setGenerationProgress(5 + (uploadDone / totalUploads) * uploadProgressSpan);
-      }
-      const videoUrls: string[] = [];
-      for (let i = 0; i < videoBlobUrls.length; i++) {
-        const url = await blobUrlToPersistentUrl(videoBlobUrls[i]!, { ...uploadOpts, filename: `vlog-vid-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.mp4` });
-        videoUrls.push(url);
-        uploadDone += 1;
-        setGenerationProgress(5 + (uploadDone / totalUploads) * uploadProgressSpan);
-      }
+      const imageList = images.filter((i) => i.type !== 'video').map((i) => i.url);
+      const videoList = images.filter((i) => i.type === 'video').map((i) => i.url);
+      const imageUrls = await Promise.all(
+        imageList.map((url) =>
+          url.startsWith('http')
+            ? Promise.resolve(url)
+            : blobUrlToPersistentUrl(url, { ...uploadOpts, filename: `vlog-img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg` })
+        )
+      );
+      const videoUrls = await Promise.all(
+        videoList.map((url) =>
+          url.startsWith('http')
+            ? Promise.resolve(url)
+            : blobUrlToPersistentUrl(url, { ...uploadOpts, filename: `vlog-vid-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.mp4` })
+        )
+      );
       let persistentAudio = audioUrl ?? DEFAULT_VLOG_AUDIO_URL;
       if (audioUrl && audioUrl.startsWith('blob:')) {
         persistentAudio = await blobUrlToPersistentUrl(audioUrl, { ...uploadOpts, filename: 'vlog-audio.mp3' });
-        uploadDone += 1;
-        setGenerationProgress(5 + (uploadDone / totalUploads) * uploadProgressSpan);
       }
       let persistentRecorded: string | null = recordedAudioUrl;
       if (recordedAudioUrl && recordedAudioUrl.startsWith('blob:')) {
         persistentRecorded = await blobUrlToPersistentUrl(recordedAudioUrl, { ...uploadOpts, filename: 'vlog-voice.webm' });
-        uploadDone += 1;
-        setGenerationProgress(5 + (uploadDone / totalUploads) * uploadProgressSpan);
       }
 
-      setGenerationProgress(15);
+      setGenerationProgress(25);
       const firstImageUrl = imageUrls[0];
       let filterPreset = 'Original';
       let artifiedScript: string[] = subtitleText.split('\n').map((s) => s.trim()).filter(Boolean);
-      if (firstImageUrl) {
-        await new Promise((r) => setTimeout(r, 0)); // yield so 15% paints before heavy work (helps on slow devices)
-        setGenerationProgress(18);
-        const base64Image = await compressImageToBase64(firstImageUrl);
-        setGenerationProgress(35);
-        let recordedBase64: string | undefined;
-        if (persistentRecorded) {
-          try {
-            const res = await fetch(persistentRecorded);
-            const blob = await res.blob();
-            recordedBase64 = await blobToBase64(blob);
-          } catch {
-            // optional
+      // Use imageUrl when already persistent (server fetches image); avoids heavy client base64 on real devices
+      if (firstImageUrl && subtitleText.trim()) {
+        setGenerationProgress(45);
+        const body: Record<string, unknown> = {
+          location: memoryLocation.trim() || undefined,
+          scriptText: subtitleText.trim(),
+        };
+        if (firstImageUrl.startsWith('http')) {
+          body.imageUrl = firstImageUrl;
+          if (persistentRecorded && persistentRecorded.startsWith('http')) body.recordedAudioUrl = persistentRecorded;
+        } else {
+          const base64Image = await compressImageToBase64(firstImageUrl);
+          body.image = base64Image;
+          if (persistentRecorded) {
+            try {
+              const res = await fetch(persistentRecorded);
+              const blob = await res.blob();
+              body.recordedAudioBase64 = await blobToBase64(blob);
+              body.recordedMimeType = 'audio/webm';
+            } catch {
+              // optional
+            }
           }
         }
-        setGenerationProgress(50);
-
-        const API_TIMEOUT_MS = 90000;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
-        let progressInterval: ReturnType<typeof setInterval> | null = null;
-        const startProgress = Date.now();
-        progressInterval = setInterval(() => {
-          const elapsed = (Date.now() - startProgress) / 1000;
-          const bump = Math.min(Math.floor(elapsed / 2) * 3, 32);
-          setGenerationProgress((p) => Math.min(p, 50 + bump));
-        }, 2000);
-
-        let res: Response;
-        try {
-          res = await fetch('/api/vlog-style-and-script', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              location: memoryLocation.trim() || undefined,
-              image: base64Image,
-              scriptText: subtitleText.trim(),
-              ...(recordedBase64 && {
-                recordedAudioBase64: recordedBase64,
-                recordedMimeType: 'audio/webm',
-              }),
-            }),
-            signal: controller.signal,
-          });
-        } catch (fetchErr) {
-          if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
-            throw new Error('Request timed out. Please check your network and try again.');
-          }
-          throw fetchErr;
-        } finally {
-          clearTimeout(timeoutId);
-          if (progressInterval) clearInterval(progressInterval);
-        }
+        setGenerationProgress(65);
+        const res = await fetch('/api/vlog-style-and-script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
         setGenerationProgress(85);
         if (res.ok) {
           const data = await res.json();
