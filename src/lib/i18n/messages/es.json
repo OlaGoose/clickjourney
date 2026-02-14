@@ -263,6 +263,12 @@
     "resumeUploadMessage": "Se encontraron archivos incompletos. ¿Continuar subiendo?",
     "resumeUpload": "Continuar",
     "discardCache": "Descartar",
+    "uploadManager": "Gestor de subidas",
+    "cancel": "Cancelar",
+    "cancelAll": "Cancelar todo",
+    "close": "Cerrar",
+    "photo": "Foto",
+    "video": "Vídeo",
     "exit": "Salir",
     "tapToPlay": "Toca para reproducir"
   }

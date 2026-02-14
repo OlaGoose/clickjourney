@@ -263,6 +263,12 @@
     "resumeUploadMessage": "发现未完成的文件，是否继续上传？",
     "resumeUpload": "继续上传",
     "discardCache": "放弃并清空",
+    "uploadManager": "上传管理",
+    "cancel": "取消",
+    "cancelAll": "取消全部",
+    "close": "关闭",
+    "photo": "图片",
+    "video": "视频",
     "exit": "退出",
     "tapToPlay": "点击播放"
   }

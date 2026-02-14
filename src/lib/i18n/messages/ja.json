@@ -263,6 +263,12 @@
     "resumeUploadMessage": "未完了のファイルが見つかりました。アップロードを続けますか？",
     "resumeUpload": "続ける",
     "discardCache": "破棄",
+    "uploadManager": "アップロード管理",
+    "cancel": "キャンセル",
+    "cancelAll": "すべてキャンセル",
+    "close": "閉じる",
+    "photo": "写真",
+    "video": "動画",
     "exit": "終了",
     "tapToPlay": "タップして再生"
   }

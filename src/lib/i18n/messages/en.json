@@ -263,6 +263,12 @@
     "resumeUploadMessage": "Found incomplete files. Continue uploading?",
     "resumeUpload": "Resume",
     "discardCache": "Discard",
+    "uploadManager": "Upload Manager",
+    "cancel": "Cancel",
+    "cancelAll": "Cancel All",
+    "close": "Close",
+    "photo": "Photo",
+    "video": "Video",
     "exit": "Exit",
     "tapToPlay": "Tap to play"
   }

@@ -4,11 +4,21 @@
  */
 
 const DB_NAME = 'vlog-upload-cache';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'uploads';
+const STATE_STORE_NAME = 'state';
 
-export type UploadStatus = 'pending' | 'uploading' | 'completed' | 'failed';
+export type UploadStatus = 'pending' | 'uploading' | 'completed' | 'failed' | 'cancelled';
 export type MediaType = 'image' | 'video' | 'audio' | 'recorded';
+
+export interface VlogFormState {
+  currentStep: number;
+  memoryLocation: string;
+  subtitleText: string;
+  videoText: string;
+  selectedFilterPreset: string;
+  updatedAt: number;
+}
 
 export interface UploadCacheItem {
   id: string;
@@ -39,10 +49,18 @@ async function openDB(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
+      const oldVersion = (event as IDBVersionChangeEvent).oldVersion;
+      
+      // Create uploads store
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
         store.createIndex('status', 'status', { unique: false });
         store.createIndex('createdAt', 'createdAt', { unique: false });
+      }
+      
+      // Create state store (v2)
+      if (oldVersion < 2 && !db.objectStoreNames.contains(STATE_STORE_NAME)) {
+        db.createObjectStore(STATE_STORE_NAME, { keyPath: 'id' });
       }
     };
   });
@@ -194,5 +212,65 @@ export async function cleanupOldCache(): Promise<void> {
         resolve();
       }
     };
+  });
+}
+
+/**
+ * 保存表单状态（步骤、地点、字幕等）
+ */
+export async function saveVlogFormState(state: Omit<VlogFormState, 'updatedAt'>): Promise<void> {
+  const db = await openDB();
+  const stateWithTime: VlogFormState = {
+    ...state,
+    updatedAt: Date.now(),
+  };
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STATE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STATE_STORE_NAME);
+    const request = store.put({ id: 'vlog-form', ...stateWithTime });
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+}
+
+/**
+ * 获取表单状态
+ */
+export async function getVlogFormState(): Promise<VlogFormState | null> {
+  const db = await openDB();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STATE_STORE_NAME, 'readonly');
+    const store = tx.objectStore(STATE_STORE_NAME);
+    const request = store.get('vlog-form');
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const result = request.result;
+      if (result && result.id === 'vlog-form') {
+        const { id, ...state } = result;
+        resolve(state as VlogFormState);
+      } else {
+        resolve(null);
+      }
+    };
+  });
+}
+
+/**
+ * 清除表单状态
+ */
+export async function clearVlogFormState(): Promise<void> {
+  const db = await openDB();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STATE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STATE_STORE_NAME);
+    const request = store.delete('vlog-form');
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
   });
 }

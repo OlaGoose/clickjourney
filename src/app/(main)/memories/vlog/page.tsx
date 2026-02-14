@@ -41,7 +41,12 @@ import {
   updateUploadCacheItem,
   clearUploadCache,
   cleanupOldCache,
+  removeUploadCacheItem,
+  saveVlogFormState,
+  getVlogFormState,
+  clearVlogFormState,
   type UploadCacheItem,
+  type VlogFormState,
 } from '@/lib/vlog-upload-cache';
 
 const MAX_PHOTOS = 9;
@@ -118,26 +123,30 @@ export default function VlogPage() {
   /** Upload cache: resume interrupted uploads */
   const [pendingCache, setPendingCache] = useState<UploadCacheItem[] | null>(null);
   const [showResumeDialog, setShowResumeDialog] = useState(false);
+  const [showUploadManager, setShowUploadManager] = useState(false);
 
   const youtubeIds = getYoutubeIds(videoText);
-  const hasVisualContent = images.length > 0 || youtubeIds.length > 0;
   
   // Track upload status: count items still being uploaded (blob URLs not yet replaced with http)
-  const { isUploading, uploadingCount, totalMediaCount } = useMemo(() => {
+  const { isUploading, uploadingCount, totalMediaCount, hasReadyVisualContent } = useMemo(() => {
     const blobImages = images.filter((i) => i.url.startsWith('blob:'));
+    const readyImages = images.filter((i) => i.url.startsWith('http'));
     const hasAudioBlob = audioUrl?.startsWith('blob:') ?? false;
     const hasRecordedBlob = recordedAudioUrl?.startsWith('blob:') ?? false;
     const uploading = blobImages.length + (hasAudioBlob ? 1 : 0) + (hasRecordedBlob ? 1 : 0);
     const total = images.length + (audioUrl ? 1 : 0) + (recordedAudioUrl ? 1 : 0);
+    const hasYoutube = getYoutubeIds(videoText).length > 0;
     return {
       isUploading: uploading > 0,
       uploadingCount: uploading,
       totalMediaCount: total,
+      hasReadyVisualContent: readyImages.length > 0 || hasYoutube,
     };
-  }, [images, audioUrl, recordedAudioUrl]);
+  }, [images, audioUrl, recordedAudioUrl, videoText]);
   
+  // Allow starting if有至少一个已上传完成的媒体（http）和字幕，即使还有其他项在上传
   const canStart =
-    hasVisualContent && subtitleText.trim().length > 0 && !isUploading;
+    hasReadyVisualContent && subtitleText.trim().length > 0;
 
   const TRANSCRIBE_TIMEOUT_MS = 60_000;
 
@@ -276,16 +285,32 @@ export default function VlogPage() {
     return () => audio.removeEventListener('ended', onEnded);
   }, [recordedAudioUrl]);
 
-  // Check for pending uploads on mount and cleanup old cache
+  // Check for pending uploads and form state on mount
   useEffect(() => {
     let cancelled = false;
     async function checkPendingUploads() {
       try {
         await cleanupOldCache(); // Remove uploads older than 24h
-        const pending = await getPendingUploads();
-        if (!cancelled && pending.length > 0) {
-          setPendingCache(pending);
-          setShowResumeDialog(true);
+        const [pending, formState] = await Promise.all([
+          getPendingUploads(),
+          getVlogFormState(),
+        ]);
+        
+        if (!cancelled) {
+          // Restore form state
+          if (formState) {
+            setCurrentStep(formState.currentStep);
+            setMemoryLocation(formState.memoryLocation);
+            setSubtitleText(formState.subtitleText);
+            setVideoText(formState.videoText);
+            setSelectedFilterPreset(formState.selectedFilterPreset);
+          }
+          
+          // Show resume dialog if有未完成上传
+          if (pending.length > 0) {
+            setPendingCache(pending);
+            setShowResumeDialog(true);
+          }
         }
       } catch (err) {
         console.warn('[vlog] Failed to check pending uploads:', err);
@@ -296,6 +321,20 @@ export default function VlogPage() {
       cancelled = true;
     };
   }, []);
+
+  // Auto-save form state when it changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      saveVlogFormState({
+        currentStep,
+        memoryLocation,
+        subtitleText,
+        videoText,
+        selectedFilterPreset,
+      }).catch(console.warn);
+    }, 500); // Debounce 500ms
+    return () => clearTimeout(timeoutId);
+  }, [currentStep, memoryLocation, subtitleText, videoText, selectedFilterPreset]);
 
   // Resume uploads from cache
   const handleResumeUploads = useCallback(async () => {
@@ -369,6 +408,38 @@ export default function VlogPage() {
     setPendingCache(null);
     await clearUploadCache();
   }, []);
+
+  // Cancel single upload
+  const handleCancelUpload = useCallback((id: string, type: 'image' | 'video' | 'audio' | 'recorded') => {
+    if (type === 'image' || type === 'video') {
+      setImages((prev) => prev.filter((img) => img.id !== id));
+    } else if (type === 'audio') {
+      setAudioUrl(null);
+    } else if (type === 'recorded') {
+      setRecordedAudioUrl(null);
+    }
+    updateUploadCacheItem(id, { status: 'cancelled' }).catch(console.warn);
+    removeUploadCacheItem(id).catch(console.warn);
+  }, []);
+
+  // Cancel all uploads
+  const handleCancelAllUploads = useCallback(() => {
+    const blobImages = images.filter((i) => i.url.startsWith('blob:'));
+    blobImages.forEach((img) => {
+      updateUploadCacheItem(img.id, { status: 'cancelled' }).catch(console.warn);
+      removeUploadCacheItem(img.id).catch(console.warn);
+    });
+    setImages((prev) => prev.filter((i) => !i.url.startsWith('blob:')));
+    
+    if (audioUrl?.startsWith('blob:')) {
+      setAudioUrl(null);
+    }
+    if (recordedAudioUrl?.startsWith('blob:')) {
+      setRecordedAudioUrl(null);
+    }
+    
+    setShowUploadManager(false);
+  }, [images, audioUrl, recordedAudioUrl]);
 
   const handleStartClick = useCallback(() => {
     setReplaceTargetId(null);
@@ -490,19 +561,17 @@ export default function VlogPage() {
     setGenerationError(null);
     try {
       setGenerationProgress(10);
-      // All media should already be uploaded (http URLs) since canStart checks !isUploading
-      const imageUrls = images.filter((i) => i.type !== 'video').map((i) => i.url);
-      const videoUrls = images.filter((i) => i.type === 'video').map((i) => i.url);
-      const persistentAudio = audioUrl ?? DEFAULT_VLOG_AUDIO_URL;
-      const persistentRecorded = recordedAudioUrl;
-      
-      // Sanity check: ensure no blob URLs (should never happen if canStart works correctly)
-      const hasBlobUrl = [...imageUrls, ...videoUrls, persistentAudio, persistentRecorded].some(
-        (url) => url && typeof url === 'string' && url.startsWith('blob:')
-      );
-      if (hasBlobUrl) {
-        throw new Error('请等待媒体上传完成后再试');
-      }
+      // Only use successfully uploaded media (http URLs); ignore blob (still uploading or cancelled)
+      const imageUrls = images
+        .filter((i) => i.type !== 'video' && i.url.startsWith('http'))
+        .map((i) => i.url);
+      const videoUrls = images
+        .filter((i) => i.type === 'video' && i.url.startsWith('http'))
+        .map((i) => i.url);
+      const persistentAudio =
+        audioUrl && audioUrl.startsWith('http') ? audioUrl : DEFAULT_VLOG_AUDIO_URL;
+      const persistentRecorded =
+        recordedAudioUrl && recordedAudioUrl.startsWith('http') ? recordedAudioUrl : null;
 
       setGenerationProgress(30);
       const firstImageUrl = imageUrls[0];
@@ -566,8 +635,11 @@ export default function VlogPage() {
 
       setGenerationProgress(100);
 
-      // Clear upload cache on success
-      await clearUploadCache().catch(console.warn);
+      // Clear upload cache and form state on success
+      await Promise.all([
+        clearUploadCache(),
+        clearVlogFormState(),
+      ]).catch(console.warn);
 
       // Redirect by id so this vlog has a stable play URL and does not overwrite others
       if (savedMemoryId && userId) {
@@ -1021,14 +1093,167 @@ export default function VlogPage() {
             )}
           </div>
           {currentStep === 2 && !canStart && (
-            <p className={`mt-3 text-xs text-center max-w-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-              {isUploading 
-                ? `${t('vlog.uploadingMedia') || '正在上传媒体'} (${totalMediaCount - uploadingCount}/${totalMediaCount})`
-                : t('vlog.needPhotosAudioSubtitles')}
-            </p>
+            <>
+              {isUploading ? (
+                <button
+                  type="button"
+                  onClick={() => setShowUploadManager(true)}
+                  className={`mt-3 text-xs text-center max-w-sm underline decoration-dotted hover:no-underline transition-all ${
+                    isDark ? 'text-white/70 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {t('vlog.uploadingMedia') || '正在上传媒体'} ({totalMediaCount - uploadingCount}/{totalMediaCount})
+                </button>
+              ) : (
+                <p className={`mt-3 text-xs text-center max-w-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                  {t('vlog.needPhotosAudioSubtitles')}
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>
+
+      {/* Upload Manager Panel (Bottom Sheet) */}
+      {showUploadManager && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowUploadManager(false)}
+        >
+          <div
+            className={`fixed bottom-0 left-0 right-0 max-h-[70vh] overflow-auto rounded-t-3xl p-6 shadow-2xl transition-transform ${
+              isDark ? 'bg-gray-900' : 'bg-white'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('vlog.uploadManager') || '上传管理'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowUploadManager(false)}
+                className={`p-2 rounded-full transition-colors ${
+                  isDark ? 'hover:bg-white/10 text-white/70' : 'hover:bg-gray-100 text-gray-600'
+                }`}
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                  <path d="M15 5L5 15M5 5l10 10" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-3 mb-4">
+              {/* Uploading Images/Videos */}
+              {images.filter((i) => i.url.startsWith('blob:')).map((img) => (
+                <div
+                  key={img.id}
+                  className={`flex items-center justify-between p-3 rounded-lg ${
+                    isDark ? 'bg-white/5' : 'bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className={`text-sm ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                      {img.type === 'video' ? (t('vlog.video') || '视频') : (t('vlog.photo') || '图片')} ({img.id.slice(0, 6)})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCancelUpload(img.id, img.type || 'image')}
+                    className={`text-xs px-3 py-1.5 rounded-md transition-colors ${
+                      isDark
+                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                        : 'bg-red-50 text-red-600 hover:bg-red-100'
+                    }`}
+                  >
+                    {t('vlog.cancel') || '取消'}
+                  </button>
+                </div>
+              ))}
+
+              {/* Uploading Audio */}
+              {audioUrl?.startsWith('blob:') && (
+                <div
+                  className={`flex items-center justify-between p-3 rounded-lg ${
+                    isDark ? 'bg-white/5' : 'bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className={`text-sm ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                      {t('vlog.soundtrack') || '配乐'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCancelUpload('audio', 'audio')}
+                    className={`text-xs px-3 py-1.5 rounded-md transition-colors ${
+                      isDark
+                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                        : 'bg-red-50 text-red-600 hover:bg-red-100'
+                    }`}
+                  >
+                    {t('vlog.cancel') || '取消'}
+                  </button>
+                </div>
+              )}
+
+              {/* Uploading Recorded Audio */}
+              {recordedAudioUrl?.startsWith('blob:') && (
+                <div
+                  className={`flex items-center justify-between p-3 rounded-lg ${
+                    isDark ? 'bg-white/5' : 'bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className={`text-sm ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                      {t('vlog.screenplay') || '旁白录音'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCancelUpload('recorded', 'recorded')}
+                    className={`text-xs px-3 py-1.5 rounded-md transition-colors ${
+                      isDark
+                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                        : 'bg-red-50 text-red-600 hover:bg-red-100'
+                    }`}
+                  >
+                    {t('vlog.cancel') || '取消'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleCancelAllUploads}
+                className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-colors ${
+                  isDark
+                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                    : 'bg-red-50 text-red-600 hover:bg-red-100'
+                }`}
+              >
+                {t('vlog.cancelAll') || '取消全部'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowUploadManager(false)}
+                className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-colors ${
+                  isDark
+                    ? 'bg-white/10 text-white hover:bg-white/20'
+                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                }`}
+              >
+                {t('vlog.close') || '关闭'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
