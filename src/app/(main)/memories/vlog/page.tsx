@@ -410,6 +410,9 @@ export default function VlogPage() {
         }
       }
       setGenerationProgress(95);
+      // LUT: use user selection when they chose a preset; otherwise use AI recommendation
+      const finalFilterPreset =
+        selectedFilterPreset !== 'Original' ? selectedFilterPreset : filterPreset;
       const data: VlogData = {
         location: memoryLocation.trim(),
         images: imageUrls,
@@ -417,7 +420,7 @@ export default function VlogPage() {
         audio: persistentAudio,
         recordedAudio: persistentRecorded,
         subtitles: artifiedScript,
-        filterPreset: filterPreset,
+        filterPreset: finalFilterPreset,
         youtubeIds,
       };
 
