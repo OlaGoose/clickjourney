@@ -76,6 +76,8 @@ const ANIMATION_VARIANTS = [
 export interface VlogPlayerProps {
   data: VlogData;
   onExit: () => void;
+  /** When true (shared link), hide header/controls for pure content display. */
+  shareView?: boolean;
 }
 
 const YT_SCRIPT_URL = 'https://www.youtube.com/iframe_api';
@@ -184,7 +186,7 @@ const SubtitleDisplay = memo(({
 ));
 SubtitleDisplay.displayName = 'SubtitleDisplay';
 
-export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
+export function VlogPlayer({ data, onExit, shareView = false }: VlogPlayerProps) {
   const { t } = useLocale();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -754,13 +756,15 @@ export function VlogPlayer({ data, onExit }: VlogPlayerProps) {
         />
       )}
 
-      {/* Control buttons */}
-      <ControlButtons 
-        isMuted={isMuted}
-        onMute={handleMute}
-        onExit={handleExit}
-        exitLabel={t('vlog.exit')}
-      />
+      {/* Control buttons — hidden in share view for pure content */}
+      {!shareView && (
+        <ControlButtons 
+          isMuted={isMuted}
+          onMute={handleMute}
+          onExit={handleExit}
+          exitLabel={t('vlog.exit')}
+        />
+      )}
 
       {/* Play/pause overlay */}
       <div

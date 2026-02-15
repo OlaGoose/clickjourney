@@ -227,21 +227,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
         />
       )}
 
-      {/* Share view: minimal back so viewer can leave */}
-      {shareView && (
-        <div className={`absolute top-0 left-0 z-20 p-4 ${isDark ? 'text-white/80' : 'text-black/80'}`}>
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-2 hover:opacity-100 opacity-80 transition-opacity"
-          >
-            <ArrowLeft size={20} aria-hidden />
-            <span className="text-sm font-medium">{t('memory.back') || 'Back'}</span>
-          </button>
-        </div>
-      )}
-
-      {/* Main Content — 1:1 structure with AI generate page (single scroll like generate) */}
+      {/* Main Content — 1:1 structure with AI generate page (single scroll like generate). Share view: no header, pure content. */}
       <main className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-contain ${shareView ? 'pt-4' : 'pt-[44px]'}`} style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
         {/* Hero Title Section — same as generate: max-w-5xl, py-16 md:py-24, space-y-8 */}
         <section className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-24">

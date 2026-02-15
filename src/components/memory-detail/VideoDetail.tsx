@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import type { CarouselItem, MemoryVisibility } from '@/types/memory';
 import { MemoryDetailHeader } from '@/components/memory-detail/MemoryDetailHeader';
 import { MemoryService } from '@/lib/db/services/memory-service';
@@ -99,20 +98,7 @@ export function VideoDetail({ memory, onBack, isOwner = false, shareView = false
         />
       )}
 
-      {shareView && (
-        <div className="absolute top-0 left-0 z-20 p-4 text-white/80">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-2 hover:opacity-100 opacity-80 transition-opacity"
-          >
-            <ArrowLeft size={20} aria-hidden />
-            <span className="text-sm font-medium">{t('memory.back') || 'Back'}</span>
-          </button>
-        </div>
-      )}
-
-      <div className={`flex-1 overflow-hidden ${shareView ? 'pt-4' : ''}`}>
+      <div className={`flex-1 overflow-hidden ${shareView ? 'pt-0' : ''}`}>
         {videos.length > 0 ? (
           <div className="flex h-full flex-col">
             <div className="relative flex-1 bg-black">

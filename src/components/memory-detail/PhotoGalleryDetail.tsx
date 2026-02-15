@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import type { CarouselItem, MemoryVisibility } from '@/types/memory';
 import GalleryModal from '@/components/GalleryModal';
 import PhotoGrid from '@/components/PhotoGrid';
@@ -115,20 +114,7 @@ export function PhotoGalleryDetail({ memory, onBack, isOwner = false, shareView 
           />
         )}
 
-        {shareView && (
-          <div className="absolute top-0 left-0 z-20 p-4 text-black/80">
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex items-center gap-2 hover:opacity-100 opacity-80 transition-opacity"
-            >
-              <ArrowLeft size={20} aria-hidden />
-              <span className="text-sm font-medium">{t('memory.back') || 'Back'}</span>
-            </button>
-          </div>
-        )}
-
-        <div className={`no-scrollbar flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pb-8 overscroll-contain ${shareView ? 'pt-12' : ''}`} style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+        <div className={`no-scrollbar flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pb-8 overscroll-contain ${shareView ? 'pt-4' : ''}`} style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
           <div className="px-0 py-4">
             <h1 className="text-xl font-semibold text-black">{title}</h1>
             <p className="mt-3 whitespace-pre-wrap text-gray-800">{description}</p>

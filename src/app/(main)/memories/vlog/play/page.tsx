@@ -141,7 +141,7 @@ function VlogPlayContent() {
     );
   }
 
-  return <VlogPlayer data={data} onExit={handleExit} />;
+  return <VlogPlayer data={data} onExit={handleExit} shareView={isSharedView} />;
 }
 
 export default function VlogPlayPage() {
