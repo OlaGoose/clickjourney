@@ -78,7 +78,7 @@ export function RichStoryDetail({ memory, onBack, shareView = false, isOwner = f
   };
 
   const contentBody = (
-    <div className="no-scrollbar flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-24 pt-4 bg-[#fbfbfd] overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div className="no-scrollbar flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-24 pt-4 bg-[#fbfbfd] overscroll-contain" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
       <div className="px-8 pt-4 space-y-4 max-w-2xl mx-auto min-h-full">
         <div className="pt-2">
           <h1 className="text-2xl font-bold text-[#1d1d1f]">{title || t('memory.untitled')}</h1>
@@ -109,7 +109,7 @@ export function RichStoryDetail({ memory, onBack, shareView = false, isOwner = f
 
   if (shareView) {
     return (
-      <div className="min-h-screen flex flex-col font-sans bg-[#fbfbfd] text-[#1d1d1f] relative">
+      <div className="fixed inset-0 z-50 flex flex-col font-sans bg-[#fbfbfd] text-[#1d1d1f]">
         <div className="absolute top-0 left-0 z-20 p-4 text-[#1d1d1f]/80">
           <button
             type="button"
