@@ -27,6 +27,7 @@ import { useLocale } from '@/lib/i18n';
 import { saveMemory, updateMemory } from '@/lib/storage';
 import { directorScriptToCarouselItem } from '@/lib/upload-to-memory';
 import { saveCinematicScript, saveLocalCinematic } from '@/lib/cinematic-storage';
+import { fileToUrlOrDataUrl } from '@/lib/upload-media';
 import type { UploadedImage } from '@/types/upload';
 import type { DirectorScript } from '@/types/cinematic';
 
@@ -231,19 +232,34 @@ export default function MemoryUploadPage() {
       const files = e.target.files;
       if (!files || files.length === 0) return;
 
+      const uploadOpts = { userId };
+
       if (replaceTargetId) {
         const file = files[0];
         if (!file) return;
+        const blobUrl = URL.createObjectURL(file);
         setImages((prev) => {
           const prevImg = prev.find((img) => img.id === replaceTargetId);
           if (prevImg?.url) revokeBlobUrlIfNeeded(prevImg.url);
-          const newUrl = URL.createObjectURL(file);
           return prev.map((img) =>
-            img.id === replaceTargetId ? { ...img, url: newUrl } : img
+            img.id === replaceTargetId ? { ...img, url: blobUrl } : img
           );
         });
         if (isDefault) setIsDefault(false);
         setReplaceTargetId(null);
+        fileToUrlOrDataUrl(file, uploadOpts)
+          .then((persistentUrl) => {
+            setImages((prev) =>
+              prev.map((img) =>
+                img.id === replaceTargetId ? { ...img, url: persistentUrl } : img
+              )
+            );
+            revokeBlobUrlIfNeeded(blobUrl);
+          })
+          .catch((err) => {
+            console.error('[upload] Replace image upload failed:', err);
+            revokeBlobUrlIfNeeded(blobUrl);
+          });
       } else {
         const currentImages = isDefault ? [] : images;
         const remainingSlots = 9 - currentImages.length;
@@ -259,10 +275,29 @@ export default function MemoryUploadPage() {
         }));
         setImages([...currentImages, ...newImages]);
         setIsDefault(false);
+        newImages.forEach((item, index) => {
+          const file = fileArray[index];
+          if (!file) return;
+          const id = item.id;
+          const blobUrl = item.url;
+          fileToUrlOrDataUrl(file, uploadOpts)
+            .then((persistentUrl) => {
+              setImages((prev) =>
+                prev.map((img) =>
+                  img.id === id ? { ...img, url: persistentUrl } : img
+                )
+              );
+              revokeBlobUrlIfNeeded(blobUrl);
+            })
+            .catch((err) => {
+              console.error('[upload] Image upload failed:', file.name, err);
+              revokeBlobUrlIfNeeded(blobUrl);
+            });
+        });
       }
       if (fileInputRef.current) fileInputRef.current.value = '';
     },
-    [replaceTargetId, isDefault, images, t]
+    [replaceTargetId, isDefault, images, userId, t]
   );
 
   const TRANSCRIBE_TIMEOUT_MS = 60_000;

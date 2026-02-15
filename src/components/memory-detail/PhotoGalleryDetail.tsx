@@ -128,7 +128,7 @@ export function PhotoGalleryDetail({ memory, onBack, isOwner = false, shareView 
           </div>
         )}
 
-        <div className={`no-scrollbar flex-1 overflow-y-auto px-4 pb-8 ${shareView ? 'pt-12' : ''}`}>
+        <div className={`no-scrollbar flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pb-8 overscroll-contain ${shareView ? 'pt-12' : ''}`} style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="px-0 py-4">
             <h1 className="text-xl font-semibold text-black">{title}</h1>
             <p className="mt-3 whitespace-pre-wrap text-gray-800">{description}</p>

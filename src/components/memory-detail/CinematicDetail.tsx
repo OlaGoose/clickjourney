@@ -242,7 +242,7 @@ export function CinematicDetail({ memory, script: initialScript, onBack, isOwner
       )}
 
       {/* Main Content — 1:1 structure with AI generate page (single scroll like generate) */}
-      <main className={`flex-1 min-h-0 overflow-y-auto no-scrollbar ${shareView ? 'pt-4' : 'pt-[44px]'}`}>
+      <main className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-contain ${shareView ? 'pt-4' : 'pt-[44px]'}`} style={{ WebkitOverflowScrolling: 'touch' }}>
         {/* Hero Title Section — same as generate: max-w-5xl, py-16 md:py-24, space-y-8 */}
         <section className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-24">
           <div className="space-y-8">

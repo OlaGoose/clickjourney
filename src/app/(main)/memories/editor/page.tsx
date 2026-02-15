@@ -17,6 +17,7 @@ import { useOptionalAuth } from '@/lib/auth';
 import { useLocale } from '@/lib/i18n';
 import { MemoryService } from '@/lib/db/services/memory-service';
 import { resolveCoordinatesForLocation } from '@/lib/upload-to-memory';
+import { blobUrlToPersistentUrl } from '@/lib/upload-media';
 
 const STORAGE_KEY = 'travel-editor-draft';
 
@@ -159,19 +160,28 @@ function TravelEditorContent() {
 
     const locationStr = (editorData.location ?? '').trim();
     const coordinates = locationStr ? resolveCoordinatesForLocation(locationStr) : undefined;
+
+    let blocksToSave = editorData.blocks;
+    try {
+      blocksToSave = await resolveBlobUrlsInBlocks(editorData.blocks, userId);
+    } catch (e) {
+      console.error('Failed to resolve blob URLs for save:', e);
+    }
+    const resolvedImages = collectImagesFromBlocks(blocksToSave);
+
     const memoryData = {
       type: 'rich-story' as const,
       title: editorData.title,
       subtitle: locationStr || editorData.description.slice(0, 50) || t('editor.travelMemory'),
       detailTitle: editorData.title,
       description: editorData.description,
-      image: allImages[0] ?? '',
-      gallery: allImages,
+      image: resolvedImages[0] ?? '',
+      gallery: resolvedImages,
       color: '#3B82F6',
       chord: [0.2, 0.4, 0.6],
       category: t('editor.travelMemory'),
       richContent: generateRichContent(editorData),
-      editorBlocks: editorData.blocks,
+      editorBlocks: blocksToSave,
       ...(coordinates && { coordinates }),
     };
 
@@ -218,6 +228,50 @@ function collectSectionImages(data: SectionBlockData): string[] {
   if (data.feature_card?.image) urls.push(data.feature_card.image);
   if (data.marquee?.items) data.marquee.items.forEach((i) => i.image && urls.push(i.image));
   return urls;
+}
+
+/** Resolve blob: URLs in blocks to persistent URLs (Supabase/GCS/data URL) so shared content shows images. */
+async function resolveBlobUrlsInBlocks(
+  blocks: TravelEditorData['blocks'],
+  userId: string | null
+): Promise<TravelEditorData['blocks']> {
+  const urlSet = new Set(collectImagesFromBlocks(blocks));
+  const blobUrls = [...urlSet].filter((u) => typeof u === 'string' && u.startsWith('blob:'));
+  if (blobUrls.length === 0) return blocks;
+
+  const resolved = await Promise.all(
+    blobUrls.map((u) => blobUrlToPersistentUrl(u, { userId }))
+  );
+  const urlMap = new Map<string, string>(blobUrls.map((u, i) => [u, resolved[i] ?? u]));
+
+  function replaceUrl(url: string): string {
+    return urlMap.get(url) ?? url;
+  }
+
+  return blocks.map((block) => {
+    const next = { ...block, metadata: block.metadata ? { ...block.metadata } : undefined };
+    if (next.type === 'image') {
+      if (next.content) next.content = replaceUrl(next.content);
+      if (next.metadata?.images) {
+        next.metadata = { ...next.metadata, images: next.metadata.images.map(replaceUrl) };
+      }
+    } else if (next.type === 'cinematic' && next.metadata?.cinematicImage) {
+      next.metadata = { ...next.metadata, cinematicImage: replaceUrl(next.metadata.cinematicImage) };
+    } else if (next.type === 'section' && next.metadata?.sectionData) {
+      const sd = { ...next.metadata.sectionData };
+      if (sd.feature_card?.image) {
+        sd.feature_card = { ...sd.feature_card, image: replaceUrl(sd.feature_card.image) };
+      }
+      if (sd.marquee?.items) {
+        sd.marquee = {
+          ...sd.marquee,
+          items: sd.marquee.items.map((i) => (i.image ? { ...i, image: replaceUrl(i.image) } : i)),
+        };
+      }
+      next.metadata = { ...next.metadata, sectionData: sd };
+    }
+    return next;
+  });
 }
 
   const handleOpenAddPanel = useCallback(() => {
