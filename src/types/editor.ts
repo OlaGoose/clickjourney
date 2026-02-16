@@ -10,8 +10,8 @@ export type ContentBlockType = 'text' | 'image' | 'video' | 'audio' | 'richtext'
 /** Divider block style: Apple-style refined separator. */
 export type DividerStyle = 'thin' | 'default' | 'accent';
 
-/** Section template: only marquee. */
-export type SectionTemplateId = 'marquee';
+/** Section template: marquee (horizontal scroll), friends (avatar + name + description, multiple), or agenda (timeline with images, titles, and descriptions). */
+export type SectionTemplateId = 'marquee' | 'friends' | 'agenda';
 
 /** CTA link for section blocks. */
 export interface SectionCta {
@@ -19,7 +19,7 @@ export interface SectionCta {
   href?: string;
 }
 
-/** Dynamic content for section blocks (marquee only). */
+/** Dynamic content for section blocks. */
 export interface SectionBlockData {
   marquee?: {
     /** When true (default), show infinite marquee animation; when false, static horizontal scroll. */
@@ -30,6 +30,27 @@ export interface SectionBlockData {
       ctaLabel?: string;
       href?: string;
     }>;
+  };
+  /** Friends block: list of avatar + name + description (Airbnb-style, i18n). */
+  friends?: Array<{
+    avatar: string;
+    name: string;
+    description: string;
+  }>;
+  /** Agenda/Timeline block: Airbnb experience-style itinerary with image cards. */
+  agenda?: {
+    /** Main headline for the agenda section. */
+    headline?: string;
+    /** Intro text below the headline. */
+    intro?: string;
+    /** List of agenda items/steps. */
+    items: Array<{
+      image: string;
+      title: string;
+      description: string;
+    }>;
+    /** Optional footer note (e.g., "Activity language: English"). */
+    footer?: string;
   };
 }
 

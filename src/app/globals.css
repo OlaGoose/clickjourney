@@ -175,6 +175,58 @@
   }
 }
 
+/* Apple-style image upload skeleton: soft gray, gentle breath, optional shimmer */
+@keyframes upload-skeleton-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.82;
+  }
+}
+
+@keyframes upload-skeleton-shine {
+  0% {
+    transform: translateX(-100%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-12deg);
+  }
+}
+
+.upload-skeleton {
+  background-color: #e5e5ea; /* system gray 4, light mode */
+  animation: upload-skeleton-breathe 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.upload-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  animation: upload-skeleton-shine 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .upload-skeleton {
+    animation: none;
+  }
+  .upload-skeleton::after {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
 /* Apple-style divider in rich content (detail/share) */
 .prose .editor-divider,
 .editor-divider {

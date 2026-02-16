@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, LayoutGrid, Images, Mic, Square, Type, FileText, LayoutTemplate, ChevronLeft, ChevronDown, Sparkles, AlignLeft, AlignCenter, AlignRight, Minus } from 'lucide-react';
 import { useOptionalAuth } from '@/lib/auth';
+import { useLocale } from '@/lib/i18n';
 import { fileToUrlOrDataUrl } from '@/lib/upload-media';
 import PhotoGrid from '@/components/PhotoGrid';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
@@ -14,17 +15,9 @@ import { CINEMATIC_TEMPLATES, ALL_CINEMATIC_LAYOUTS } from '@/lib/editor-cinemat
 import { SECTION_TEMPLATES, getDefaultSectionData } from '@/lib/editor-section-templates';
 import { CinematicTemplatePreview } from '@/components/editor/CinematicTemplatePreview';
 import { DividerBlock } from '@/components/editor/DividerBlock';
+import { ImageUploadSkeleton } from '@/components/editor/ImageUploadSkeleton';
 
 const MAX_IMAGES = 6;
-
-/** 统一模板列表：杂志风与宣传区块合并为同一类 item，不区分 iOS/杂志风 */
-const UNIFIED_TEMPLATES: Array<
-  | { kind: 'cinematic'; layout: LayoutType; label: string }
-  | { kind: 'section'; id: SectionTemplateId; label: string }
-> = [
-  ...CINEMATIC_TEMPLATES.map((t) => ({ kind: 'cinematic' as const, layout: t.layout, label: t.label })),
-  ...SECTION_TEMPLATES.map((t) => ({ kind: 'section' as const, id: t.id, label: t.label })),
-];
 
 /** Returns true if the block has meaningful content (no empty blocks). */
 function blockHasContent(b: ContentBlock): boolean {
@@ -54,6 +47,8 @@ interface EditPanelProps {
   isOpen: boolean;
   onClose: () => void;
   block: ContentBlock | null;
+  /** When true, closing without changes will discard the block (no new content added). */
+  isNewlyAddedBlock?: boolean;
   onSave: (block: ContentBlock) => void;
   onDelete: () => void;
   /** Called when panel is closed with no content, so parent can remove the block. */
@@ -86,9 +81,48 @@ const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[
 ];
 
 /** Apple light mode only: white panel, gray controls, #1d1d1f text. Apple Arcade–inspired layout. */
-export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard, onSelectType, onSelectCinematicTemplate, onSelectSectionTemplate, onInsertGeneratedContent, onInsertGeneratedBlocks, editingTarget, titleData, descriptionData, onSaveTitle, onSaveDescription }: EditPanelProps) {
+/** Returns true if two blocks have the same meaningful content (for cinematic/section template blocks). */
+function blockUnchangedFromInitial(initial: ContentBlock, current: ContentBlock): boolean {
+  if (initial.type !== current.type) return false;
+  if (initial.type === 'cinematic') {
+    return (
+      (initial.content ?? '') === (current.content ?? '') &&
+      (initial.metadata?.cinematicLayout ?? 'full_bleed') === (current.metadata?.cinematicLayout ?? 'full_bleed') &&
+      (initial.metadata?.cinematicImage ?? '') === (current.metadata?.cinematicImage ?? '') &&
+      (initial.metadata?.showBorder ?? false) === (current.metadata?.showBorder ?? false)
+    );
+  }
+  if (initial.type === 'section') {
+    return (
+      (initial.metadata?.sectionTemplateId ?? '') === (current.metadata?.sectionTemplateId ?? '') &&
+      JSON.stringify(initial.metadata?.sectionData ?? {}) === JSON.stringify(current.metadata?.sectionData ?? {}) &&
+      (initial.metadata?.showBorder ?? false) === (current.metadata?.showBorder ?? false)
+    );
+  }
+  return false;
+}
+
+/** Build unified template list with i18n labels for section templates. */
+function useUnifiedTemplates(): Array<
+  | { kind: 'cinematic'; layout: LayoutType; label: string }
+  | { kind: 'section'; id: SectionTemplateId; label: string }
+> {
+  const { t } = useLocale();
+  return [
+    ...CINEMATIC_TEMPLATES.map((tpl) => ({ kind: 'cinematic' as const, layout: tpl.layout, label: tpl.label })),
+    ...SECTION_TEMPLATES.map((tpl) => ({
+      kind: 'section' as const,
+      id: tpl.id,
+      label: tpl.id === 'marquee' ? t('editor.sectionMarquee') : tpl.id === 'friends' ? t('editor.sectionFriends') : tpl.id === 'agenda' ? t('editor.sectionAgenda') : tpl.label,
+    })),
+  ];
+}
+
+export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, onDelete, onDiscard, onSelectType, onSelectCinematicTemplate, onSelectSectionTemplate, onInsertGeneratedContent, onInsertGeneratedBlocks, editingTarget, titleData, descriptionData, onSaveTitle, onSaveDescription }: EditPanelProps) {
   const auth = useOptionalAuth();
+  const { t } = useLocale();
   const userId = auth?.user?.id ?? null;
+  const unifiedTemplates = useUnifiedTemplates();
 
   const [content, setContent] = useState('');
   const [fileName, setFileName] = useState('');
@@ -111,6 +145,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
   /** 当前正在替换的 section 图片槽位，用于统一 file input 回调 */
   const [sectionImageTarget, setSectionImageTarget] = useState<{ key: string } | null>(null);
   const sectionImageTargetRef = useRef<{ key: string } | null>(null);
+  const initialBlockRef = useRef<ContentBlock | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -121,11 +156,15 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
       setAiGeneratedBlocks([]);
       setAiError(null);
       setCinematicLayoutDropdownOpen(false);
+      setUploadingImageSlot(null);
     }
   }, [isOpen]);
 
   const [cinematicImage, setCinematicImage] = useState('');
+  const [cinematicImageLoaded, setCinematicImageLoaded] = useState(false);
   const [cinematicLayout, setCinematicLayout] = useState<LayoutType>('full_bleed');
+  /** Slot id while an image is uploading (e.g. 'cinematic', 'image', 'marquee.0', 'friends.0.avatar'). Used for local skeleton only. */
+  const [uploadingImageSlot, setUploadingImageSlot] = useState<string | null>(null);
   const [sectionTemplateId, setSectionTemplateId] = useState<SectionTemplateId>('marquee');
   const [sectionData, setSectionData] = useState<SectionBlockData>({});
   const [showBorder, setShowBorder] = useState(false);
@@ -174,16 +213,24 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
       if (block.type === 'cinematic') {
         setCinematicImage(block.metadata?.cinematicImage ?? '');
         setCinematicLayout(block.metadata?.cinematicLayout ?? 'full_bleed');
+        setCinematicImageLoaded(false);
       }
       if (block.type === 'section') {
-        const tid = block.metadata?.sectionTemplateId ?? 'marquee';
+        const rawTid = (block.metadata?.sectionTemplateId ?? 'marquee') as string;
+        const tid = (rawTid === 'creator_card' ? 'friends' : rawTid) as SectionTemplateId;
         setSectionTemplateId(tid);
-        setSectionData(block.metadata?.sectionData ?? getDefaultSectionData(tid));
+        let sd = block.metadata?.sectionData;
+        if (rawTid === 'creator_card' && sd && 'creatorCard' in sd) {
+          const c = (sd as { creatorCard?: { avatar: string; name: string; description: string } }).creatorCard;
+          sd = { friends: c ? [c] : [{ avatar: '', name: '', description: '' }] };
+        }
+        setSectionData(sd ?? getDefaultSectionData(tid));
       }
       if (block.type === 'divider') {
         setDividerStyle((block.metadata?.dividerStyle as DividerStyle) ?? 'default');
       }
       setShowBorder(!!block.metadata?.showBorder);
+      initialBlockRef.current = block ? JSON.parse(JSON.stringify(block)) : null;
     }
   }, [block]);
 
@@ -328,20 +375,42 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
         e.target.value = '';
         return;
       }
-      const url = await fileToUrlOrDataUrl(file, { userId });
-      setSectionData((prev) => {
-        const next = { ...prev };
-        const [part, sub] = target.key.split('.');
-        if (part === 'marquee' && next.marquee?.items) {
-          const idx = parseInt(sub, 10);
-          if (!Number.isNaN(idx) && next.marquee.items[idx]) {
-            const items = [...next.marquee.items];
-            items[idx] = { ...items[idx], image: url };
-            next.marquee = { ...next.marquee, items };
+      const slotKey = target.key;
+      setUploadingImageSlot(slotKey);
+      try {
+        const url = await fileToUrlOrDataUrl(file, { userId });
+        setSectionData((prev) => {
+          const next = { ...prev };
+          const parts = slotKey.split('.');
+          if (parts[0] === 'marquee' && next.marquee?.items) {
+            const idx = parseInt(parts[1], 10);
+            if (!Number.isNaN(idx) && next.marquee.items[idx]) {
+              const items = [...next.marquee.items];
+              items[idx] = { ...items[idx], image: url };
+              next.marquee = { ...next.marquee, items };
+            }
           }
-        }
-        return next;
-      });
+          if (parts[0] === 'friends' && parts[1] !== undefined && parts[2] === 'avatar') {
+            const idx = parseInt(parts[1], 10);
+            if (!Number.isNaN(idx) && next.friends?.[idx] !== undefined) {
+              const arr = [...next.friends];
+              arr[idx] = { ...arr[idx], avatar: url };
+              next.friends = arr;
+            }
+          }
+          if (parts[0] === 'agenda' && parts[1] !== undefined && parts[2] === 'image') {
+            const idx = parseInt(parts[1], 10);
+            if (!Number.isNaN(idx) && next.agenda?.items?.[idx] !== undefined) {
+              const items = [...next.agenda.items];
+              items[idx] = { ...items[idx], image: url };
+              next.agenda = { ...next.agenda, items };
+            }
+          }
+          return next;
+        });
+      } finally {
+        setUploadingImageSlot(null);
+      }
       e.target.value = '';
     },
     [userId]
@@ -354,21 +423,31 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
       const currentBlock = block;
       if (!currentBlock) return;
       if (currentBlock.type === 'image') {
-        const list: string[] = [];
-        for (let i = 0; i < files.length && list.length < MAX_IMAGES; i++) {
-          const file = files[i];
-          if (file) {
-            const url = await fileToUrlOrDataUrl(file, { userId });
-            list.push(url);
+        setUploadingImageSlot('image');
+        try {
+          const list: string[] = [];
+          for (let i = 0; i < files.length && list.length < MAX_IMAGES; i++) {
+            const file = files[i];
+            if (file) {
+              const url = await fileToUrlOrDataUrl(file, { userId });
+              list.push(url);
+            }
           }
+          setImages((prev) => [...prev, ...list].slice(0, MAX_IMAGES));
+        } finally {
+          setUploadingImageSlot(null);
         }
-        setImages((prev) => [...prev, ...list].slice(0, MAX_IMAGES));
       } else {
         const file = files[0];
         if (file) {
-          const url = await fileToUrlOrDataUrl(file, { userId });
-          setContent(url);
-          setFileName(file.name);
+          setUploadingImageSlot('file');
+          try {
+            const url = await fileToUrlOrDataUrl(file, { userId });
+            setContent(url);
+            setFileName(file.name);
+          } finally {
+            setUploadingImageSlot(null);
+          }
         }
       }
       e.target.value = '';
@@ -442,7 +521,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             {templateTab === 'template' && (
               <div className="space-y-2">
                 <p className="text-[13px] text-[#6e6e73] mb-3">选择布局即插入</p>
-                {UNIFIED_TEMPLATES.map((t) =>
+                {unifiedTemplates.map((t) =>
                   t.kind === 'cinematic' ? (
                     <button
                       key={`c-${t.layout}`}
@@ -450,7 +529,6 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                       onClick={() => {
                         onSelectCinematicTemplate?.(t.layout);
                         setTemplatePanelOpen(false);
-                        onClose();
                       }}
                       className="w-full flex items-center gap-4 rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99]"
                     >
@@ -467,7 +545,6 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                       onClick={() => {
                         onSelectSectionTemplate(t.id);
                         setTemplatePanelOpen(false);
-                        onClose();
                       }}
                       className="w-full flex items-center gap-4 rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99]"
                     >
@@ -832,7 +909,13 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
   };
 
   const handleClose = () => {
-    if (!blockHasContent(getCurrentBlock())) {
+    const current = getCurrentBlock();
+    if (!blockHasContent(current)) {
+      onDiscard?.();
+      onClose();
+      return;
+    }
+    if (isNewlyAddedBlock && initialBlockRef.current && (block?.type === 'cinematic' || block?.type === 'section') && blockUnchangedFromInitial(initialBlockRef.current, current)) {
       onDiscard?.();
     }
     onClose();
@@ -1033,7 +1116,22 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                 </button>
               </div>
             </div>
-            {images.length > 0 ? (
+            {uploadingImageSlot === 'image' ? (
+              <div className="space-y-3">
+                {images.length > 0 ? (
+                  <>
+                    {imageDisplayMode === 'gallery' ? (
+                      <GalleryDisplayView images={images} ariaLabel="编辑区块照片" className="max-h-[320px]" />
+                    ) : (
+                      <PhotoGrid images={images} totalCount={images.length} ariaLabel="编辑区块照片" className="max-h-[320px]" />
+                    )}
+                    <ImageUploadSkeleton className="w-full h-24 rounded-xl" />
+                  </>
+                ) : (
+                  <ImageUploadSkeleton className="w-full h-40 rounded-2xl" />
+                )}
+              </div>
+            ) : images.length > 0 ? (
               <div className="space-y-3">
                 {imageDisplayMode === 'gallery' ? (
                   <GalleryDisplayView
@@ -1119,9 +1217,17 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
-                if (file) setCinematicImage(URL.createObjectURL(file));
+                if (!file) { e.target.value = ''; return; }
+                setUploadingImageSlot('cinematic');
+                try {
+                  const url = await fileToUrlOrDataUrl(file, { userId });
+                  setCinematicImageLoaded(false);
+                  setCinematicImage(url);
+                } finally {
+                  setUploadingImageSlot(null);
+                }
                 e.target.value = '';
               }}
               className="hidden"
@@ -1166,9 +1272,25 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                 </ul>
               )}
             </div>
-            {cinematicImage ? (
+            {uploadingImageSlot === 'cinematic' ? (
               <div className="space-y-2">
-                <img src={cinematicImage} alt="" className="w-full rounded-2xl object-cover max-h-48" />
+                <ImageUploadSkeleton className="w-full min-h-[192px] max-h-48" />
+                <div className="h-10" aria-hidden />
+              </div>
+            ) : (cinematicImage || (block?.type === 'cinematic' && block.metadata?.cinematicImage)) ? (
+              <div className="space-y-2">
+                <div className="relative w-full rounded-2xl overflow-hidden bg-[#f5f5f7] min-h-[192px] max-h-48">
+                  {!cinematicImageLoaded && (
+                    <div className="absolute inset-0 animate-pulse bg-[#e8e8ed]" aria-hidden />
+                  )}
+                  <img
+                    src={cinematicImage || block?.metadata?.cinematicImage || ''}
+                    alt=""
+                    className={`w-full rounded-2xl object-cover max-h-48 transition-opacity duration-200 ${cinematicImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    style={{ minHeight: 192 }}
+                    onLoad={() => setCinematicImageLoaded(true)}
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -1211,7 +1333,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
               className="hidden"
             />
             <p className="text-[13px] text-[#6e6e73]">
-              {SECTION_TEMPLATES.find((t) => t.id === sectionTemplateId)?.label ?? sectionTemplateId}
+              {sectionTemplateId === 'marquee' ? t('editor.sectionMarquee') : sectionTemplateId === 'friends' ? t('editor.sectionFriends') : sectionTemplateId === 'agenda' ? t('editor.sectionAgenda') : sectionTemplateId}
             </p>
             {sectionTemplateId === 'marquee' && sectionData.marquee && (
               <>
@@ -1237,7 +1359,9 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                     <div className="flex items-center justify-between">
                       <span className="text-[12px] text-[#6e6e73]">项 {idx + 1}</span>
                     </div>
-                    {item.image ? (
+                    {uploadingImageSlot === `marquee.${idx}` ? (
+                      <ImageUploadSkeleton className="w-full h-20 rounded-lg" />
+                    ) : item.image ? (
                       <div className="space-y-2">
                         <img src={item.image} alt="" className="w-full rounded-lg object-cover h-20" />
                         <button
@@ -1245,7 +1369,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                           onClick={() => { const k = { key: `marquee.${idx}` }; setSectionImageTarget(k); sectionImageTargetRef.current = k; sectionImageInputRef.current?.click(); }}
                           className="w-full rounded-full py-1.5 text-[12px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
                         >
-                          更换图片
+                          {t('editor.replaceImage')}
                         </button>
                       </div>
                     ) : (
@@ -1254,7 +1378,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                         onClick={() => { const k = { key: `marquee.${idx}` }; setSectionImageTarget(k); sectionImageTargetRef.current = k; sectionImageInputRef.current?.click(); }}
                         className="w-full rounded-lg border border-dashed border-black/[0.1] py-2 text-[12px] text-[#6e6e73]"
                       >
-                        上传图片
+                        {t('editor.addImage')}
                       </button>
                     )}
                     <input
@@ -1271,6 +1395,291 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
                   </div>
                 ))}
               </>
+            )}
+            {sectionTemplateId === 'friends' && (
+              <div className="space-y-4">
+                {(sectionData.friends ?? []).map((friend, idx) => (
+                  <div key={idx} className="rounded-xl border border-black/[0.08] p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] text-[#6e6e73]">{t('editor.sectionFriends')} {idx + 1}</span>
+                      {(sectionData.friends?.length ?? 0) > 1 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSectionData((prev) => ({
+                              ...prev,
+                              friends: prev.friends?.filter((_, i) => i !== idx) ?? [],
+                            }))
+                          }
+                          className="text-[12px] font-medium text-[#ff3b30] hover:underline"
+                        >
+                          {t('editor.removeFriend')}
+                        </button>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.uploadPersonImage')}</label>
+                      {uploadingImageSlot === `friends.${idx}.avatar` ? (
+                        <div className="flex items-center gap-3">
+                          <ImageUploadSkeleton className="w-9 h-9 rounded-full flex-shrink-0" />
+                        </div>
+                      ) : friend.avatar ? (
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={friend.avatar}
+                            alt=""
+                            className="w-9 h-9 rounded-full object-cover flex-shrink-0 bg-black/5"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const k = { key: `friends.${idx}.avatar` };
+                              setSectionImageTarget(k);
+                              sectionImageTargetRef.current = k;
+                              sectionImageInputRef.current?.click();
+                            }}
+                            className="rounded-full py-2 px-4 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09]"
+                          >
+                            {t('editor.replaceImage')}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const k = { key: `friends.${idx}.avatar` };
+                            setSectionImageTarget(k);
+                            sectionImageTargetRef.current = k;
+                            sectionImageInputRef.current?.click();
+                          }}
+                          className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.1] py-4 text-[13px] text-[#6e6e73] hover:bg-black/[0.02]"
+                        >
+                          <ImageIcon size={20} className="text-[#86868b]" />
+                          {t('editor.uploadPersonImage')}
+                        </button>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.friendName')}</label>
+                      <input
+                        type="text"
+                        value={friend.name}
+                        onChange={(e) => {
+                          const arr = [...(sectionData.friends ?? [])];
+                          arr[idx] = { ...arr[idx], name: e.target.value };
+                          setSectionData((prev) => ({ ...prev, friends: arr }));
+                        }}
+                        placeholder="Joe"
+                        className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.friendDescription')}</label>
+                      <input
+                        type="text"
+                        value={friend.description}
+                        onChange={(e) => {
+                          const arr = [...(sectionData.friends ?? [])];
+                          arr[idx] = { ...arr[idx], description: e.target.value };
+                          setSectionData((prev) => ({ ...prev, friends: arr }));
+                        }}
+                        placeholder="Hollywood Guide"
+                        className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                      />
+                    </div>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSectionData((prev) => ({
+                      ...prev,
+                      friends: [...(prev.friends ?? []), { avatar: '', name: '', description: '' }],
+                    }))
+                  }
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-black/[0.1] py-3 text-[13px] font-medium text-[#6e6e73] hover:bg-black/[0.02]"
+                >
+                  <ImageIcon size={16} strokeWidth={2} />
+                  {t('editor.addFriend')}
+                </button>
+              </div>
+            )}
+            {sectionTemplateId === 'agenda' && sectionData.agenda && (
+              <div className="space-y-4">
+                {/* Headline */}
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.agendaHeadline')}</label>
+                  <input
+                    type="text"
+                    value={sectionData.agenda.headline ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        agenda: { ...prev.agenda!, headline: e.target.value },
+                      }))
+                    }
+                    placeholder="体验内容"
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                  />
+                </div>
+
+                {/* Intro */}
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.agendaIntro')}</label>
+                  <textarea
+                    value={sectionData.agenda.intro ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        agenda: { ...prev.agenda!, intro: e.target.value },
+                      }))
+                    }
+                    placeholder="精心设计的行程，让每一步都充满期待。"
+                    rows={2}
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
+                  />
+                </div>
+
+                {/* Agenda Items */}
+                <label className="block text-[13px] font-medium text-[#6e6e73]">{t('editor.agendaItems')}</label>
+                {sectionData.agenda.items.map((item, idx) => (
+                  <div key={idx} className="rounded-xl border border-black/[0.08] p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] text-[#6e6e73]">{t('editor.agendaItem')} {idx + 1}</span>
+                      {sectionData.agenda!.items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSectionData((prev) => ({
+                              ...prev,
+                              agenda: {
+                                ...prev.agenda!,
+                                items: prev.agenda!.items.filter((_, i) => i !== idx),
+                              },
+                            }))
+                          }
+                          className="text-[12px] font-medium text-[#ff3b30] hover:underline"
+                        >
+                          {t('common.remove')}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Image */}
+                    <div>
+                      <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.agendaItemImage')}</label>
+                      {uploadingImageSlot === `agenda.${idx}.image` ? (
+                        <ImageUploadSkeleton className="w-full h-24 rounded-lg" />
+                      ) : item.image ? (
+                        <div className="space-y-2">
+                          <img src={item.image} alt="" className="w-full rounded-lg object-cover h-24" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const k = { key: `agenda.${idx}.image` };
+                              setSectionImageTarget(k);
+                              sectionImageTargetRef.current = k;
+                              sectionImageInputRef.current?.click();
+                            }}
+                            className="w-full rounded-full py-1.5 text-[12px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09]"
+                          >
+                            {t('editor.replaceImage')}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const k = { key: `agenda.${idx}.image` };
+                            setSectionImageTarget(k);
+                            sectionImageTargetRef.current = k;
+                            sectionImageInputRef.current?.click();
+                          }}
+                          className="w-full rounded-lg border border-dashed border-black/[0.1] py-4 text-[13px] text-[#6e6e73] hover:bg-black/[0.02] flex items-center justify-center gap-2"
+                        >
+                          <ImageIcon size={18} className="text-[#86868b]" />
+                          {t('editor.addImage')}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Title */}
+                    <div>
+                      <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.agendaItemTitle')}</label>
+                      <input
+                        type="text"
+                        value={item.title}
+                        onChange={(e) => {
+                          const items = [...sectionData.agenda!.items];
+                          items[idx] = { ...items[idx], title: e.target.value };
+                          setSectionData((prev) => ({
+                            ...prev,
+                            agenda: { ...prev.agenda!, items },
+                          }));
+                        }}
+                        placeholder="第一站"
+                        className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.agendaItemDescription')}</label>
+                      <textarea
+                        value={item.description}
+                        onChange={(e) => {
+                          const items = [...sectionData.agenda!.items];
+                          items[idx] = { ...items[idx], description: e.target.value };
+                          setSectionData((prev) => ({
+                            ...prev,
+                            agenda: { ...prev.agenda!, items },
+                          }));
+                        }}
+                        placeholder="在这里开始我们的旅程。"
+                        rows={2}
+                        className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSectionData((prev) => ({
+                      ...prev,
+                      agenda: {
+                        ...prev.agenda!,
+                        items: [
+                          ...prev.agenda!.items,
+                          { image: '', title: '', description: '' },
+                        ],
+                      },
+                    }))
+                  }
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-black/[0.1] py-3 text-[13px] font-medium text-[#6e6e73] hover:bg-black/[0.02]"
+                >
+                  <ImageIcon size={16} strokeWidth={2} />
+                  {t('editor.addAgendaItem')}
+                </button>
+
+                {/* Footer */}
+                <div>
+                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.agendaFooter')}</label>
+                  <input
+                    type="text"
+                    value={sectionData.agenda.footer ?? ''}
+                    onChange={(e) =>
+                      setSectionData((prev) => ({
+                        ...prev,
+                        agenda: { ...prev.agenda!, footer: e.target.value },
+                      }))
+                    }
+                    placeholder="活动使用语言：中文"
+                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                  />
+                </div>
+              </div>
             )}
           </div>
         );
@@ -1395,7 +1804,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             {block.type === 'video' && '视频'}
             {block.type === 'audio' && '音频'}
             {block.type === 'cinematic' && (ALL_CINEMATIC_LAYOUTS.find((t) => t.layout === block.metadata?.cinematicLayout)?.label ?? '区块')}
-            {block.type === 'section' && (SECTION_TEMPLATES.find((t) => t.id === sectionTemplateId)?.label ?? '区块')}
+            {block.type === 'section' && (sectionTemplateId === 'marquee' ? t('editor.sectionMarquee') : sectionTemplateId === 'friends' ? t('editor.sectionFriends') : sectionTemplateId === 'agenda' ? t('editor.sectionAgenda') : '区块')}
             {block.type === 'divider' && '分割线'}
           </h3>
           <button

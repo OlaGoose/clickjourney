@@ -42,6 +42,7 @@ function TravelEditorContent() {
   const [editingBlock, setEditingBlock] = useState<ContentBlockType | null>(null);
   const [editingTarget, setEditingTarget] = useState<'title' | 'description' | null>(null);
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+  const [newlyAddedBlockId, setNewlyAddedBlockId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [titleFocused, setTitleFocused] = useState(false);
   const [descriptionFocused, setDescriptionFocused] = useState(false);
@@ -290,6 +291,7 @@ async function resolveBlobUrlsInBlocks(
 
     setEditingBlock(newBlock);
     setSelectedBlockId(newBlock.id);
+    setNewlyAddedBlockId(newBlock.id);
     if (type === 'text') {
       setIsEditPanelOpen(false);
     }
@@ -312,6 +314,7 @@ async function resolveBlobUrlsInBlocks(
     }));
     setEditingBlock(newBlock);
     setSelectedBlockId(newBlock.id);
+    setNewlyAddedBlockId(newBlock.id);
   }, [editorData.blocks.length]);
 
   const handleSelectSectionTemplate = useCallback((templateId: SectionTemplateId) => {
@@ -331,6 +334,7 @@ async function resolveBlobUrlsInBlocks(
     }));
     setEditingBlock(newBlock);
     setSelectedBlockId(newBlock.id);
+    setNewlyAddedBlockId(newBlock.id);
     setIsEditPanelOpen(true);
   }, [editorData.blocks.length]);
 
@@ -403,11 +407,13 @@ async function resolveBlobUrlsInBlocks(
     const block = editorData.blocks.find(b => b.id === blockId);
     if (block) {
       setEditingBlock(block);
+      setNewlyAddedBlockId(null);
       setIsEditPanelOpen(true);
     }
   }, [editorData.blocks]);
 
   const handleSaveBlock = useCallback((updatedBlock: ContentBlockType) => {
+    setNewlyAddedBlockId((prev) => (prev === updatedBlock.id ? null : prev));
     setEditorData(prev => ({
       ...prev,
       blocks: prev.blocks.map(b =>
@@ -435,6 +441,7 @@ async function resolveBlobUrlsInBlocks(
     setIsEditPanelOpen(false);
     setEditingBlock(null);
     setEditingTarget(null);
+    setNewlyAddedBlockId(null);
   }, []);
 
   const handleSaveTitle = useCallback((data: { title: string; titleStyle?: TitleStyle }) => {
@@ -619,6 +626,7 @@ async function resolveBlobUrlsInBlocks(
         isOpen={isEditPanelOpen}
         onClose={handleCloseEditPanel}
         block={editingBlock}
+        isNewlyAddedBlock={editingBlock != null && editingBlock.id === newlyAddedBlockId}
         editingTarget={editingTarget}
         titleData={{ title: editorData.title, titleStyle: editorData.titleStyle }}
         descriptionData={{ description: editorData.description, descriptionStyle: editorData.descriptionStyle }}
@@ -660,6 +668,15 @@ function sectionBlockToHtml(
       if (!d?.items?.length) return '';
       const list = d.items.map((i) => `<li>${i.image ? `<img src="${escapeHtml(i.image)}" alt="" />` : ''}<span>${escapeHtml(i.title)}</span>${i.ctaLabel ? `<a href="${i.href ? escapeHtml(i.href) : '#'}">${escapeHtml(i.ctaLabel)}</a>` : ''}</li>`).join('');
       return wrap('<ul class="marquee-list">' + list + '</ul>');
+    }
+    case 'friends': {
+      const list = data.friends;
+      if (!list?.length) return '';
+      const items = list.map((d) => {
+        const avatarHtml = d.avatar ? `<img src="${escapeHtml(d.avatar)}" alt="" width="36" height="36" />` : '';
+        return `<div class="editor-friends-item"><div class="editor-friends-avatar">${avatarHtml}</div><div class="editor-friends-body"><div class="editor-friends-name">${escapeHtml(d.name)}</div><div class="editor-friends-desc">${escapeHtml(d.description)}</div></div></div>`;
+      }).join('');
+      return wrap(`<div class="editor-friends">${items}</div>`);
     }
     default:
       return '';
