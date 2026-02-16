@@ -131,63 +131,6 @@ export const StaticBlockRenderer = ({ block, index, isEditMode, onUpdate, isDark
         </div>
       );
 
-    case 'hero_split':
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
-          <div className={`md:col-span-8 aspect-[4/5] min-h-[200px] ${imageWrapperClass} ${t('bg-black/5', 'bg-white/5')}`}>
-            <ImageUploader onUpload={(base64) => onUpdate(block.id, { image: base64 })}>
-              <img
-                src={block.image}
-                alt="Story moment"
-                style={{ filter: getImageFilter() }}
-                className="w-full h-full object-cover rounded-2xl"
-              />
-            </ImageUploader>
-          </div>
-          <div className="md:col-span-4 flex flex-col justify-center px-0 md:px-0">
-            <div className="space-y-4 md:space-y-6">
-              <div className={`w-12 h-px ${t('bg-black/20', 'bg-white/20')}`} />
-              <BlockTextArea
-                value={block.text}
-                onUpdate={onUpdate}
-                blockId={block.id}
-                placeholder="这里发生了什么..."
-                className={`font-serif text-xl sm:text-2xl md:text-4xl font-medium leading-[1.3] tracking-[-0.015em] ${t('text-black', 'text-white')}`}
-                isEditMode={isEditMode}
-                isDark={isDark}
-              />
-            </div>
-          </div>
-        </div>
-      );
-
-    case 'side_by_side':
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 items-center">
-          <div className={`aspect-[3/4] min-h-[220px] ${imageWrapperClass} ${t('bg-black/5', 'bg-white/5')} ${index % 2 === 0 ? 'order-1' : 'order-1 md:order-2'}`}>
-            <ImageUploader onUpload={(base64) => onUpdate(block.id, { image: base64 })}>
-              <img
-                src={block.image}
-                alt="Story moment"
-                style={{ filter: getImageFilter() }}
-                className="w-full h-full object-cover rounded-2xl"
-              />
-            </ImageUploader>
-          </div>
-          <div className={`space-y-4 md:space-y-6 ${index % 2 === 0 ? 'order-2' : 'order-2 md:order-1'}`}>
-            <BlockTextArea
-              value={block.text}
-              onUpdate={onUpdate}
-              blockId={block.id}
-              placeholder="讲述这个故事..."
-              className={`font-serif text-lg sm:text-xl md:text-2xl font-normal leading-[1.6] ${t('text-black/80', 'text-white/80')}`}
-              isEditMode={isEditMode}
-              isDark={isDark}
-            />
-          </div>
-        </div>
-      );
-
     case 'immersive_focus':
       return (
         <div className="relative">
@@ -300,31 +243,6 @@ export const StaticBlockRenderer = ({ block, index, isEditMode, onUpdate, isDark
                 isDark={isDark}
               />
             </div>
-          </div>
-        </div>
-      );
-
-    case 'text_overlay':
-      return (
-        <div className={`relative aspect-[4/3] sm:aspect-[16/9] md:aspect-[21/9] min-h-[220px] ${imageWrapperClass} flex items-center justify-center ${t('bg-black/5', 'bg-white/5')}`}>
-          <ImageUploader onUpload={(base64) => onUpdate(block.id, { image: base64 })}>
-            <img
-              src={block.image}
-              alt="Background"
-              style={{ filter: getImageFilter() }}
-              className="absolute inset-0 w-full h-full object-cover opacity-40 rounded-2xl"
-            />
-          </ImageUploader>
-          <div className="relative z-10 max-w-4xl px-4 sm:px-8 text-center">
-            <BlockTextArea
-              value={block.text}
-              onUpdate={onUpdate}
-              blockId={block.id}
-              placeholder="大胆的声明..."
-              className={`text-center font-serif text-2xl sm:text-4xl md:text-6xl font-bold leading-[1.1] tracking-[-0.02em] ${t('text-black', 'text-white')}`}
-              isEditMode={isEditMode}
-              isDark={isDark}
-            />
           </div>
         </div>
       );

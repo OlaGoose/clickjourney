@@ -104,27 +104,18 @@ Choose wisely for each image based on composition and narrative needs:
 
 1. **full_bleed** - Epic opener, sweeping landscapes, grand vistas
    Use: First image, dramatic moments, hero shots
-   
-2. **hero_split** - Asymmetric power (70% image, 30% text)
-   Use: Strong verticals, architecture, portraits with negative space
-   
-3. **immersive_focus** - Emotional climax, full bleed with centered text
+
+2. **immersive_focus** - Emotional climax, full bleed with centered text
    Use: Peak moments, intimate portraits, decisive instances
-   
-4. **magazine_spread** - Editorial storytelling, split screen with space
+
+3. **magazine_spread** - Editorial storytelling, split screen with space
    Use: Show AND tell moments, architectural details, contrasts
-   
-5. **minimal_caption** - Pure visual (90% image, 10% text)
+
+4. **minimal_caption** - Pure visual (90% image, 10% text)
    Use: When image speaks volumes, atmospheric shots, textures
-   
-6. **portrait_feature** - Human connection, vertical emphasis
+
+5. **portrait_feature** - Human connection, vertical emphasis
    Use: People, vertical compositions, intimate moments
-   
-7. **text_overlay** - Bold statement, text integrated with image
-   Use: Simple compositions, strong colors, graphic moments
-   
-8. **side_by_side** - Balanced narrative, classic 50/50 split
-   Use: Thoughtful moments, need context, quiet reflections
 </layout_palette>
 
 <text_examples>
@@ -155,7 +146,7 @@ Return ONLY valid JSON (no markdown blocks):
   "longitude": 139.6503,
   "blocks": [
     {
-      "layout": "full_bleed" | "hero_split" | "immersive_focus" | "magazine_spread" | "minimal_caption" | "portrait_feature" | "text_overlay" | "side_by_side",
+      "layout": "full_bleed" | "immersive_focus" | "magazine_spread" | "minimal_caption" | "portrait_feature",
       "text": "Rich, evocative narrative (2-4 sentences, 40-120 Chinese chars)",
       "animation": "slow_zoom" | "parallax_drift" | "fade_in" | "scale_in" | "slide_up",
       "textPosition": "top" | "bottom" | "center" | "left" | "right" | "overlay",
@@ -171,7 +162,7 @@ Return ONLY valid JSON (no markdown blocks):
 <critical_rules>
 - Generate exactly ${images.length} blocks (one per image, in sequence)
 - All text in Chinese, authentic to user's voice
-- First block: Use "full_bleed" or "hero_split" to establish tone
+- First block: Use "full_bleed" to establish tone
 - Last block: Reflective or climactic to leave lasting impression
 - Layout variety: No more than 2 consecutive identical layouts
 - Narrative arc: opening → journey → transformation → reflection

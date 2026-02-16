@@ -1,18 +1,19 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, LayoutGrid, Images, Mic, Square, Type, FileText, LayoutTemplate, ChevronLeft, Sparkles, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { X, Upload, Trash2, Image as ImageIcon, Video as VideoIcon, Music as MusicIcon, LayoutGrid, Images, Mic, Square, Type, FileText, LayoutTemplate, ChevronLeft, ChevronDown, Sparkles, AlignLeft, AlignCenter, AlignRight, Minus } from 'lucide-react';
 import { useOptionalAuth } from '@/lib/auth';
 import { fileToUrlOrDataUrl } from '@/lib/upload-media';
 import PhotoGrid from '@/components/PhotoGrid';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
 import BlockRichTextEditor from '@/components/editor/BlockRichTextEditor';
-import type { ContentBlock, ContentBlockType, ImageDisplayMode, SectionBlockData, SectionTemplateId, TitleStyle } from '@/types/editor';
+import type { ContentBlock, ContentBlockType, DividerStyle, ImageDisplayMode, SectionBlockData, SectionTemplateId, TitleStyle } from '@/types/editor';
 import type { AIGeneratedDocBlock } from '@/types/ai-document-blocks';
 import type { LayoutType } from '@/types/cinematic';
 import { CINEMATIC_TEMPLATES, ALL_CINEMATIC_LAYOUTS } from '@/lib/editor-cinematic-templates';
 import { SECTION_TEMPLATES, getDefaultSectionData } from '@/lib/editor-section-templates';
 import { CinematicTemplatePreview } from '@/components/editor/CinematicTemplatePreview';
+import { DividerBlock } from '@/components/editor/DividerBlock';
 
 const MAX_IMAGES = 6;
 
@@ -39,6 +40,8 @@ function blockHasContent(b: ContentBlock): boolean {
       return !!(b.metadata?.cinematicImage || (b.content ?? '').trim());
     case 'section':
       return !!(b.metadata?.sectionTemplateId && b.metadata?.sectionData);
+    case 'divider':
+      return true;
     case 'video':
     case 'audio':
       return (b.content ?? '').length > 0;
@@ -77,6 +80,7 @@ const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[
   { type: 'text', icon: Type, label: '文本' },
   { type: 'richtext', icon: FileText, label: '富文本' },
   { type: 'image', icon: ImageIcon, label: '图片' },
+  { type: 'divider', icon: Minus, label: '分割线' },
   { type: 'video', icon: VideoIcon, label: '视频' },
   { type: 'audio', icon: MusicIcon, label: '音频' },
 ];
@@ -116,17 +120,21 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
       setAiImages([]);
       setAiGeneratedBlocks([]);
       setAiError(null);
+      setCinematicLayoutDropdownOpen(false);
     }
   }, [isOpen]);
 
   const [cinematicImage, setCinematicImage] = useState('');
   const [cinematicLayout, setCinematicLayout] = useState<LayoutType>('full_bleed');
-  const [sectionTemplateId, setSectionTemplateId] = useState<SectionTemplateId>('tile_gallery');
+  const [sectionTemplateId, setSectionTemplateId] = useState<SectionTemplateId>('marquee');
   const [sectionData, setSectionData] = useState<SectionBlockData>({});
   const [showBorder, setShowBorder] = useState(false);
   const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>('left');
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [textColor, setTextColor] = useState<string>('#1d1d1f');
+  const [dividerStyle, setDividerStyle] = useState<DividerStyle>('default');
+  const [cinematicLayoutDropdownOpen, setCinematicLayoutDropdownOpen] = useState(false);
+  const cinematicLayoutDropdownRef = useRef<HTMLDivElement>(null);
   /** Title/description editor (when editingTarget is set) */
   const [fieldValue, setFieldValue] = useState('');
   const [fieldStyle, setFieldStyle] = useState<TitleStyle>({});
@@ -168,9 +176,12 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
         setCinematicLayout(block.metadata?.cinematicLayout ?? 'full_bleed');
       }
       if (block.type === 'section') {
-        const tid = block.metadata?.sectionTemplateId ?? 'tile_gallery';
+        const tid = block.metadata?.sectionTemplateId ?? 'marquee';
         setSectionTemplateId(tid);
         setSectionData(block.metadata?.sectionData ?? getDefaultSectionData(tid));
+      }
+      if (block.type === 'divider') {
+        setDividerStyle((block.metadata?.dividerStyle as DividerStyle) ?? 'default');
       }
       setShowBorder(!!block.metadata?.showBorder);
     }
@@ -181,6 +192,17 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
       textareaRef.current.focus();
     }
   }, [isOpen, block?.type]);
+
+  useEffect(() => {
+    if (!cinematicLayoutDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (cinematicLayoutDropdownRef.current && !cinematicLayoutDropdownRef.current.contains(e.target as Node)) {
+        setCinematicLayoutDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [cinematicLayoutDropdownOpen]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -310,9 +332,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
       setSectionData((prev) => {
         const next = { ...prev };
         const [part, sub] = target.key.split('.');
-        if (part === 'feature_card' && next.feature_card) {
-          next.feature_card = { ...next.feature_card, image: url };
-        } else if (part === 'marquee' && next.marquee?.items) {
+        if (part === 'marquee' && next.marquee?.items) {
           const idx = parseInt(sub, 10);
           if (!Number.isNaN(idx) && next.marquee.items[idx]) {
             const items = [...next.marquee.items];
@@ -783,6 +803,16 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
         },
       };
     }
+    if (block.type === 'divider') {
+      return {
+        ...block,
+        metadata: {
+          ...block.metadata,
+          dividerStyle,
+          showBorder,
+        },
+      };
+    }
     return {
       ...block,
       content,
@@ -935,6 +965,33 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
           </div>
         );
 
+      case 'divider':
+        return (
+          <div className="flex-1 px-4 space-y-4">
+            <p className="text-[13px] font-medium text-[#6e6e73]">样式</p>
+            <div className="flex flex-wrap gap-2">
+              {(['thin', 'default', 'accent'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setDividerStyle(s)}
+                  className={`rounded-xl px-4 py-2.5 text-[14px] font-medium transition-all ${
+                    dividerStyle === s
+                      ? 'bg-[#1d1d1f] text-white'
+                      : 'bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.08]'
+                  }`}
+                  aria-pressed={dividerStyle === s}
+                >
+                  {s === 'thin' ? '细线' : s === 'default' ? '默认' : '带点'}
+                </button>
+              ))}
+            </div>
+            <div className="pt-2 border-t border-black/[0.06]">
+              <DividerBlock style={dividerStyle} readOnly className="pointer-events-none" />
+            </div>
+          </div>
+        );
+
       case 'image':
         return (
           <div className="flex-1 px-4 space-y-3">
@@ -1069,17 +1126,45 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
               }}
               className="hidden"
             />
-            <div>
+            <div ref={cinematicLayoutDropdownRef} className="relative">
               <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">布局</label>
-              <select
-                value={cinematicLayout}
-                onChange={(e) => setCinematicLayout(e.target.value as LayoutType)}
-                className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+              <button
+                type="button"
+                onClick={() => setCinematicLayoutDropdownOpen((o) => !o)}
+                className="w-full flex items-center justify-between rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08] hover:bg-black/[0.02] transition-colors"
+                aria-expanded={cinematicLayoutDropdownOpen}
+                aria-haspopup="listbox"
+                aria-label="选择布局"
               >
-                {ALL_CINEMATIC_LAYOUTS.map((t) => (
-                  <option key={t.layout} value={t.layout}>{t.label}</option>
-                ))}
-              </select>
+                <span>{ALL_CINEMATIC_LAYOUTS.find((t) => t.layout === cinematicLayout)?.label ?? cinematicLayout}</span>
+                <ChevronDown size={18} strokeWidth={2} className={`text-[#86868b] flex-shrink-0 transition-transform ${cinematicLayoutDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {cinematicLayoutDropdownOpen && (
+                <ul
+                  role="listbox"
+                  className="absolute left-0 right-0 top-full z-10 mt-1 rounded-xl border border-black/[0.08] bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
+                  aria-label="布局选项"
+                >
+                  {ALL_CINEMATIC_LAYOUTS.map((t) => (
+                    <li key={t.layout} role="option" aria-selected={cinematicLayout === t.layout}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCinematicLayout(t.layout);
+                          setCinematicLayoutDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2.5 text-[15px] transition-colors ${
+                          cinematicLayout === t.layout
+                            ? 'bg-black/[0.06] text-[#1d1d1f] font-medium'
+                            : 'text-[#1d1d1f] hover:bg-black/[0.04]'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             {cinematicImage ? (
               <div className="space-y-2">
@@ -1128,150 +1213,6 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             <p className="text-[13px] text-[#6e6e73]">
               {SECTION_TEMPLATES.find((t) => t.id === sectionTemplateId)?.label ?? sectionTemplateId}
             </p>
-            {sectionTemplateId === 'tile_gallery' && sectionData.tile_gallery && (
-              <>
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={sectionData.tile_gallery.marqueeAnimate !== false}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        tile_gallery: prev.tile_gallery
-                          ? { ...prev.tile_gallery, marqueeAnimate: e.target.checked }
-                          : { tiles: [], marqueeAnimate: e.target.checked },
-                      }))
-                    }
-                    className="rounded border-black/[0.2] text-[#1d1d1f] focus:ring-black/[0.08]"
-                  />
-                  <span className="text-[13px] font-medium text-[#6e6e73]">跑马灯动效（可动）</span>
-                </label>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">区块标题</label>
-                  <input
-                    type="text"
-                    value={sectionData.tile_gallery.sectionHeadline ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        tile_gallery: prev.tile_gallery ? { ...prev.tile_gallery, sectionHeadline: e.target.value } : { sectionHeadline: e.target.value, tiles: [] },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="标题"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">卡片（每行：眉标|标题|描述|按钮文案）</label>
-                  <textarea
-                    value={sectionData.tile_gallery.tiles.map((t) => [t.eyebrow ?? '', t.title ?? '', t.copy ?? '', t.ctaLabel ?? ''].join('|')).join('\n')}
-                    onChange={(e) => {
-                      const lines = e.target.value.split('\n').filter(Boolean);
-                      setSectionData((prev) => ({
-                        ...prev,
-                        tile_gallery: {
-                          ...prev.tile_gallery!,
-                          tiles: lines.map((line) => {
-                            const [eyebrow, title, copy, ctaLabel] = line.split('|');
-                            return { eyebrow: eyebrow?.trim(), title: title?.trim() ?? '', copy: copy?.trim() ?? '', ctaLabel: ctaLabel?.trim() ?? '' };
-                          }),
-                        },
-                      }));
-                    }}
-                    rows={6}
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
-                    placeholder="方案 A|标题|说明|立即开始"
-                  />
-                </div>
-              </>
-            )}
-            {sectionTemplateId === 'feature_card' && sectionData.feature_card && (
-              <>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">眉标（可选）</label>
-                  <input
-                    type="text"
-                    value={sectionData.feature_card.eyebrow ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        feature_card: prev.feature_card ? { ...prev.feature_card, eyebrow: e.target.value } : { title: '', ctaLabel: '', eyebrow: e.target.value },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="推荐"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">标题</label>
-                  <input
-                    type="text"
-                    value={sectionData.feature_card.title ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        feature_card: prev.feature_card ? { ...prev.feature_card, title: e.target.value } : { title: e.target.value, ctaLabel: '' },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="特色标题"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">副标题（可选）</label>
-                  <input
-                    type="text"
-                    value={sectionData.feature_card.subtitle ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        feature_card: prev.feature_card ? { ...prev.feature_card, subtitle: e.target.value } : { title: '', ctaLabel: '', subtitle: e.target.value },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="一句话描述"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">主图</label>
-                  {sectionData.feature_card.image ? (
-                    <div className="space-y-2">
-                      <img src={sectionData.feature_card.image} alt="" className="w-full rounded-xl object-cover max-h-32" />
-                      <button
-                        type="button"
-                        onClick={() => { const k = { key: 'feature_card.image' }; setSectionImageTarget(k); sectionImageTargetRef.current = k; sectionImageInputRef.current?.click(); }}
-                        className="w-full rounded-full py-2 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
-                      >
-                        更换图片
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => { const k = { key: 'feature_card.image' }; setSectionImageTarget(k); sectionImageTargetRef.current = k; sectionImageInputRef.current?.click(); }}
-                      className="w-full rounded-xl border border-dashed border-black/[0.1] py-3 text-[13px] text-[#6e6e73]"
-                    >
-                      上传图片
-                    </button>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">按钮文案</label>
-                  <input
-                    type="text"
-                    value={sectionData.feature_card.ctaLabel ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        feature_card: prev.feature_card ? { ...prev.feature_card, ctaLabel: e.target.value } : { title: '', ctaLabel: e.target.value },
-                      }))
-                    }
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                    placeholder="查看详情"
-                  />
-                </div>
-              </>
-            )}
             {sectionTemplateId === 'marquee' && sectionData.marquee && (
               <>
                 <label className="flex items-center gap-2.5 cursor-pointer">
@@ -1455,6 +1396,7 @@ export function EditPanel({ isOpen, onClose, block, onSave, onDelete, onDiscard,
             {block.type === 'audio' && '音频'}
             {block.type === 'cinematic' && (ALL_CINEMATIC_LAYOUTS.find((t) => t.layout === block.metadata?.cinematicLayout)?.label ?? '区块')}
             {block.type === 'section' && (SECTION_TEMPLATES.find((t) => t.id === sectionTemplateId)?.label ?? '区块')}
+            {block.type === 'divider' && '分割线'}
           </h3>
           <button
             type="button"

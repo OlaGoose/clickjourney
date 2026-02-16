@@ -5,13 +5,13 @@
 
 import type { LayoutType } from './cinematic';
 
-export type ContentBlockType = 'text' | 'image' | 'video' | 'audio' | 'richtext' | 'cinematic' | 'section';
+export type ContentBlockType = 'text' | 'image' | 'video' | 'audio' | 'richtext' | 'cinematic' | 'section' | 'divider';
 
-/** Apple-style section template IDs (promotional/section blocks). */
-export type SectionTemplateId =
-  | 'tile_gallery'
-  | 'feature_card'
-  | 'marquee';
+/** Divider block style: Apple-style refined separator. */
+export type DividerStyle = 'thin' | 'default' | 'accent';
+
+/** Section template: only marquee. */
+export type SectionTemplateId = 'marquee';
 
 /** CTA link for section blocks. */
 export interface SectionCta {
@@ -19,28 +19,8 @@ export interface SectionCta {
   href?: string;
 }
 
-/** Dynamic content for section blocks (per-template shapes). */
+/** Dynamic content for section blocks (marquee only). */
 export interface SectionBlockData {
-  tile_gallery?: {
-    sectionHeadline?: string;
-    /** When true (default), show infinite marquee animation; when false, static horizontal scroll. */
-    marqueeAnimate?: boolean;
-    tiles: Array<{
-      eyebrow?: string;
-      title: string;
-      copy: string;
-      ctaLabel: string;
-      ctaHref?: string;
-    }>;
-  };
-  feature_card?: {
-    eyebrow?: string;
-    title: string;
-    subtitle?: string;
-    image?: string;
-    ctaLabel: string;
-    ctaHref?: string;
-  };
   marquee?: {
     /** When true (default), show infinite marquee animation; when false, static horizontal scroll. */
     marqueeAnimate?: boolean;
@@ -66,7 +46,7 @@ export interface ContentBlock {
     images?: string[];
     /** How to display images: grid (PhotoGrid) or gallery (upload-style polaroid). */
     imageDisplayMode?: ImageDisplayMode;
-    /** Cinematic block: layout from cinematic templates (full_bleed, hero_split, etc.). */
+    /** Cinematic block: layout from cinematic templates (full_bleed, etc.). */
     cinematicLayout?: LayoutType;
     /** Cinematic block: single image URL for the block. */
     cinematicImage?: string;
@@ -74,7 +54,7 @@ export interface ContentBlock {
     imageFilter?: 'none' | 'grayscale' | 'warm' | 'cool' | 'vibrant' | 'muted';
     /** Cinematic block: optional mood label. */
     mood?: string;
-    /** Section block: template id (tile_gallery, feature_card, etc.). */
+    /** Section block: template id (marquee). */
     sectionTemplateId?: SectionTemplateId;
     /** Section block: dynamic content for the chosen template. */
     sectionData?: SectionBlockData;
@@ -86,6 +66,8 @@ export interface ContentBlock {
     fontSize?: 'small' | 'medium' | 'large';
     /** Text/richtext block: CSS color (hex or named). */
     textColor?: string;
+    /** Divider block: visual style. */
+    dividerStyle?: DividerStyle;
   };
 }
 

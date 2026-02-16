@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Edit2, Image, Video, Music, Type, FileText, LayoutTemplate } from 'lucide-react';
+import { Edit2, Image, Video, Music, Type, FileText, LayoutTemplate, Minus } from 'lucide-react';
 import PhotoGrid from '@/components/PhotoGrid';
 import GalleryModal from '@/components/GalleryModal';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
 import { StaticBlockRenderer } from '@/components/cinematic/StaticBlockRenderer';
 import { SectionBlockRenderer } from '@/components/editor/SectionBlockRenderer';
+import { DividerBlock } from '@/components/editor/DividerBlock';
 import { getCinematicPlaceholderImage } from '@/lib/editor-cinematic-templates';
 import { sanitizeBlockHtml } from '@/lib/sanitize-block-html';
 import type { ContentBlock as ContentBlockType, ImageDisplayMode } from '@/types/editor';
@@ -84,6 +85,22 @@ export function ContentBlock({
           className="w-full"
         >
           <SectionBlockRenderer block={block} isEditMode={!readOnly} />
+        </div>
+      );
+    }
+    if (block.type === 'divider') {
+      return (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!readOnly) onClick?.();
+          }}
+          className="w-full"
+        >
+          <DividerBlock
+            style={block.metadata?.dividerStyle ?? 'default'}
+            readOnly={readOnly}
+          />
         </div>
       );
     }
@@ -281,6 +298,8 @@ export function ContentBlock({
         return <Music size={14} />;
       case 'section':
         return <LayoutTemplate size={14} />;
+      case 'divider':
+        return <Minus size={14} />;
       default:
         return null;
     }

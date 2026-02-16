@@ -19,34 +19,6 @@ export function CinematicTemplatePreview({ layout, className }: { layout: Layout
           </div>
         </div>
       );
-    case 'hero_split':
-      return (
-        <div className={`${root} flex-row w-full h-[56px]`}>
-          <div className={`w-[65%] h-full rounded-l-xl ${imgZone}`} />
-          <div className={`w-[35%] h-full rounded-r-xl ${textZone} flex items-center justify-center px-1`}>
-            <div className={`h-0.5 w-full max-w-[90%] ${textLine}`} />
-          </div>
-        </div>
-      );
-    case 'side_by_side':
-      return (
-        <div className={`${root} flex-row w-full h-[56px]`}>
-          <div className={`w-1/2 h-full rounded-l-xl ${imgZone}`} />
-          <div className={`w-1/2 h-full rounded-r-xl ${textZone} flex items-center justify-center`}>
-            <div className={`h-0.5 w-[80%] ${textLine}`} />
-          </div>
-        </div>
-      );
-    case 'text_overlay':
-      return (
-        <div className={`${root} relative w-full h-[56px]`}>
-          <div className={`absolute inset-0 rounded-xl ${imgZone}`} />
-          <div className="absolute inset-0 rounded-xl bg-black/20" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className={`h-1.5 w-3/4 max-w-[48px] ${textLine} opacity-90`} />
-          </div>
-        </div>
-      );
     default:
       return (
         <div className={`${root} w-full h-[56px]`}>

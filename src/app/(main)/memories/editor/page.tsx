@@ -225,7 +225,6 @@ function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
 
 function collectSectionImages(data: SectionBlockData): string[] {
   const urls: string[] = [];
-  if (data.feature_card?.image) urls.push(data.feature_card.image);
   if (data.marquee?.items) data.marquee.items.forEach((i) => i.image && urls.push(i.image));
   return urls;
 }
@@ -259,9 +258,6 @@ async function resolveBlobUrlsInBlocks(
       next.metadata = { ...next.metadata, cinematicImage: replaceUrl(next.metadata.cinematicImage) };
     } else if (next.type === 'section' && next.metadata?.sectionData) {
       const sd = { ...next.metadata.sectionData };
-      if (sd.feature_card?.image) {
-        sd.feature_card = { ...sd.feature_card, image: replaceUrl(sd.feature_card.image) };
-      }
       if (sd.marquee?.items) {
         sd.marquee = {
           ...sd.marquee,
@@ -659,22 +655,6 @@ function sectionBlockToHtml(
   if (!templateId || !data) return '';
   const wrap = (inner: string) => `<section class="editor-section" data-template="${escapeHtml(templateId)}">${inner}</section>`;
   switch (templateId) {
-    case 'tile_gallery': {
-      const d = data.tile_gallery;
-      if (!d?.tiles?.length) return '';
-      let inner = d.sectionHeadline ? `<h2>${escapeHtml(d.sectionHeadline)}</h2>` : '';
-      inner += '<ul class="tile-list">' + d.tiles.map((t) => `<li><strong>${escapeHtml(t.title)}</strong><p>${escapeHtml(t.copy)}</p>${t.ctaLabel ? `<a href="${t.ctaHref ? escapeHtml(t.ctaHref) : '#'}">${escapeHtml(t.ctaLabel)}</a>` : ''}</li>`).join('') + '</ul>';
-      return wrap(inner);
-    }
-    case 'feature_card': {
-      const d = data.feature_card;
-      if (!d) return '';
-      let inner = d.image ? `<img src="${escapeHtml(d.image)}" alt="" />` : '';
-      inner += `<h3>${escapeHtml(d.title)}</h3>`;
-      if (d.subtitle) inner += `<p>${escapeHtml(d.subtitle)}</p>`;
-      if (d.ctaLabel) inner += `<a href="${d.ctaHref ? escapeHtml(d.ctaHref) : '#'}">${escapeHtml(d.ctaLabel)}</a>`;
-      return wrap(inner);
-    }
     case 'marquee': {
       const d = data.marquee;
       if (!d?.items?.length) return '';
@@ -712,6 +692,15 @@ function generateRichContent(data: TravelEditorData): string {
       }
       case 'section': {
         html += sectionBlockToHtml(block.metadata?.sectionTemplateId, block.metadata?.sectionData);
+        break;
+      }
+      case 'divider': {
+        const style = block.metadata?.dividerStyle ?? 'default';
+        if (style === 'accent') {
+          html += '<div class="editor-divider-accent" role="separator" aria-hidden="true"><span class="editor-divider-line"></span><span class="editor-divider-dot"></span><span class="editor-divider-line"></span></div>';
+        } else {
+          html += `<hr class="editor-divider" data-style="${escapeHtml(style)}" />`;
+        }
         break;
       }
       case 'video':

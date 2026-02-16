@@ -157,7 +157,7 @@
   }
 }
 
-/* Infinite marquee for tile_gallery (duplicated content, translate -50% loops) */
+/* Infinite marquee (duplicated content, translate -50% loops) */
 @keyframes tile-marquee {
   0% {
     transform: translateX(0);
@@ -173,6 +173,51 @@
   .animate-tile-marquee {
     animation: none;
   }
+}
+
+/* Apple-style divider in rich content (detail/share) */
+.prose .editor-divider,
+.editor-divider {
+  display: block;
+  border: 0;
+  margin: 1.25rem auto;
+  padding: 0;
+  max-width: 280px;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+}
+.prose .editor-divider[data-style="thin"],
+.editor-divider[data-style="thin"] {
+  height: 1px;
+  transform: scaleY(0.5);
+  transform-origin: center;
+}
+.prose .editor-divider-accent,
+.editor-divider-accent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 1.5rem auto;
+  padding: 0;
+  max-width: 240px;
+  border: 0;
+  background: transparent;
+}
+.prose .editor-divider-accent .editor-divider-line,
+.editor-divider-accent .editor-divider-line {
+  flex: 1;
+  min-width: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+}
+.prose .editor-divider-accent .editor-divider-dot,
+.editor-divider-accent .editor-divider-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.14);
+  flex-shrink: 0;
 }
 
 /* Editor scroll area: child fills height so ProseMirror can be the scroll container */
