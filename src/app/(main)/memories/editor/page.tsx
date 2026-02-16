@@ -366,7 +366,8 @@ async function resolveBlobUrlsInBlocks(
         return { id, type: 'text', content: b.content ?? '', order };
       }
       if (b.type === 'image') {
-        const url = imageUrls[b.imageIndex];
+        const idx = Math.max(0, Math.min(b.imageIndex ?? 0, imageUrls.length - 1));
+        const url = imageUrls[idx];
         return {
           id,
           type: 'image',
@@ -495,104 +496,104 @@ async function resolveBlobUrlsInBlocks(
         onClick={handleDeselectBlocks}
         role="presentation"
       >
-        <div className="px-8 pt-4 space-y-4 max-w-2xl mx-auto">
-          {/* Title — direct edit; focus 时右上角绝对定位编辑按钮，不占文档流 */}
-          <div
-            className="relative pt-2"
-            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setTitleFocused(false); }}
-          >
-            <input
-              type="text"
-              value={editorData.title}
-              onChange={(e) =>
-                setEditorData(prev => ({ ...prev, title: e.target.value }))
-              }
-              onFocus={() => setTitleFocused(true)}
-              placeholder={t('editor.title')}
-              className="w-full font-bold focus:outline-none bg-transparent placeholder:text-[#86868b]"
-              style={{
-                fontSize: editorData.titleStyle?.fontSize === 'small' ? '1.25rem' : editorData.titleStyle?.fontSize === 'large' ? '1.75rem' : '1.5rem',
-                color: editorData.titleStyle?.textColor ?? '#1d1d1f',
-                textAlign: editorData.titleStyle?.textAlign ?? 'left',
-              }}
-              maxLength={100}
-            />
-            {titleFocused && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingBlock(null);
-                  setEditingTarget('title');
-                  setIsEditPanelOpen(true);
+        <div className="px-8 pt-4 max-w-2xl mx-auto">
+          {/* Header block: title + location + description — 一体感，默认居中，间距紧凑 */}
+          <header className="space-y-2 text-center">
+            <div
+              className="relative"
+              onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setTitleFocused(false); }}
+            >
+              <input
+                type="text"
+                value={editorData.title}
+                onChange={(e) =>
+                  setEditorData(prev => ({ ...prev, title: e.target.value }))
+                }
+                onFocus={() => setTitleFocused(true)}
+                placeholder={t('editor.title')}
+                className="w-full font-bold focus:outline-none bg-transparent placeholder:text-[#86868b]"
+                style={{
+                  fontSize: editorData.titleStyle?.fontSize === 'small' ? '1.25rem' : editorData.titleStyle?.fontSize === 'large' ? '1.75rem' : '1.5rem',
+                  color: editorData.titleStyle?.textColor ?? '#1d1d1f',
+                  textAlign: editorData.titleStyle?.textAlign ?? 'center',
                 }}
-                className="absolute top-2 right-0 z-10 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
-                aria-label={t('editor.editTitle')}
-              >
-                <Edit2 size={10} strokeWidth={2.5} />
-                <span>{t('common.edit')}</span>
-              </button>
-            )}
-          </div>
+                maxLength={100}
+              />
+              {titleFocused && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingBlock(null);
+                    setEditingTarget('title');
+                    setIsEditPanelOpen(true);
+                  }}
+                  className="absolute top-0 right-0 z-10 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
+                  aria-label={t('editor.editTitle')}
+                >
+                  <Edit2 size={10} strokeWidth={2.5} />
+                  <span>{t('common.edit')}</span>
+                </button>
+              )}
+            </div>
 
-          {/* Location — travel place for this memory; shown in edit and stored in Memory */}
-          <div className="pt-1">
-            <label htmlFor="editor-location" className="sr-only">
-              {t('cinematic.location')}
-            </label>
-            <input
-              id="editor-location"
-              type="text"
-              value={editorData.location ?? ''}
-              onChange={(e) =>
-                setEditorData(prev => ({ ...prev, location: e.target.value }))
-              }
-              placeholder={t('upload.locationPlaceholder')}
-              className="w-full text-sm text-[#86868b] focus:text-[#1d1d1f] focus:outline-none bg-transparent placeholder:text-[#86868b] border-b border-[#d2d2d7] focus:border-[#1d1d1f] pb-1.5 transition-colors"
-              maxLength={120}
-            />
-          </div>
+            <div>
+              <label htmlFor="editor-location" className="sr-only">
+                {t('cinematic.location')}
+              </label>
+              <input
+                id="editor-location"
+                type="text"
+                value={editorData.location ?? ''}
+                onChange={(e) =>
+                  setEditorData(prev => ({ ...prev, location: e.target.value }))
+                }
+                placeholder={t('upload.locationPlaceholder')}
+                className="w-full text-sm text-center text-[#86868b] focus:text-[#1d1d1f] focus:outline-none bg-transparent placeholder:text-[#86868b]"
+                maxLength={120}
+              />
+            </div>
 
-          {/* Description — 同上：直接编辑，focus 时右上角绝对定位编辑按钮，不占文档流 */}
-          <div
-            className="relative"
-            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDescriptionFocused(false); }}
-          >
-            <textarea
-              value={editorData.description}
-              onChange={(e) =>
-                setEditorData(prev => ({ ...prev, description: e.target.value }))
-              }
-              onFocus={() => setDescriptionFocused(true)}
-              placeholder={t('editor.description')}
-              className="w-full resize-none focus:outline-none bg-transparent rounded-xl py-3 placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80"
-              style={{
-                minHeight: 72,
-                fontSize: editorData.descriptionStyle?.fontSize === 'small' ? 14 : editorData.descriptionStyle?.fontSize === 'large' ? 18 : 16,
-                color: editorData.descriptionStyle?.textColor ?? '#1d1d1f',
-                textAlign: editorData.descriptionStyle?.textAlign ?? 'left',
-              }}
-              rows={1}
-              maxLength={500}
-            />
-            {descriptionFocused && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingBlock(null);
-                  setEditingTarget('description');
-                  setIsEditPanelOpen(true);
+            <div
+              className="relative"
+              onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDescriptionFocused(false); }}
+            >
+              <textarea
+                value={editorData.description}
+                onChange={(e) =>
+                  setEditorData(prev => ({ ...prev, description: e.target.value }))
+                }
+                onFocus={() => setDescriptionFocused(true)}
+                placeholder={t('editor.description')}
+                className="w-full resize-none focus:outline-none bg-transparent rounded-xl py-2 placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80 text-sm"
+                style={{
+                  minHeight: 56,
+                  fontSize: editorData.descriptionStyle?.fontSize === 'small' ? 13 : editorData.descriptionStyle?.fontSize === 'large' ? 17 : 14,
+                  color: editorData.descriptionStyle?.textColor ?? '#1d1d1f',
+                  textAlign: editorData.descriptionStyle?.textAlign ?? 'center',
                 }}
-                className="absolute top-2 right-0 z-10 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
-                aria-label={t('editor.editDescription')}
-              >
-                <Edit2 size={10} strokeWidth={2.5} />
-                <span>{t('common.edit')}</span>
-              </button>
-            )}
-          </div>
+                rows={1}
+                maxLength={500}
+              />
+              {descriptionFocused && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingBlock(null);
+                    setEditingTarget('description');
+                    setIsEditPanelOpen(true);
+                  }}
+                  className="absolute top-0 right-0 z-10 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
+                  aria-label={t('editor.editDescription')}
+                >
+                  <Edit2 size={10} strokeWidth={2.5} />
+                  <span>{t('common.edit')}</span>
+                </button>
+              )}
+            </div>
+          </header>
 
-          {/* Content Blocks — 块间距 12px，符合 8pt 网格与可读性最佳实践 */}
-          <div className="space-y-3 pt-2">
+          {/* Content Blocks — 与 header 拉开间距，块间距 12px */}
+          <div className="space-y-3">
             {editorData.blocks
               .sort((a, b) => a.order - b.order)
               .map((block, index) => (

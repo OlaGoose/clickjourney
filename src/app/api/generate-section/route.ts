@@ -99,7 +99,11 @@ export async function POST(request: Request) {
   const hasImages = parsedImages.length > 0;
 
   const model = process.env.GEMINI_MODEL_SECTION || process.env.NEXT_PUBLIC_GEMINI_MODEL_SECTION || 'gemini-2.5-flash';
-  const useStructuredOutput = !hasImages;
+  const useStructuredOutput = true;
+
+  const imageRequirement = hasImages
+    ? `【必做】本次用户上传了 ${parsedImages.length} 张图，你必须在 blocks 中为每一张图都插入一个 image 块：第 1 张用 {"type":"image","imageIndex":0}，第 2 张用 imageIndex 1，依此类推。将 image 块穿插在叙事中（不要全部堆在开头或结尾），让图文交错。`
+    : '本次无图，不要输出 type 为 image 的块。';
 
   const componentsDesc = `
 文档有三种可渲染的块类型，请根据节奏与层次交替使用，做出好看、错落有致的游记排版：
@@ -112,11 +116,11 @@ export async function POST(request: Request) {
    {"type":"text","content":"一句或很短的一段"}
    用 text 做「单句成块」能强化节奏，避免通篇都是大段。
 
-3. image — 插图占位（文档会按序号插入用户上传的图）。
-   {"type":"image","imageIndex":0}  （0=第1张，1=第2张…）
-${hasImages ? `   本次有 ${parsedImages.length} 张图，请在情绪或场景节点穿插 image，不要堆在末尾。` : '   本次无图，不要输出 image 块。'}
+3. image — 插图占位（文档会按 imageIndex 插入用户上传的图片）。
+   {"type":"image","imageIndex":0} 表示第 1 张上传图，imageIndex 1 表示第 2 张，以此类推。
+${imageRequirement}
 
-排版原则：充分利用三种块的差异——用 richtext 做「有标题、有引用的完整小段」，用 text 做「单句/金句/留白」，有图时用 image 打断节奏；块数 4～7 块，交替类型，避免连续多块都是 richtext。`;
+排版原则：充分利用三种块的差异——用 richtext 做「有标题、有引用的完整小段」，用 text 做「单句/金句/留白」，有图时用 image 穿插节奏；块数 4～7 块，交替类型，避免连续多块都是 richtext。`;
 
   const jsonExample = hasImages
     ? `{"blocks":[{"type":"richtext","content":"<h2>东京蓝夜</h2><p>夜幕初降，普鲁士蓝笼罩都市。</p>"},{"type":"text","content":"转角处，灯火渐次亮起。"},{"type":"image","imageIndex":0},{"type":"richtext","content":"<p>再走几步，便是熟悉的巷子。</p><blockquote>东京 · 深夜</blockquote>"},{"type":"text","content":"那盏灯，还亮着。"}]}`
@@ -159,12 +163,10 @@ ${prompt}`;
       temperature: 0.7,
       maxOutputTokens: hasImages ? 3072 : 1024,
     };
-    if (useStructuredOutput) {
-      config.responseMimeType = 'application/json';
-      config.responseJsonSchema = DOC_BLOCKS_JSON_SCHEMA;
-    }
+    config.responseMimeType = 'application/json';
+    config.responseJsonSchema = DOC_BLOCKS_JSON_SCHEMA;
 
-    console.log('[generate-section] calling Gemini', { model, hasImages, useStructuredOutput });
+    console.log('[generate-section] calling Gemini', { model, hasImages });
     const response = await ai.models.generateContent({
       model,
       contents: { parts },

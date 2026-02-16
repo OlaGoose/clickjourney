@@ -30,7 +30,7 @@ export function SectionBlockRenderer({
   switch (templateId) {
     case 'marquee': {
       const d = data.marquee;
-      if (!d?.items?.length) return <SectionPlaceholder label="横向滚动条" className={base} />;
+      if (!d?.items?.length) return <SectionPlaceholder label={t('editor.sectionMarquee')} className={base} />;
       const animate = d.marqueeAnimate !== false;
       const items = d.items;
       const duplicated = animate ? [...items, ...items] : items;
@@ -111,7 +111,7 @@ export function SectionBlockRenderer({
       return (
         <section className={`${base} ${className}`} role="article" aria-label="体验议程">
           {/* Header */}
-          <div className="px-4 pt-5 pb-3">
+          <div className="pt-5 pb-3">
             <h2 className="text-[22px] font-bold text-[#1d1d1f] leading-snug mb-2">
               {d.headline || '体验内容'}
             </h2>
@@ -123,7 +123,7 @@ export function SectionBlockRenderer({
           </div>
 
           {/* Agenda Items with Timeline — 灰线 1px，对齐每张图片水平中心，图片覆盖圆点与线 */}
-          <div className="relative px-4 pb-2 overflow-visible">
+          <div className="relative pb-2 overflow-visible">
             {d.items.map((item, i) => (
               <div key={i} className="relative flex items-stretch overflow-visible group">
                 {/* 占位：使时间线中心落在图片中心。图片中心 = pl-1(4px) + 88/2(44px) = 48px */}

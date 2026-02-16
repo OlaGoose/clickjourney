@@ -71,11 +71,11 @@ interface EditPanelProps {
   onSaveDescription?: (data: { description: string; descriptionStyle?: TitleStyle }) => void;
 }
 
+/** 基础内容类型（分割线已并入模板列表）. */
 const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[] = [
   { type: 'text', icon: Type, label: '文本' },
   { type: 'richtext', icon: FileText, label: '富文本' },
   { type: 'image', icon: ImageIcon, label: '图片' },
-  { type: 'divider', icon: Minus, label: '分割线' },
   { type: 'video', icon: VideoIcon, label: '视频' },
   { type: 'audio', icon: MusicIcon, label: '音频' },
 ];
@@ -102,10 +102,11 @@ function blockUnchangedFromInitial(initial: ContentBlock, current: ContentBlock)
   return false;
 }
 
-/** Build unified template list with i18n labels for section templates. */
+/** Build unified template list with i18n labels (cinematic, section, divider). */
 function useUnifiedTemplates(): Array<
   | { kind: 'cinematic'; layout: LayoutType; label: string }
   | { kind: 'section'; id: SectionTemplateId; label: string }
+  | { kind: 'divider'; label: string }
 > {
   const { t } = useLocale();
   return [
@@ -115,6 +116,7 @@ function useUnifiedTemplates(): Array<
       id: tpl.id,
       label: tpl.id === 'marquee' ? t('editor.sectionMarquee') : tpl.id === 'friends' ? t('editor.sectionFriends') : tpl.id === 'agenda' ? t('editor.sectionAgenda') : tpl.label,
     })),
+    { kind: 'divider' as const, label: t('editor.sectionDivider') },
   ];
 }
 
@@ -133,6 +135,8 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
   const [templateTab, setTemplateTab] = useState<'template' | 'ai'>('template');
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiImages, setAiImages] = useState<string[]>([]);
+  /** Number of AI images currently uploading (skeleton count). */
+  const [aiImagesUploadingCount, setAiImagesUploadingCount] = useState(0);
   const [aiGeneratedBlocks, setAiGeneratedBlocks] = useState<AIGeneratedDocBlock[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -300,18 +304,23 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
       if (!files?.length) return;
+      const imageFiles = Array.from(files).filter((f) => f?.type.startsWith('image/'));
+      const toProcess = Math.min(imageFiles.length, MAX_IMAGES - aiImages.length);
+      if (toProcess <= 0) {
+        e.target.value = '';
+        return;
+      }
+      setAiImagesUploadingCount(toProcess);
       const urls: string[] = [];
-      for (let i = 0; i < files.length && urls.length < MAX_IMAGES; i++) {
-        const file = files[i];
-        if (file?.type.startsWith('image/')) {
-          const url = await fileToUrlOrDataUrl(file, { userId });
-          urls.push(url);
-        }
+      for (let i = 0; i < imageFiles.length && urls.length < toProcess; i++) {
+        const url = await fileToUrlOrDataUrl(imageFiles[i], { userId });
+        urls.push(url);
       }
       setAiImages((prev) => [...prev, ...urls].slice(0, MAX_IMAGES));
+      setAiImagesUploadingCount(0);
       e.target.value = '';
     },
-    [userId]
+    [userId, aiImages.length]
   );
 
   const handleGenerateSection = useCallback(async () => {
@@ -517,7 +526,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
               AI
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto px-5 py-5">
+          <div className="flex-1 overflow-y-auto px-5 py-3">
             {templateTab === 'template' && (
               <div className="space-y-2">
                 <p className="text-[13px] text-[#6e6e73] mb-3">选择布局即插入</p>
@@ -538,7 +547,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                       <span className="flex-1">{t.label}</span>
                       <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
                     </button>
-                  ) : onSelectSectionTemplate ? (
+                  ) : t.kind === 'section' && onSelectSectionTemplate ? (
                     <button
                       key={`s-${t.id}`}
                       type="button"
@@ -550,6 +559,22 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     >
                       <div className="flex-shrink-0 w-20 h-[52px] rounded-xl bg-[#f5f5f7] flex items-center justify-center">
                         <LayoutTemplate size={24} strokeWidth={2} className="text-[#86868b]" />
+                      </div>
+                      <span className="flex-1">{t.label}</span>
+                      <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
+                    </button>
+                  ) : t.kind === 'divider' && onSelectType ? (
+                    <button
+                      key="divider"
+                      type="button"
+                      onClick={() => {
+                        onSelectType('divider');
+                        setTemplatePanelOpen(false);
+                      }}
+                      className="w-full flex items-center gap-4 rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99]"
+                    >
+                      <div className="flex-shrink-0 w-20 h-[52px] rounded-xl bg-[#f5f5f7] flex items-center justify-center">
+                        <Minus size={24} strokeWidth={2} className="text-[#86868b]" />
                       </div>
                       <span className="flex-1">{t.label}</span>
                       <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
@@ -569,29 +594,42 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     onChange={handleAiImageSelect}
                     className="hidden"
                   />
-                  {aiImages.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {aiImages.map((url, idx) => (
-                        <div key={url} className="relative">
-                          <img src={url} alt="" className="h-14 w-14 rounded-xl object-cover ring-1 ring-black/[0.06]" />
+                  {(aiImages.length > 0 || aiImagesUploadingCount > 0) ? (
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap gap-2">
+                        {aiImages.map((url, idx) => (
+                          <div key={url} className="relative">
+                            <img src={url} alt="" className="h-14 w-14 rounded-xl object-cover ring-1 ring-black/[0.06]" />
+                            <button
+                              type="button"
+                              onClick={() => setAiImages((p) => p.filter((_, i) => i !== idx))}
+                              className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center hover:bg-[#424245] transition-colors"
+                              aria-label="移除"
+                            >
+                              <X size={10} strokeWidth={2.5} />
+                            </button>
+                          </div>
+                        ))}
+                        {Array.from({ length: aiImagesUploadingCount }).map((_, i) => (
+                          <div key={`ai-uploading-${i}`} className="h-14 w-14 rounded-xl overflow-hidden flex-shrink-0 ring-1 ring-black/[0.06]">
+                            <ImageUploadSkeleton className="h-full w-full rounded-xl" />
+                          </div>
+                        ))}
+                        {aiImages.length + aiImagesUploadingCount < MAX_IMAGES && (
                           <button
                             type="button"
-                            onClick={() => setAiImages((p) => p.filter((_, i) => i !== idx))}
-                            className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center hover:bg-[#424245] transition-colors"
-                            aria-label="移除"
+                            onClick={() => aiImageInputRef.current?.click()}
+                            disabled={aiImagesUploadingCount > 0}
+                            className="h-14 w-14 rounded-xl border border-dashed border-black/[0.12] flex items-center justify-center text-[#86868b] hover:bg-black/[0.03] transition-colors disabled:opacity-60 disabled:pointer-events-none"
                           >
-                            <X size={10} strokeWidth={2.5} />
+                            <Upload size={18} strokeWidth={2} />
                           </button>
-                        </div>
-                      ))}
-                      {aiImages.length < MAX_IMAGES && (
-                        <button
-                          type="button"
-                          onClick={() => aiImageInputRef.current?.click()}
-                          className="h-14 w-14 rounded-xl border border-dashed border-black/[0.12] flex items-center justify-center text-[#86868b] hover:bg-black/[0.03] transition-colors"
-                        >
-                          <Upload size={18} strokeWidth={2} />
-                        </button>
+                        )}
+                      </div>
+                      {aiImagesUploadingCount > 0 && (
+                        <p className="text-[11px] text-[#86868b]" aria-live="polite">
+                          {t('editor.uploadingImages')}
+                        </p>
                       )}
                     </div>
                   ) : (
