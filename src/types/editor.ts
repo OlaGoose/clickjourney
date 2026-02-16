@@ -48,6 +48,8 @@ export interface SectionBlockData {
       image: string;
       title: string;
       description: string;
+      /** Optional emoji shown in the timeline circle (e.g. ✨ 🎯). */
+      emoji?: string;
     }>;
     /** Optional footer note (e.g., "Activity language: English"). */
     footer?: string;

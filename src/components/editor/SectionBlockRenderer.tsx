@@ -122,49 +122,36 @@ export function SectionBlockRenderer({
             )}
           </div>
 
-          {/* Timeline Items - Apple Style */}
-          <div className="px-5 pb-2">
+          {/* Timeline: single left border, no duplicate segments; content below icon midline, closer to line */}
+          <div className="border-l-2 border-[#e3e3e3] pl-7 pr-5 pb-2 ml-5">
             {d.items.map((item, i) => {
-              const isLast = i === d.items.length - 1;
+              const isEmoji = (item.emoji ?? '').trim().length > 0;
               return (
-                <div key={i} className="relative">
-                  {/* Timeline Line - extends to next item */}
-                  {!isLast && (
-                    <div 
-                      className="absolute left-[18px] top-[40px] w-[2px] h-[calc(100%+16px)] bg-gradient-to-b from-[#d2d2d7] to-[#e5e5ea]"
-                      aria-hidden="true"
-                    />
-                  )}
-                  
+                <div key={i} className="flex gap-3 py-1 first:pt-0">
+                  {/* Timeline icon circle - Apple flat style, white ring; aligns to top so content sits below its midline */}
+                  <div
+                    className="flex-shrink-0 w-8 h-8 -ml-[47px] rounded-full flex items-center justify-center overflow-hidden bg-[#f4f6f8] text-[#3d3d3d] shadow-[0_0_0_6px_#fbfbfd]"
+                    aria-hidden="true"
+                  >
+                    {isEmoji ? (
+                      <span className="text-m leading-none select-none" aria-hidden>
+                        {item.emoji!.trim()}
+                      </span>
+                    ) : (
+                      <span className="text-[13px] font-semibold text-[#688afd]">
+                        {i + 1}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Card top aligned to icon bottom (pt-8 = full icon height so card starts below circle) */}
                   <button
                     type="button"
                     aria-label={`${item.title}. ${item.description}`}
-                    className={`w-full flex gap-4 py-3 text-left group ${isEditMode ? 'pointer-events-none' : 'hover:translate-x-1'} transition-all duration-300 ease-out`}
+                    className={`flex-1 min-w-0 text-left group pt-4 mt-4 ${isEditMode ? 'pointer-events-none' : 'hover:translate-x-0.5'} transition-all duration-300 ease-out`}
                   >
-                    {/* Timeline Dot & Number */}
-                    <div className="flex-shrink-0 flex flex-col items-center pt-1.5">
-                      {/* Dot with ripple effect */}
-                      <div className="relative w-9 h-9 flex items-center justify-center">
-                        {/* Outer ring - appears on hover */}
-                        <div className="absolute inset-0 rounded-full border-[3px] border-[#007aff]/20 opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all duration-500" />
-                        
-                        {/* Main dot */}
-                        <div className="relative w-6 h-6 rounded-full bg-gradient-to-br from-[#007aff] to-[#0051d5] shadow-[0_2px_8px_rgba(0,122,255,0.3)] group-hover:shadow-[0_4px_16px_rgba(0,122,255,0.4)] transition-all duration-300">
-                          {/* Inner glow */}
-                          <div className="absolute inset-[3px] rounded-full bg-gradient-to-br from-white/40 to-transparent" />
-                          
-                          {/* Number */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-[11px] font-bold text-white tracking-tight">
-                              {i + 1}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Content Card */}
-                    <div className="flex-1 min-w-0 pb-4">
+                    <div className="min-w-0">
                       <div className="flex gap-3.5 p-3 rounded-2xl bg-white/60 group-hover:bg-white group-hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-all duration-300 border border-black/[0.04] group-hover:border-black/[0.08]">
                         {/* Image */}
                         <div className="flex-shrink-0 w-[92px] h-[92px] rounded-xl overflow-hidden bg-black/5 ring-1 ring-black/[0.06] group-hover:ring-black/[0.12] transition-all duration-300">

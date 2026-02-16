@@ -152,6 +152,7 @@
     "agendaItems": "Elementos de agenda",
     "agendaItem": "Elemento",
     "agendaItemImage": "Imagen del elemento",
+    "agendaItemEmoji": "Icono (emoji)",
     "agendaItemTitle": "Título del elemento",
     "agendaItemDescription": "Descripción del elemento",
     "agendaFooter": "Nota al pie",
