@@ -1662,23 +1662,6 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                   <ImageIcon size={16} strokeWidth={2} />
                   {t('editor.addAgendaItem')}
                 </button>
-
-                {/* Footer */}
-                <div>
-                  <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.agendaFooter')}</label>
-                  <input
-                    type="text"
-                    value={sectionData.agenda.footer ?? ''}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        agenda: { ...prev.agenda!, footer: e.target.value },
-                      }))
-                    }
-                    placeholder="活动使用语言：中文"
-                    className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                  />
-                </div>
               </div>
             )}
           </div>

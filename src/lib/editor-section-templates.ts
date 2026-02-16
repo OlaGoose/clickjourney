@@ -18,7 +18,7 @@ export interface SectionTemplateDef {
 export const SECTION_TEMPLATES: SectionTemplateDef[] = [
   { id: 'marquee', label: '横向滚动条', description: '小图 + 标题横向滚动' },
   { id: 'friends', label: '朋友', description: '头像 + 名称 + 描述，支持多人' },
-  { id: 'agenda', label: '议程/时间线', description: 'Airbnb 风格体验日程' },
+  { id: 'agenda', label: '时间线', description: 'Airbnb 风格体验日程' },
 ];
 
 /** Default section data by template. */

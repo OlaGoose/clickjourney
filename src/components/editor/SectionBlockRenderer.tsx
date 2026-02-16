@@ -184,15 +184,6 @@ export function SectionBlockRenderer({
               </div>
             ))}
           </div>
-
-          {/* Footer */}
-          {d.footer && (
-            <div className="px-4 pt-3 pb-4">
-              <p className="text-[13px] text-[#86868b] leading-relaxed">
-                {d.footer}
-              </p>
-            </div>
-          )}
         </section>
       );
     }
