@@ -1565,26 +1565,6 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                       )}
                     </div>
 
-                    {/* Emoji (timeline circle icon) */}
-                    <div>
-                      <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.agendaItemEmoji')}</label>
-                      <input
-                        type="text"
-                        value={item.emoji ?? ''}
-                        onChange={(e) => {
-                          const items = [...sectionData.agenda!.items];
-                          items[idx] = { ...items[idx], emoji: e.target.value };
-                          setSectionData((prev) => ({
-                            ...prev,
-                            agenda: { ...prev.agenda!, items },
-                          }));
-                        }}
-                        placeholder="✨ 🎯 📍"
-                        maxLength={4}
-                        className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[18px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
-                      />
-                    </div>
-
                     {/* Image */}
                     <div>
                       <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.agendaItemImage')}</label>
@@ -1672,7 +1652,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                         ...prev.agenda!,
                         items: [
                           ...prev.agenda!.items,
-                          { image: '', title: '', description: '', emoji: '' },
+                          { image: '', title: '', description: '' },
                         ],
                       },
                     }))

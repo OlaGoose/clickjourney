@@ -111,87 +111,85 @@ export function SectionBlockRenderer({
       return (
         <section className={`${base} ${className}`} role="article" aria-label="体验议程">
           {/* Header */}
-          <div className="px-5 pt-6 pb-4">
-            <h2 className="text-[24px] font-bold text-[#1d1d1f] leading-snug mb-2.5 tracking-tight">
+          <div className="px-4 pt-5 pb-3">
+            <h2 className="text-[22px] font-bold text-[#1d1d1f] leading-snug mb-2">
               {d.headline || '体验内容'}
             </h2>
             {d.intro && (
-              <p className="text-[15px] text-[#6e6e73] leading-relaxed max-w-[90%]">
+              <p className="text-[15px] text-[#6e6e73] leading-relaxed">
                 {d.intro}
               </p>
             )}
           </div>
 
-          {/* Timeline: single left border, no duplicate segments; content below icon midline, closer to line */}
-          <div className="border-l-2 border-[#e3e3e3] pl-7 pr-5 pb-2 ml-5">
-            {d.items.map((item, i) => {
-              const isEmoji = (item.emoji ?? '').trim().length > 0;
-              return (
-                <div key={i} className="flex gap-3 py-1 first:pt-0">
-                  {/* Timeline icon circle - Apple flat style, white ring; aligns to top so content sits below its midline */}
-                  <div
-                    className="flex-shrink-0 w-8 h-8 -ml-[47px] rounded-full flex items-center justify-center overflow-hidden bg-[#f4f6f8] text-[#3d3d3d] shadow-[0_0_0_6px_#fbfbfd]"
-                    aria-hidden="true"
-                  >
-                    {isEmoji ? (
-                      <span className="text-m leading-none select-none" aria-hidden>
-                        {item.emoji!.trim()}
-                      </span>
+          {/* Agenda Items with Timeline — 灰线 1px，对齐每张图片水平中心，图片覆盖圆点与线 */}
+          <div className="relative px-4 pb-2 overflow-visible">
+            {d.items.map((item, i) => (
+              <div key={i} className="relative flex items-stretch overflow-visible group">
+                {/* 占位：使时间线中心落在图片中心。图片中心 = pl-1(4px) + 88/2(44px) = 48px */}
+                <div className="w-[42px] flex-shrink-0" aria-hidden="true" />
+                {/* Timeline Column：灰线(宽约 1px，比 2px 减 30%) + 圆点，置于底层 */}
+                <div className="relative w-3 flex-shrink-0 flex flex-col items-center justify-center self-stretch" style={{ zIndex: 0 }}>
+                  {/* 上方连接线 — 灰色、1px */}
+                  {i > 0 && (
+                    <div
+                      className="absolute top-0 left-1/2 -translate-x-px w-px bg-gradient-to-b from-[#d1d5db] to-transparent"
+                      style={{ height: '50%' }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {/* 圆点 */}
+                  <div className="relative w-2.5 h-2.5 rounded-full bg-[#9ca3af] ring-2 ring-[#9ca3af]/30 group-hover:ring-[#9ca3af]/50 transition-all duration-200 flex-shrink-0" aria-hidden="true" />
+                  {/* 下方连接线 — 灰色、1px */}
+                  {i < d.items.length - 1 && (
+                    <div
+                      className="absolute bottom-0 left-1/2 -translate-x-px w-px bg-gradient-to-b from-transparent to-[#d1d5db]"
+                      style={{ height: '50%' }}
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
+
+                {/* Content Column：左移使图片中心对准时间线，图片覆盖圆点与线 */}
+                <button
+                  type="button"
+                  aria-label={`${item.title}. ${item.description}`}
+                  className={`relative flex flex-1 min-w-0 gap-3.5 py-3 pr-3 pl-1 -ml-[54px] rounded-2xl hover:bg-black/[0.02] transition-all duration-200 group-hover:shadow-sm ${isEditMode ? 'pointer-events-none' : ''}`}
+                  style={{ zIndex: 10 }}
+                >
+                  {/* 图片：中心压在灰线与圆点上 */}
+                  <div className="flex-shrink-0 w-[88px] h-[88px] rounded-xl overflow-hidden bg-black/5 ring-1 ring-black/[0.06] group-hover:ring-black/[0.1] transition-all duration-200 shadow-sm">
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
                     ) : (
-                      <span className="text-[13px] font-semibold text-[#688afd]">
-                        {i + 1}
-                      </span>
+                      <div className="w-full h-full bg-black/10" />
                     )}
                   </div>
 
-                  {/* Card top aligned to icon bottom (pt-8 = full icon height so card starts below circle) */}
-                  <button
-                    type="button"
-                    aria-label={`${item.title}. ${item.description}`}
-                    className={`flex-1 min-w-0 text-left group pt-4 mt-4 ${isEditMode ? 'pointer-events-none' : 'hover:translate-x-0.5'} transition-all duration-300 ease-out`}
-                  >
-                    {/* Content Card */}
-                    <div className="min-w-0">
-                      <div className="flex gap-3.5 p-3 rounded-2xl bg-white/60 group-hover:bg-white group-hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-all duration-300 border border-black/[0.04] group-hover:border-black/[0.08]">
-                        {/* Image */}
-                        <div className="flex-shrink-0 w-[92px] h-[92px] rounded-xl overflow-hidden bg-black/5 ring-1 ring-black/[0.06] group-hover:ring-black/[0.12] transition-all duration-300">
-                          {item.image ? (
-                            <img
-                              src={item.image}
-                              alt=""
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-black/5 to-black/10" />
-                          )}
-                        </div>
-
-                        {/* Text Content */}
-                        <div className="flex-1 min-w-0 py-1">
-                          <h3 className="text-[17px] font-semibold text-[#1d1d1f] leading-tight mb-2 group-hover:text-[#007aff] transition-colors duration-300">
-                            {item.title || '标题'}
-                          </h3>
-                          <p className="text-[14px] text-[#6e6e73] leading-relaxed line-clamp-3">
-                            {item.description || '描述'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              );
-            })}
+                  {/* Text Content */}
+                  <div className="flex-1 min-w-0 text-left py-0.5">
+                    <h3 className="text-[16px] font-semibold text-[#1d1d1f] leading-tight mb-1.5 group-hover:text-[#007aff] transition-colors duration-200">
+                      {item.title || '标题'}
+                    </h3>
+                    <p className="text-[14px] text-[#6e6e73] leading-relaxed line-clamp-3">
+                      {item.description || '描述'}
+                    </p>
+                  </div>
+                </button>
+              </div>
+            ))}
           </div>
 
           {/* Footer */}
           {d.footer && (
-            <div className="px-5 pt-2 pb-5 border-t border-black/[0.06] mt-2">
-              <p className="text-[13px] text-[#86868b] leading-relaxed flex items-center gap-2">
-                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{d.footer}</span>
+            <div className="px-4 pt-3 pb-4">
+              <p className="text-[13px] text-[#86868b] leading-relaxed">
+                {d.footer}
               </p>
             </div>
           )}
@@ -201,7 +199,7 @@ export function SectionBlockRenderer({
 
     default:
       // Backward compat: treat legacy creator_card as single friend
-      if (rawTemplateId === 'creator_card' && (data as { creatorCard?: unknown }).creatorCard) {
+      if ((rawTemplateId as string) === 'creator_card' && (data as { creatorCard?: unknown }).creatorCard) {
         const d = (data as { creatorCard: { avatar: string; name: string; description: string } }).creatorCard;
         return (
           <section className={`${base} py-3 px-4 ${className}`} role="presentation" aria-hidden="true">

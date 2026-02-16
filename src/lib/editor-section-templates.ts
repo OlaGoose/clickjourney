@@ -36,9 +36,21 @@ export function getDefaultSectionData(templateId: SectionTemplateId): SectionBlo
         headline: '体验内容',
         intro: '精心设计的行程，让每一步都充满期待。',
         items: [
-          { image: PLACEHOLDER_IMAGE, title: '第一站', description: '在这里开始我们的旅程。', emoji: '📍' },
-          { image: PLACEHOLDER_IMAGE, title: '第二站', description: '体验独特的风景和文化。', emoji: '✨' },
-          { image: PLACEHOLDER_IMAGE, title: '第三站', description: '留下难忘的回忆。', emoji: '🎬' },
+          {
+            image: PLACEHOLDER_IMAGE,
+            title: '第一站',
+            description: '在这里开始我们的旅程。',
+          },
+          {
+            image: PLACEHOLDER_IMAGE,
+            title: '第二站',
+            description: '体验独特的风景和文化。',
+          },
+          {
+            image: PLACEHOLDER_IMAGE,
+            title: '第三站',
+            description: '留下难忘的回忆。',
+          },
         ],
         footer: '',
       },
