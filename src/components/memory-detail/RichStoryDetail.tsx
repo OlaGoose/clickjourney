@@ -76,10 +76,14 @@ export function RichStoryDetail({ memory, onBack, shareView = false, isOwner = f
     }
   };
 
-  /* 与分享页一致：可滚动内容区，保留滚动条 */
+  /* 与 PhotoGalleryDetail 一致：overflow-y-auto 容器作为根 flex 列的直接子元素，无额外嵌套 */
+  const scrollAreaClass =
+    'flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-24 bg-[#fbfbfd] overscroll-contain';
+  const scrollAreaStyle: React.CSSProperties = { WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' };
+
   const contentBody = (
-    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-24 pt-4 bg-[#fbfbfd] overscroll-contain" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
-      <div className="px-8 pt-4 space-y-4 max-w-2xl mx-auto min-h-full">
+    <div className={`${scrollAreaClass} pt-4`} style={scrollAreaStyle}>
+      <div className="px-8 pt-4 space-y-4 max-w-2xl mx-auto">
         <div className="pt-2">
           <h1 className="text-2xl font-bold text-[#1d1d1f]">{title || t('memory.untitled')}</h1>
         </div>
@@ -107,19 +111,16 @@ export function RichStoryDetail({ memory, onBack, shareView = false, isOwner = f
     </div>
   );
 
-  /* 分享页与详情页共用同一滚动结构：根 flex 容器 + 中间 flex-1 min-h-0 包裹，内容区可滚动并显示滚动条 */
   if (shareView) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col font-sans bg-[#fbfbfd] text-[#1d1d1f]">
-        <div className="flex-1 min-h-0 flex flex-col pt-4">
-          {contentBody}
-        </div>
+        {contentBody}
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col font-sans bg-[#fbfbfd] text-[#1d1d1f] relative animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex flex-col font-sans bg-[#fbfbfd] text-[#1d1d1f] animate-fadeIn">
       <MemoryDetailHeader
         title={title || undefined}
         onBack={onBack}
@@ -149,9 +150,7 @@ export function RichStoryDetail({ memory, onBack, shareView = false, isOwner = f
           ) : undefined
         }
       />
-      <div className="flex-1 min-h-0 flex flex-col">
-        {contentBody}
-      </div>
+      {contentBody}
     </div>
   );
 }
