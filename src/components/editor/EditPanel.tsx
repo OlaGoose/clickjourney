@@ -88,15 +88,13 @@ function blockUnchangedFromInitial(initial: ContentBlock, current: ContentBlock)
     return (
       (initial.content ?? '') === (current.content ?? '') &&
       (initial.metadata?.cinematicLayout ?? 'full_bleed') === (current.metadata?.cinematicLayout ?? 'full_bleed') &&
-      (initial.metadata?.cinematicImage ?? '') === (current.metadata?.cinematicImage ?? '') &&
-      (initial.metadata?.showBorder ?? false) === (current.metadata?.showBorder ?? false)
+      (initial.metadata?.cinematicImage ?? '') === (current.metadata?.cinematicImage ?? '')
     );
   }
   if (initial.type === 'section') {
     return (
       (initial.metadata?.sectionTemplateId ?? '') === (current.metadata?.sectionTemplateId ?? '') &&
-      JSON.stringify(initial.metadata?.sectionData ?? {}) === JSON.stringify(current.metadata?.sectionData ?? {}) &&
-      (initial.metadata?.showBorder ?? false) === (current.metadata?.showBorder ?? false)
+      JSON.stringify(initial.metadata?.sectionData ?? {}) === JSON.stringify(current.metadata?.sectionData ?? {})
     );
   }
   return false;
@@ -161,9 +159,11 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
       setAiError(null);
       setCinematicLayoutDropdownOpen(false);
       setUploadingImageSlot(null);
+      setDeleteConfirmOpen(false);
     }
   }, [isOpen]);
 
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [cinematicImage, setCinematicImage] = useState('');
   const [cinematicImageLoaded, setCinematicImageLoaded] = useState(false);
   const [cinematicLayout, setCinematicLayout] = useState<LayoutType>('full_bleed');
@@ -171,7 +171,6 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
   const [uploadingImageSlot, setUploadingImageSlot] = useState<string | null>(null);
   const [sectionTemplateId, setSectionTemplateId] = useState<SectionTemplateId>('marquee');
   const [sectionData, setSectionData] = useState<SectionBlockData>({});
-  const [showBorder, setShowBorder] = useState(false);
   const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>('left');
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [textColor, setTextColor] = useState<string>('#1d1d1f');
@@ -233,7 +232,6 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
       if (block.type === 'divider') {
         setDividerStyle((block.metadata?.dividerStyle as DividerStyle) ?? 'default');
       }
-      setShowBorder(!!block.metadata?.showBorder);
       initialBlockRef.current = block ? JSON.parse(JSON.stringify(block)) : null;
     }
   }, [block]);
@@ -385,9 +383,9 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
         return;
       }
       const slotKey = target.key;
-      setUploadingImageSlot(slotKey);
-      try {
-        const url = await fileToUrlOrDataUrl(file, { userId });
+
+      /** Apply a URL to the appropriate section data slot. */
+      const applyUrlToSlot = (url: string) => {
         setSectionData((prev) => {
           const next = { ...prev };
           const parts = slotKey.split('.');
@@ -417,6 +415,18 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
           }
           return next;
         });
+      };
+
+      // 1. Instant preview via blob URL
+      const blobUrl = URL.createObjectURL(file);
+      applyUrlToSlot(blobUrl);
+      setUploadingImageSlot(slotKey);
+
+      // 2. Upload to server and swap
+      try {
+        const url = await fileToUrlOrDataUrl(file, { userId });
+        URL.revokeObjectURL(blobUrl);
+        applyUrlToSlot(url);
       } finally {
         setUploadingImageSlot(null);
       }
@@ -432,17 +442,35 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
       const currentBlock = block;
       if (!currentBlock) return;
       if (currentBlock.type === 'image') {
-        setUploadingImageSlot('image');
+        const imageFiles = Array.from(files)
+          .filter((f) => f?.type.startsWith('image/'))
+          .slice(0, MAX_IMAGES); // will be clamped again per-state below
+        if (!imageFiles.length) { e.target.value = ''; return; }
+
+        // 1. Instant preview: create object URLs so images appear immediately
+        const blobUrls = imageFiles.map((f) => URL.createObjectURL(f));
+        setImages((prev) => {
+          const room = MAX_IMAGES - prev.length;
+          return [...prev, ...blobUrls.slice(0, room)];
+        });
+        setUploadingImageSlot('image'); // shows skeleton "uploading to server" row
+
+        // 2. Upload to server in parallel and swap blob → persistent URL
         try {
-          const list: string[] = [];
-          for (let i = 0; i < files.length && list.length < MAX_IMAGES; i++) {
-            const file = files[i];
-            if (file) {
-              const url = await fileToUrlOrDataUrl(file, { userId });
-              list.push(url);
-            }
-          }
-          setImages((prev) => [...prev, ...list].slice(0, MAX_IMAGES));
+          const serverUrls = await Promise.all(
+            imageFiles.map((f) => fileToUrlOrDataUrl(f, { userId }))
+          );
+          setImages((prev) => {
+            const next = [...prev];
+            blobUrls.forEach((blobUrl, i) => {
+              const idx = next.indexOf(blobUrl);
+              if (idx >= 0 && serverUrls[i]) {
+                URL.revokeObjectURL(blobUrl);
+                next[idx] = serverUrls[i];
+              }
+            });
+            return next;
+          });
         } finally {
           setUploadingImageSlot(null);
         }
@@ -877,7 +905,6 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
           ...block.metadata,
           images: images.length ? images : undefined,
           imageDisplayMode,
-          showBorder,
         },
       };
     }
@@ -889,7 +916,6 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
           ...block.metadata,
           cinematicLayout: cinematicLayout,
           cinematicImage: cinematicImage || block.metadata?.cinematicImage,
-          showBorder,
         },
       };
     }
@@ -900,7 +926,6 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
           ...block.metadata,
           sectionTemplateId,
           sectionData,
-          showBorder,
         },
       };
     }
@@ -911,7 +936,6 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
         metadata: {
           ...block.metadata,
           fileName: fileName || undefined,
-          showBorder,
           textAlign,
           fontSize,
           textColor,
@@ -924,14 +948,13 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
         metadata: {
           ...block.metadata,
           dividerStyle,
-          showBorder,
         },
       };
     }
     return {
       ...block,
       content,
-      metadata: { ...block.metadata, fileName: fileName || undefined, showBorder },
+      metadata: { ...block.metadata, fileName: fileName || undefined },
     };
   };
 
@@ -1022,6 +1045,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
               style={{
                 fontSize: fontSize === 'small' ? 14 : fontSize === 'medium' ? 15 : 17,
                 color: textColor,
+                textAlign: textAlign,
               }}
               rows={6}
             />
@@ -1031,51 +1055,6 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
       case 'richtext':
         return (
           <div className="flex-1 flex flex-col px-2 min-h-0">
-            <div className="flex items-center gap-2 flex-wrap px-2 pb-2 border-b border-black/[0.06] mb-2">
-              <span className="text-[12px] text-[#6e6e73] mr-1">字体</span>
-              <div className="flex rounded-full p-0.5 bg-black/[0.06]">
-                {(['left', 'center', 'right'] as const).map((align) => (
-                  <button
-                    key={align}
-                    type="button"
-                    onClick={() => setTextAlign(align)}
-                    className={`rounded-full p-2 transition-all ${textAlign === align ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73]'}`}
-                    aria-pressed={textAlign === align}
-                    aria-label={align === 'left' ? '左对齐' : align === 'center' ? '居中' : '右对齐'}
-                  >
-                    {align === 'left' && <AlignLeft size={16} strokeWidth={2} />}
-                    {align === 'center' && <AlignCenter size={16} strokeWidth={2} />}
-                    {align === 'right' && <AlignRight size={16} strokeWidth={2} />}
-                  </button>
-                ))}
-              </div>
-              <div className="flex rounded-full p-0.5 bg-black/[0.06]">
-                {(['small', 'medium', 'large'] as const).map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => setFontSize(size)}
-                    className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-all ${fontSize === size ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73]'}`}
-                    aria-pressed={fontSize === size}
-                  >
-                    {size === 'small' ? '小' : size === 'medium' ? '中' : '大'}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-1">
-                {['#1d1d1f', '#6e6e73', '#86868b', '#007aff'].map((hex) => (
-                  <button
-                    key={hex}
-                    type="button"
-                    onClick={() => setTextColor(hex)}
-                    className={`w-6 h-6 rounded-full border-2 transition-all ${textColor === hex ? 'border-[#1d1d1f] scale-110' : 'border-transparent'}`}
-                    style={{ backgroundColor: hex }}
-                    aria-pressed={textColor === hex}
-                    aria-label="颜色"
-                  />
-                ))}
-              </div>
-            </div>
             <div className="flex-1 min-h-[200px]">
               <BlockRichTextEditor
                 content={content}
@@ -1154,22 +1133,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                 </button>
               </div>
             </div>
-            {uploadingImageSlot === 'image' ? (
-              <div className="space-y-3">
-                {images.length > 0 ? (
-                  <>
-                    {imageDisplayMode === 'gallery' ? (
-                      <GalleryDisplayView images={images} ariaLabel="编辑区块照片" className="max-h-[320px]" />
-                    ) : (
-                      <PhotoGrid images={images} totalCount={images.length} ariaLabel="编辑区块照片" className="max-h-[320px]" />
-                    )}
-                    <ImageUploadSkeleton className="w-full h-24 rounded-xl" />
-                  </>
-                ) : (
-                  <ImageUploadSkeleton className="w-full h-40 rounded-2xl" />
-                )}
-              </div>
-            ) : images.length > 0 ? (
+            {images.length > 0 ? (
               <div className="space-y-3">
                 {imageDisplayMode === 'gallery' ? (
                   <GalleryDisplayView
@@ -1185,7 +1149,11 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     className="max-h-[320px]"
                   />
                 )}
-                {images.length < MAX_IMAGES && (
+                {/* Server-upload progress row — shown while uploading to cloud */}
+                {uploadingImageSlot === 'image' && (
+                  <ImageUploadSkeleton className="w-full h-10 rounded-xl" />
+                )}
+                {uploadingImageSlot !== 'image' && images.length < MAX_IMAGES && (
                   <button
                     type="button"
                     onClick={handleUploadClick}
@@ -1196,6 +1164,8 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                   </button>
                 )}
               </div>
+            ) : uploadingImageSlot === 'image' ? (
+              <ImageUploadSkeleton className="w-full h-40 rounded-2xl" />
             ) : (
               <button
                 type="button"
@@ -1258,10 +1228,14 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
               onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) { e.target.value = ''; return; }
+                // Show instant preview via blob URL, upload to server in background
+                const blobUrl = URL.createObjectURL(file);
+                setCinematicImageLoaded(false);
+                setCinematicImage(blobUrl);
                 setUploadingImageSlot('cinematic');
                 try {
                   const url = await fileToUrlOrDataUrl(file, { userId });
-                  setCinematicImageLoaded(false);
+                  URL.revokeObjectURL(blobUrl);
                   setCinematicImage(url);
                 } finally {
                   setUploadingImageSlot(null);
@@ -1310,12 +1284,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                 </ul>
               )}
             </div>
-            {uploadingImageSlot === 'cinematic' ? (
-              <div className="space-y-2">
-                <ImageUploadSkeleton className="w-full min-h-[192px] max-h-48" />
-                <div className="h-10" aria-hidden />
-              </div>
-            ) : (cinematicImage || (block?.type === 'cinematic' && block.metadata?.cinematicImage)) ? (
+            {(cinematicImage || (block?.type === 'cinematic' && block.metadata?.cinematicImage)) ? (
               <div className="space-y-2">
                 <div className="relative w-full rounded-2xl overflow-hidden bg-[#f5f5f7] min-h-[192px] max-h-48">
                   {!cinematicImageLoaded && (
@@ -1328,14 +1297,26 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     style={{ minHeight: 192 }}
                     onLoad={() => setCinematicImageLoaded(true)}
                   />
+                  {/* Server-upload overlay — shown while the server upload is in progress */}
+                  {uploadingImageSlot === 'cinematic' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/30 rounded-2xl">
+                      <span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full rounded-full py-2.5 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09]"
+                  disabled={uploadingImageSlot === 'cinematic'}
+                  className="w-full rounded-full py-2.5 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] disabled:opacity-50 disabled:pointer-events-none"
                 >
                   更换图片
                 </button>
+              </div>
+            ) : uploadingImageSlot === 'cinematic' ? (
+              <div className="space-y-2">
+                <ImageUploadSkeleton className="w-full min-h-[192px] max-h-48" />
+                <div className="h-10" aria-hidden />
               </div>
             ) : (
               <button
@@ -1370,66 +1351,71 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
               onChange={handleSectionImageSelect}
               className="hidden"
             />
-            <p className="text-[13px] text-[#6e6e73]">
-              {sectionTemplateId === 'marquee' ? t('editor.sectionMarquee') : sectionTemplateId === 'friends' ? t('editor.sectionFriends') : sectionTemplateId === 'agenda' ? t('editor.sectionAgenda') : sectionTemplateId}
-            </p>
             {sectionTemplateId === 'marquee' && sectionData.marquee && (
               <>
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={sectionData.marquee.marqueeAnimate !== false}
-                    onChange={(e) =>
-                      setSectionData((prev) => ({
-                        ...prev,
-                        marquee: prev.marquee
-                          ? { ...prev.marquee, marqueeAnimate: e.target.checked }
-                          : { items: [], marqueeAnimate: e.target.checked },
-                      }))
-                    }
-                    className="rounded border-black/[0.2] text-[#1d1d1f] focus:ring-black/[0.08]"
-                  />
-                  <span className="text-[13px] font-medium text-[#6e6e73]">跑马灯动效（可动）</span>
-                </label>
-                <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">横向滚动项（每项可换图）</label>
-                {sectionData.marquee.items.map((item, idx) => (
-                  <div key={idx} className="rounded-xl border border-black/[0.08] p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12px] text-[#6e6e73]">项 {idx + 1}</span>
-                    </div>
-                    {uploadingImageSlot === `marquee.${idx}` ? (
-                      <ImageUploadSkeleton className="w-full h-20 rounded-lg" />
-                    ) : item.image ? (
-                      <div className="space-y-2">
-                        <img src={item.image} alt="" className="w-full rounded-lg object-cover h-20" />
-                        <button
-                          type="button"
-                          onClick={() => { const k = { key: `marquee.${idx}` }; setSectionImageTarget(k); sectionImageTargetRef.current = k; sectionImageInputRef.current?.click(); }}
-                          className="w-full rounded-full py-1.5 text-[12px] font-semibold bg-black/[0.06] text-[#1d1d1f]"
-                        >
-                          {t('editor.replaceImage')}
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => { const k = { key: `marquee.${idx}` }; setSectionImageTarget(k); sectionImageTargetRef.current = k; sectionImageInputRef.current?.click(); }}
-                        className="w-full rounded-lg border border-dashed border-black/[0.1] py-2 text-[12px] text-[#6e6e73]"
-                      >
-                        {t('editor.addImage')}
-                      </button>
-                    )}
+                {/* Animation toggle — iOS-style */}
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="text-[16px] font-medium text-[#1d1d1f]">{t('editor.marqueeAnimateLabel')}</span>
+                  <div className="relative flex-shrink-0">
                     <input
-                      type="text"
-                      value={item.title ?? ''}
-                      onChange={(e) => {
-                        const items = [...sectionData.marquee!.items];
-                        items[idx] = { ...items[idx], title: e.target.value };
-                        setSectionData((prev) => ({ ...prev, marquee: { ...prev.marquee!, items } }));
-                      }}
-                      className="w-full rounded-lg border border-black/[0.08] bg-white px-3 py-2 text-[14px]"
-                      placeholder="标题"
+                      type="checkbox"
+                      checked={sectionData.marquee.marqueeAnimate !== false}
+                      onChange={(e) =>
+                        setSectionData((prev) => ({
+                          ...prev,
+                          marquee: prev.marquee
+                            ? { ...prev.marquee, marqueeAnimate: e.target.checked }
+                            : { items: [], marqueeAnimate: e.target.checked },
+                        }))
+                      }
+                      className="sr-only peer"
                     />
+                    <div className="w-9 h-[22px] rounded-full bg-black/[0.12] peer-checked:bg-[#34c759] transition-colors duration-200" />
+                    <div className="absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 peer-checked:translate-x-[14px]" />
+                  </div>
+                </label>
+
+                {/* Items — horizontal card: aspect-video thumbnail + transparent title */}
+                {sectionData.marquee.items.map((item, idx) => (
+                  <div key={idx} className="group flex gap-3 rounded-2xl border border-black/[0.06] bg-white/60 p-3">
+                    {/* Thumbnail — click to upload/replace */}
+                    <button
+                      type="button"
+                      onClick={() => { const k = { key: `marquee.${idx}` }; setSectionImageTarget(k); sectionImageTargetRef.current = k; sectionImageInputRef.current?.click(); }}
+                      disabled={uploadingImageSlot === `marquee.${idx}`}
+                      aria-label={item.image ? t('editor.replaceImage') : t('editor.addImage')}
+                      className="relative flex flex-shrink-0 h-20 min-w-[80px] max-w-[120px] rounded-xl overflow-hidden bg-black/[0.05] ring-1 ring-black/[0.06] disabled:pointer-events-none"
+                    >
+                      {uploadingImageSlot === `marquee.${idx}` ? (
+                        <ImageUploadSkeleton className="w-20 h-20 rounded-xl flex-shrink-0" showIcon />
+                      ) : item.image ? (
+                        <span className="relative flex h-full">
+                          <img src={item.image} alt="" className="h-full w-auto object-contain" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors duration-150 rounded-xl">
+                            <Upload size={14} className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+                          </div>
+                        </span>
+                      ) : (
+                        <div className="flex items-center justify-center w-20 h-20 rounded-xl flex-shrink-0">
+                          <ImageIcon size={16} className="text-[#c7c7cc]" />
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Title — transparent, no label */}
+                    <div className="flex-1 min-w-0 flex items-center">
+                      <input
+                        type="text"
+                        value={item.title ?? ''}
+                        onChange={(e) => {
+                          const items = [...sectionData.marquee!.items];
+                          items[idx] = { ...items[idx], title: e.target.value };
+                          setSectionData((prev) => ({ ...prev, marquee: { ...prev.marquee!, items } }));
+                        }}
+                        placeholder={t('editor.marqueeItemTitlePlaceholder')}
+                        className="w-full bg-transparent text-[15px] font-semibold text-[#1d1d1f] placeholder:text-[#c7c7cc] focus:outline-none"
+                      />
+                    </div>
                   </div>
                 ))}
               </>
@@ -1457,17 +1443,20 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     </div>
                     <div>
                       <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.uploadPersonImage')}</label>
-                      {uploadingImageSlot === `friends.${idx}.avatar` ? (
+                      {friend.avatar ? (
                         <div className="flex items-center gap-3">
-                          <ImageUploadSkeleton className="w-9 h-9 rounded-full flex-shrink-0" />
-                        </div>
-                      ) : friend.avatar ? (
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={friend.avatar}
-                            alt=""
-                            className="w-9 h-9 rounded-full object-cover flex-shrink-0 bg-black/5"
-                          />
+                          <div className="relative flex-shrink-0">
+                            <img
+                              src={friend.avatar}
+                              alt=""
+                              className="w-9 h-9 rounded-full object-cover bg-black/5"
+                            />
+                            {uploadingImageSlot === `friends.${idx}.avatar` && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full">
+                                <span className="h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                              </div>
+                            )}
+                          </div>
                           <button
                             type="button"
                             onClick={() => {
@@ -1476,10 +1465,15 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                               sectionImageTargetRef.current = k;
                               sectionImageInputRef.current?.click();
                             }}
-                            className="rounded-full py-2 px-4 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09]"
+                            disabled={uploadingImageSlot === `friends.${idx}.avatar`}
+                            className="rounded-full py-2 px-4 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] disabled:opacity-50 disabled:pointer-events-none"
                           >
                             {t('editor.replaceImage')}
                           </button>
+                        </div>
+                      ) : uploadingImageSlot === `friends.${idx}.avatar` ? (
+                        <div className="flex items-center gap-3">
+                          <ImageUploadSkeleton className="w-9 h-9 rounded-full flex-shrink-0" />
                         </div>
                       ) : (
                         <button
@@ -1581,103 +1575,82 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                 {/* Agenda Items */}
                 <label className="block text-[13px] font-medium text-[#6e6e73]">{t('editor.agendaItems')}</label>
                 {sectionData.agenda.items.map((item, idx) => (
-                  <div key={idx} className="rounded-xl border border-black/[0.08] p-3 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12px] text-[#6e6e73]">{t('editor.agendaItem')} {idx + 1}</span>
-                      {sectionData.agenda!.items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setSectionData((prev) => ({
-                              ...prev,
-                              agenda: {
-                                ...prev.agenda!,
-                                items: prev.agenda!.items.filter((_, i) => i !== idx),
-                              },
-                            }))
-                          }
-                          className="text-[12px] font-medium text-[#ff3b30] hover:underline"
-                        >
-                          {t('common.remove')}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Image */}
-                    <div>
-                      <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.agendaItemImage')}</label>
+                  <div key={idx} className="group relative flex gap-3 rounded-2xl border border-black/[0.06] bg-white/60 p-3">
+                    {/* Thumbnail — click to upload/replace */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const k = { key: `agenda.${idx}.image` };
+                        setSectionImageTarget(k);
+                        sectionImageTargetRef.current = k;
+                        sectionImageInputRef.current?.click();
+                      }}
+                      disabled={uploadingImageSlot === `agenda.${idx}.image`}
+                      aria-label={item.image ? t('editor.replaceImage') : t('editor.addImage')}
+                      className="relative flex flex-shrink-0 h-20 min-w-[80px] max-w-[120px] rounded-xl overflow-hidden bg-black/[0.05] ring-1 ring-black/[0.06] disabled:pointer-events-none"
+                    >
                       {uploadingImageSlot === `agenda.${idx}.image` ? (
-                        <ImageUploadSkeleton className="w-full h-24 rounded-lg" />
+                        <ImageUploadSkeleton className="w-20 h-20 rounded-xl flex-shrink-0" showIcon />
                       ) : item.image ? (
-                        <div className="space-y-2">
-                          <img src={item.image} alt="" className="w-full rounded-lg object-cover h-24" />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const k = { key: `agenda.${idx}.image` };
-                              setSectionImageTarget(k);
-                              sectionImageTargetRef.current = k;
-                              sectionImageInputRef.current?.click();
-                            }}
-                            className="w-full rounded-full py-1.5 text-[12px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09]"
-                          >
-                            {t('editor.replaceImage')}
-                          </button>
-                        </div>
+                        <span className="relative flex h-full">
+                          <img src={item.image} alt="" className="h-full w-auto object-contain" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors duration-150 rounded-xl">
+                            <Upload size={14} className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+                          </div>
+                        </span>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const k = { key: `agenda.${idx}.image` };
-                            setSectionImageTarget(k);
-                            sectionImageTargetRef.current = k;
-                            sectionImageInputRef.current?.click();
-                          }}
-                          className="w-full rounded-lg border border-dashed border-black/[0.1] py-4 text-[13px] text-[#6e6e73] hover:bg-black/[0.02] flex items-center justify-center gap-2"
-                        >
-                          <ImageIcon size={18} className="text-[#86868b]" />
-                          {t('editor.addImage')}
-                        </button>
+                        <div className="flex items-center justify-center w-20 h-20 rounded-xl flex-shrink-0">
+                          <ImageIcon size={18} className="text-[#c7c7cc]" />
+                        </div>
                       )}
-                    </div>
+                    </button>
 
-                    {/* Title */}
-                    <div>
-                      <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.agendaItemTitle')}</label>
+                    {/* Text fields — no labels, placeholders only */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5 py-0.5">
                       <input
                         type="text"
                         value={item.title}
                         onChange={(e) => {
                           const items = [...sectionData.agenda!.items];
                           items[idx] = { ...items[idx], title: e.target.value };
-                          setSectionData((prev) => ({
-                            ...prev,
-                            agenda: { ...prev.agenda!, items },
-                          }));
+                          setSectionData((prev) => ({ ...prev, agenda: { ...prev.agenda!, items } }));
                         }}
-                        placeholder="第一站"
-                        className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
+                        placeholder={t('editor.agendaItemTitlePlaceholder')}
+                        className="w-full bg-transparent text-[15px] font-semibold text-[#1d1d1f] placeholder:text-[#c7c7cc] focus:outline-none"
                       />
-                    </div>
-
-                    {/* Description */}
-                    <div>
-                      <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.agendaItemDescription')}</label>
+                      <div className="h-px bg-black/[0.06]" aria-hidden />
                       <textarea
                         value={item.description}
                         onChange={(e) => {
                           const items = [...sectionData.agenda!.items];
                           items[idx] = { ...items[idx], description: e.target.value };
-                          setSectionData((prev) => ({
-                            ...prev,
-                            agenda: { ...prev.agenda!, items },
-                          }));
+                          setSectionData((prev) => ({ ...prev, agenda: { ...prev.agenda!, items } }));
                         }}
-                        placeholder="在这里开始我们的旅程。"
+                        placeholder={t('editor.agendaItemDescriptionPlaceholder')}
                         rows={2}
-                        className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
+                        className="w-full bg-transparent text-[13px] text-[#6e6e73] placeholder:text-[#c7c7cc] focus:outline-none resize-none leading-relaxed"
                       />
                     </div>
+
+                    {/* Remove — icon badge, only when >1 item */}
+                    {sectionData.agenda!.items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSectionData((prev) => ({
+                            ...prev,
+                            agenda: {
+                              ...prev.agenda!,
+                              items: prev.agenda!.items.filter((_, i) => i !== idx),
+                            },
+                          }))
+                        }
+                        aria-label={t('common.remove')}
+                        className="absolute top-2 right-2 w-[18px] h-[18px] rounded-full bg-black/[0.06] hover:bg-[#ff3b30]/[0.12] flex items-center justify-center text-[#86868b] hover:text-[#ff3b30] transition-colors duration-150"
+                      >
+                        <X size={10} strokeWidth={2.5} />
+                      </button>
+                    )}
                   </div>
                 ))}
 
@@ -1810,44 +1783,55 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
           <div className="h-0.5 w-9 rounded-full bg-black/[0.12]" />
         </div>
         <div className="grid grid-cols-3 items-center px-5 pb-3">
-          <button
-            type="button"
-            onClick={onDelete}
-            className="justify-self-start flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-all duration-200 active:scale-95"
-          >
-            <Trash2 size={14} strokeWidth={2} />
-            删除
-          </button>
-          <h3 className="justify-self-center text-[17px] font-semibold text-[#1d1d1f] tracking-tight">
-            {block.type === 'text' && '文本'}
-            {block.type === 'richtext' && '富文本'}
-            {block.type === 'image' && '图片'}
-            {block.type === 'video' && '视频'}
-            {block.type === 'audio' && '音频'}
-            {block.type === 'cinematic' && (ALL_CINEMATIC_LAYOUTS.find((t) => t.layout === block.metadata?.cinematicLayout)?.label ?? '区块')}
-            {block.type === 'section' && (sectionTemplateId === 'marquee' ? t('editor.sectionMarquee') : sectionTemplateId === 'friends' ? t('editor.sectionFriends') : sectionTemplateId === 'agenda' ? t('editor.sectionAgenda') : '区块')}
-            {block.type === 'divider' && '分割线'}
-          </h3>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] transition-all duration-200 active:scale-95"
-            aria-label="关闭"
-          >
-            <X size={18} strokeWidth={2} />
-          </button>
-        </div>
-        <div className="px-5 py-2 flex items-center gap-2 border-b border-black/[0.06]">
-          <input
-            id="edit-panel-show-border"
-            type="checkbox"
-            checked={showBorder}
-            onChange={(e) => setShowBorder(e.target.checked)}
-            className="h-4 w-4 rounded border-black/[0.2] text-[#1d1d1f] focus:ring-black/[0.08]"
-          />
-          <label htmlFor="edit-panel-show-border" className="text-[14px] font-medium text-[#1d1d1f]">
-            显示边框
-          </label>
+          {deleteConfirmOpen ? (
+            /* Inline delete confirmation — replaces header row */
+            <>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmOpen(false)}
+                className="justify-self-start rounded-full px-3.5 py-2 text-[13px] font-semibold text-[#6e6e73] hover:bg-black/[0.05] transition-all duration-200 active:scale-95"
+              >
+                取消
+              </button>
+              <p className="justify-self-center text-[14px] font-medium text-[#1d1d1f] text-center">确定删除？</p>
+              <button
+                type="button"
+                onClick={() => { setDeleteConfirmOpen(false); onDelete(); }}
+                className="justify-self-end rounded-full px-3.5 py-2 text-[13px] font-semibold text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-all duration-200 active:scale-95"
+              >
+                删除
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmOpen(true)}
+                className="justify-self-start flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-all duration-200 active:scale-95"
+              >
+                <Trash2 size={14} strokeWidth={2} />
+                删除
+              </button>
+              <h3 className="justify-self-center text-[17px] font-semibold text-[#1d1d1f] tracking-tight">
+                {block.type === 'text' && '文本'}
+                {block.type === 'richtext' && '富文本'}
+                {block.type === 'image' && '图片'}
+                {block.type === 'video' && '视频'}
+                {block.type === 'audio' && '音频'}
+                {block.type === 'cinematic' && (ALL_CINEMATIC_LAYOUTS.find((t) => t.layout === block.metadata?.cinematicLayout)?.label ?? '区块')}
+                {block.type === 'section' && (sectionTemplateId === 'marquee' ? t('editor.sectionMarquee') : sectionTemplateId === 'friends' ? t('editor.sectionFriends') : sectionTemplateId === 'agenda' ? t('editor.sectionAgenda') : '区块')}
+                {block.type === 'divider' && '分割线'}
+              </h3>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] transition-all duration-200 active:scale-95"
+                aria-label="关闭"
+              >
+                <X size={18} strokeWidth={2} />
+              </button>
+            </>
+          )}
         </div>
         <div className="flex-1 overflow-y-auto py-2 px-2">
           {renderEditor()}

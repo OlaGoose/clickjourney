@@ -164,8 +164,6 @@ function TravelEditorContent() {
   const userId = auth?.user?.id ?? null;
 
   // ─── Split state: header fields vs blocks ───────────────────────────────────
-  // Separating title/description/location from blocks means typing in header
-  // fields does NOT trigger ContentBlock re-renders (blocks state unchanged).
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
@@ -181,6 +179,11 @@ function TravelEditorContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [titleFocused, setTitleFocused] = useState(false);
   const [descriptionFocused, setDescriptionFocused] = useState(false);
+  /** Toast notification: message + type, auto-dismissed after 3 s. */
+  const [toast, setToast] = useState<{ msg: string; type: 'error' | 'success' } | null>(null);
+  /** Controls the "leave without saving?" confirmation bottom sheet. */
+  const [leaveSheetOpen, setLeaveSheetOpen] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveInProgressRef = useRef(false);
   // Refs that are always current — let zero-dependency callbacks read live state
   const blocksLengthRef = useRef(0);
@@ -275,24 +278,32 @@ function TravelEditorContent() {
     [blocks]
   );
 
+  const showToast = useCallback((msg: string, type: 'error' | 'success' = 'error') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ msg, type });
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
+  }, []);
+
   const handleBack = useCallback(() => {
-    const shouldLeave = confirm(t('editor.confirmLeave'));
-    if (shouldLeave) {
-      localStorage.removeItem(STORAGE_KEY);
-      router.back();
-    }
-  }, [router, t]);
+    setLeaveSheetOpen(true);
+  }, []);
+
+  const handleConfirmLeave = useCallback(() => {
+    setLeaveSheetOpen(false);
+    localStorage.removeItem(STORAGE_KEY);
+    router.back();
+  }, [router]);
 
   const handleSave = useCallback(async () => {
     if (saveInProgressRef.current) return;
     if (!title.trim()) {
-      alert(t('editor.enterTitle'));
+      showToast(t('editor.enterTitle'));
       return;
     }
 
     const allImages = collectImagesFromBlocks(blocks);
     if (allImages.length === 0) {
-      alert(t('editor.addOnePhoto'));
+      showToast(t('editor.addOnePhoto'));
       return;
     }
 
@@ -344,16 +355,16 @@ function TravelEditorContent() {
       }
 
       localStorage.removeItem(STORAGE_KEY);
-      alert(editId ? t('editor.updateSuccess') : t('editor.saveSuccess'));
+      // Navigate immediately — success is implicit from the route change
       router.push(editId ? `/memories/${editId}` : '/');
     } catch (error) {
       console.error('Failed to save:', error);
-      alert(t('editor.saveFailed'));
+      showToast(t('editor.saveFailed'));
     } finally {
       saveInProgressRef.current = false;
       setIsSaving(false);
     }
-  }, [title, description, location, blocks, userId, router, editId, t]);
+  }, [title, description, location, blocks, userId, router, editId, t, showToast]);
 
   const handleOpenAddPanel = useCallback(() => {
     setEditingBlock(null);
@@ -478,14 +489,12 @@ function TravelEditorContent() {
   const handleDeleteBlock = useCallback(() => {
     const block = editingBlockRef.current;
     if (!block) return;
-    const shouldDelete = confirm(t('editor.confirmDeleteBlock'));
-    if (shouldDelete) {
-      setBlocks(prev => prev.filter(b => b.id !== block.id));
-      setIsEditPanelOpen(false);
-      setEditingBlock(null);
-      setSelectedBlockId(null);
-    }
-  }, [t]);
+    // Confirmation is handled inside EditPanel via inline confirm UI
+    setBlocks(prev => prev.filter(b => b.id !== block.id));
+    setIsEditPanelOpen(false);
+    setEditingBlock(null);
+    setSelectedBlockId(null);
+  }, []);
 
   const handleCloseEditPanel = useCallback(() => {
     setIsEditPanelOpen(false);
@@ -538,6 +547,60 @@ function TravelEditorContent() {
         onSave={handleSave}
         isSaving={isSaving}
       />
+
+      {/* ─── Toast banner ─────────────────────────────────────────────────── */}
+      <div
+        aria-live="assertive"
+        className="pointer-events-none fixed inset-x-0 top-14 z-[60] flex justify-center px-4"
+      >
+        <div
+          className={`pointer-events-auto flex items-center gap-2.5 rounded-2xl px-4 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.14)] text-[14px] font-medium transition-all duration-300 ${
+            toast
+              ? 'translate-y-0 opacity-100'
+              : '-translate-y-3 opacity-0 pointer-events-none'
+          } ${toast?.type === 'error' ? 'bg-[#1d1d1f] text-white' : 'bg-[#34c759] text-white'}`}
+        >
+          {toast?.type === 'error' && (
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold">!</span>
+          )}
+          <span>{toast?.msg}</span>
+        </div>
+      </div>
+
+      {/* ─── Leave-without-saving confirm sheet ───────────────────────────── */}
+      {leaveSheetOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-sm"
+            onClick={() => setLeaveSheetOpen(false)}
+            aria-hidden
+          />
+          <div className="fixed inset-x-4 bottom-6 z-[70] rounded-3xl bg-[#fbfbfd] shadow-[0_8px_40px_rgba(0,0,0,0.18)] overflow-hidden animate-sheetSlideUp">
+            <div className="px-5 pt-5 pb-4 text-center">
+              <p className="text-[17px] font-semibold text-[#1d1d1f] leading-snug">
+                {t('editor.confirmLeave')}
+              </p>
+            </div>
+            <div className="border-t border-black/[0.08]" />
+            <button
+              type="button"
+              onClick={handleConfirmLeave}
+              className="w-full py-4 text-[17px] font-semibold text-[#ff3b30] hover:bg-black/[0.03] transition-colors"
+            >
+              离开
+            </button>
+            <div className="border-t border-black/[0.08]" />
+            <button
+              type="button"
+              onClick={() => setLeaveSheetOpen(false)}
+              className="w-full py-4 text-[17px] font-medium text-[#1d1d1f] hover:bg-black/[0.03] transition-colors"
+            >
+              继续编辑
+            </button>
+            <div className="h-safe-bottom" />
+          </div>
+        </>
+      )}
 
       <div
         className="no-scrollbar flex-1 overflow-y-auto pb-24 pt-[44px]"

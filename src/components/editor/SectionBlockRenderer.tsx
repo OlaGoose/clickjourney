@@ -21,8 +21,7 @@ export function SectionBlockRenderer({
   const templateId = rawTemplateId as SectionTemplateId;
   const data = block.metadata?.sectionData ?? {};
 
-  const showBorder = !!block.metadata?.showBorder;
-  const base = `rounded-2xl overflow-hidden bg-[#fbfbfd] text-[#1d1d1f] ${showBorder ? 'border border-black/[0.06]' : ''}`;
+  const base = 'rounded-2xl overflow-hidden bg-[#fbfbfd] text-[#1d1d1f]';
   const linkClass = isEditMode
     ? 'pointer-events-none'
     : 'text-[#007aff] hover:underline';
@@ -109,7 +108,7 @@ export function SectionBlockRenderer({
       const d = data.agenda;
       if (!d?.items?.length) return <SectionPlaceholder label={t('editor.sectionAgenda')} className={base} />;
       return (
-        <section className={`${base} ${className}`} role="article" aria-label="体验议程">
+        <section className={`${base} ${className}`} role="article" aria-label="体验旅程">
           {/* Header */}
           <div className="pt-5 pb-3">
             <h2 className="text-[22px] font-bold text-[#1d1d1f] leading-snug mb-2">
@@ -122,7 +121,7 @@ export function SectionBlockRenderer({
             )}
           </div>
 
-          {/* Agenda Items with Timeline — 灰线 1px，对齐每张图片水平中心，图片覆盖圆点与线 */}
+          {/* Journey items with Timeline — 灰线 1px，对齐每张图片水平中心，图片覆盖圆点与线 */}
           <div className="relative pb-2 overflow-visible">
             {d.items.map((item, i) => (
               <div key={i} className="relative flex items-stretch overflow-visible group">

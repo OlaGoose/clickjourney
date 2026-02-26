@@ -14,11 +14,11 @@ export interface SectionTemplateDef {
   description?: string;
 }
 
-/** Section templates：图片轮播、人物卡片、议程。Labels come from i18n (editor.sectionMarquee / editor.sectionFriends / editor.sectionAgenda). */
+/** Section templates：图片轮播、人物卡片、旅程。Labels come from i18n (editor.sectionMarquee / editor.sectionFriends / editor.sectionAgenda). */
 export const SECTION_TEMPLATES: SectionTemplateDef[] = [
   { id: 'marquee', label: '图片轮播', description: '小图 + 标题轮播展示' },
   { id: 'friends', label: '人物卡片', description: '头像 + 名称 + 描述，支持多人' },
-  { id: 'agenda', label: '时间线', description: 'Airbnb 风格体验日程' },
+  { id: 'agenda', label: '时间线', description: 'Airbnb 风格体验旅程' },
 ];
 
 /** Default section data by template. */
