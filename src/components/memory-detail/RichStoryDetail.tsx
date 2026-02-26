@@ -44,6 +44,9 @@ export function RichStoryDetail({ memory, onBack, shareView = false, isOwner = f
       if (!userId) return;
       await updateMemory(userId, memory.id, { visibility: v });
       if (v === 'public') {
+        // Push the visibility update to Supabase synchronously so the share link
+        // works immediately for other users (not just on this device).
+        await MemoryService.pushSync();
         const copied = await copyMemoryShareLink(memory.id);
         if (copied) alert(t('memory.linkCopied'));
       }

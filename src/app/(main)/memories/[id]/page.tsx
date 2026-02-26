@@ -40,31 +40,40 @@ export default function MemoryPage() {
 
         const isShare = searchParams.get('share') === '1';
         let item: CarouselItem | null = null;
+        let apiTried = false;
 
-        // Public share: try API first so unauthenticated users can load (no login required; RLS allows visibility=public)
+        // Share link: try Supabase API first.
+        // RLS allows SELECT when visibility='public', so unauthenticated viewers can load.
         if (isShare) {
+          apiTried = true;
           const res = await fetch(`/api/memories/${id}`);
           if (res.ok) {
             item = (await res.json()) as CarouselItem;
             setIsOwner(false);
           }
         }
-        // Owner or not share: try local first (IndexedDB)
+
+        // Owner fallback (or non-share): check local IndexedDB.
+        // This covers the owner viewing their own share link on the same device,
+        // or normal navigation without ?share=1.
         if (!item) {
           item = await MemoryService.getMemory(id);
           if (item) setIsOwner(true);
         }
-        if (!item) {
+
+        // Non-share links: try API once as final fallback (e.g. after being shared without ?share=1).
+        if (!item && !apiTried) {
           const res = await fetch(`/api/memories/${id}`);
           if (res.ok) {
             item = (await res.json()) as CarouselItem;
             setIsOwner(false);
-          } else {
-            setError('Memory not found');
-            return;
           }
         }
-        if (!item) return;
+
+        if (!item) {
+          setError('Memory not found');
+          return;
+        }
 
         setMemory(item);
 

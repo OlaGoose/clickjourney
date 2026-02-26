@@ -25,7 +25,7 @@ function generateId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-/** Collect all image URLs from image, cinematic, and section blocks. */
+/** Collect all image URLs (for gallery/thumbnail) from image, cinematic, and section blocks. */
 function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
   const fromImage = blocks.filter((b) => b.type === 'image').flatMap((b) => (b.metadata?.images?.length ? b.metadata.images : b.content ? [b.content] : []));
   const fromCinematic = blocks.filter((b) => b.type === 'cinematic').map((b) => b.metadata?.cinematicImage).filter(Boolean) as string[];
@@ -41,12 +41,26 @@ function collectSectionImages(data: SectionBlockData): string[] {
   return urls;
 }
 
-/** Resolve blob: URLs in blocks to persistent URLs (Supabase/GCS/data URL) so shared content shows images. */
+/**
+ * Collect ALL media URLs from blocks (images + video + audio) for blob URL resolution.
+ * Includes video/audio block content so they're also uploaded to cloud if saved as blob URLs.
+ */
+function collectAllMediaUrlsFromBlocks(blocks: TravelEditorData['blocks']): string[] {
+  const images = collectImagesFromBlocks(blocks);
+  const fromVideo = blocks.filter((b) => b.type === 'video' && b.content).map((b) => b.content!);
+  const fromAudio = blocks.filter((b) => b.type === 'audio' && b.content).map((b) => b.content!);
+  return [...images, ...fromVideo, ...fromAudio];
+}
+
+/**
+ * Resolve blob: URLs in ALL block types (image, cinematic, section, video, audio) to
+ * persistent URLs (Supabase Storage / GCS / data URL) so shared content renders correctly.
+ */
 async function resolveBlobUrlsInBlocks(
   blocks: TravelEditorData['blocks'],
   userId: string | null
 ): Promise<TravelEditorData['blocks']> {
-  const urlSet = new Set(collectImagesFromBlocks(blocks));
+  const urlSet = new Set(collectAllMediaUrlsFromBlocks(blocks));
   const blobUrls = [...urlSet].filter((u) => typeof u === 'string' && u.startsWith('blob:'));
   if (blobUrls.length === 0) return blocks;
 
@@ -77,6 +91,8 @@ async function resolveBlobUrlsInBlocks(
         };
       }
       next.metadata = { ...next.metadata, sectionData: sd };
+    } else if ((next.type === 'video' || next.type === 'audio') && next.content) {
+      next.content = replaceUrl(next.content);
     }
     return next;
   });

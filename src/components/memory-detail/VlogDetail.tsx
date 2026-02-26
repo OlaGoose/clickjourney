@@ -66,9 +66,10 @@ export function VlogDetail({ memory, onBack, isOwner }: VlogDetailProps) {
       setVisibility(v);
       if (!userId) return;
       await updateMemory(userId, memory.id, { visibility: v });
-      
-      // If setting to public, copy share link to clipboard
+
+      // If setting to public, push to Supabase first so the link works on other devices.
       if (v === 'public') {
+        await MemoryService.pushSync();
         const copied = await copyMemoryShareLink(memory.id);
         if (copied) {
           alert(t('memory.linkCopied') || '链接已复制');

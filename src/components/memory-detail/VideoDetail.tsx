@@ -40,6 +40,8 @@ export function VideoDetail({ memory, onBack, isOwner = false, shareView = false
       if (!userId) return;
       await updateMemory(userId, memory.id, { visibility: v });
       if (v === 'public') {
+        // Push to Supabase before copying so the link works for other devices immediately.
+        await MemoryService.pushSync();
         const copied = await copyMemoryShareLink(memory.id);
         if (copied) alert(t('memory.linkCopied'));
       }

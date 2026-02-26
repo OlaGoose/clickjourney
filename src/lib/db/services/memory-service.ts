@@ -316,7 +316,7 @@ export class MemoryService {
   }
 
   /**
-   * Manual sync trigger
+   * Manual sync trigger (push + pull)
    */
   static async sync(userId: string | null): Promise<{ success: boolean; error: string | null }> {
     if (!userId || (isDevelopment() && isMockAuthEnabled())) {
@@ -331,6 +331,28 @@ export class MemoryService {
       };
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Sync failed';
+      return { success: false, error: message };
+    }
+  }
+
+  /**
+   * Push pending local changes to Supabase immediately (no pull).
+   * Use this before sharing a memory so the link works for other users right away.
+   * Safe to call even if Supabase is not configured — returns success:false with error.
+   */
+  static async pushSync(): Promise<{ success: boolean; error: string | null }> {
+    if (isDevelopment() && isMockAuthEnabled()) {
+      return { success: false, error: 'Sync not available in mock mode' };
+    }
+
+    try {
+      const result = await SyncEngine.push();
+      return {
+        success: result.errors.length === 0,
+        error: result.errors.length > 0 ? result.errors.join(', ') : null,
+      };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Push sync failed';
       return { success: false, error: message };
     }
   }

@@ -95,8 +95,16 @@ export async function uploadToGoogleStorage(
 }
 
 /**
- * Convert File to a persistent URL: try Supabase → then Google Cloud Storage → then data URL.
- * Use this in components so production can use either Supabase or GCS, with base64 fallback.
+ * Convert File to a persistent URL: try Supabase Storage → GCS → data URL (base64 fallback).
+ *
+ * Cloud upload fails silently and falls back to base64 when:
+ *  - Supabase is not configured (missing env vars)
+ *  - The 'memories' bucket does not exist (run migration 00000000000004_create_storage_bucket.sql)
+ *  - The user is not authenticated and the bucket anonymous policy is not applied
+ *  - GCS is not configured
+ *
+ * Base64 data URLs work locally but inflate DB storage and break on other devices when shared.
+ * Ensure the Supabase 'memories' bucket exists and is public to fix sharing.
  */
 export async function fileToUrlOrDataUrl(
   file: File,
@@ -108,6 +116,12 @@ export async function fileToUrlOrDataUrl(
   const googleUrl = await uploadToGoogleStorage(file, options);
   if (googleUrl) return googleUrl;
 
+  // Base64 fallback — file stays local (IndexedDB / memory) and won't work on other devices.
+  console.warn(
+    `[upload-media] Cloud upload failed for "${file.name}" (${(file.size / 1024 / 1024).toFixed(2)} MB). ` +
+    'Falling back to base64 data URL. Check that the Supabase "memories" bucket exists and migration ' +
+    '00000000000004_create_storage_bucket.sql has been applied.'
+  );
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
