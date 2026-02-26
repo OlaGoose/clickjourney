@@ -55,28 +55,16 @@ export function useMemories(): UseMemoriesResult {
     setSyncStatus(status);
   }, []);
 
-  // Initialize and load data
+  // Load data on mount (DatabaseProvider in layout already handles initialization + sync)
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
-    const init = async () => {
-      await MemoryService.initialize(userId);
-      await loadMemories();
-      await loadSyncStatus();
-    };
-
-    init();
-
-    // Cleanup on unmount
-    return () => {
-      // Don't cleanup data, just stop sync
-      // Data persists for offline use
-    };
+    loadMemories();
+    loadSyncStatus();
   }, [userId, loadMemories, loadSyncStatus]);
 
-  // Refresh sync status periodically
+  // Refresh sync status periodically — use a longer interval to reduce state churn
   useEffect(() => {
-    const interval = setInterval(loadSyncStatus, 5000);
+    const interval = setInterval(loadSyncStatus, 30000);
     return () => clearInterval(interval);
   }, [loadSyncStatus]);
 

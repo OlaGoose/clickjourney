@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useOptionalAuth } from '@/lib/auth';
 import type { Locale } from './locales';
 import {
   DEFAULT_LOCALE,
@@ -78,17 +78,22 @@ interface LocaleContextValue {
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const { profile, isAuthenticated, updateProfile } = useAuth();
+  const auth = useOptionalAuth();
+  // Only read locale-relevant fields to avoid re-renders from unrelated auth changes
+  const profileLocaleRaw = auth?.profile?.settings?.locale;
+  const isAuthenticated = auth?.isAuthenticated ?? false;
+  const profileSettings = auth?.profile?.settings;
+  const updateProfile = auth?.updateProfile;
+
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
   const [isReady, setIsReady] = useState(false);
 
   // Resolve initial locale: user profile (logged in) → localStorage → browser → en
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const fromProfile = isAuthenticated && profile?.settings?.locale;
     const profileLocale =
-      typeof fromProfile === 'string' && SUPPORTED_LOCALES.includes(fromProfile as Locale)
-        ? (fromProfile as Locale)
+      typeof profileLocaleRaw === 'string' && SUPPORTED_LOCALES.includes(profileLocaleRaw as Locale)
+        ? (profileLocaleRaw as Locale)
         : null;
     const stored = getStoredLocale();
     const browser = getBrowserLocale();
@@ -100,7 +105,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       document.documentElement.lang = next === 'zh-Hans' ? 'zh-Hans' : next;
     }
     setIsReady(true);
-  }, [isAuthenticated, profile?.settings]);
+  }, [profileLocaleRaw]);
 
   const setLocale = useCallback(
     (newLocale: Locale) => {
@@ -110,13 +115,13 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
         document.documentElement.lang =
           newLocale === 'zh-Hans' ? 'zh-Hans' : newLocale;
       }
-      if (isAuthenticated && profile) {
+      if (isAuthenticated && profileSettings && updateProfile) {
         updateProfile({
-          settings: { ...profile.settings, locale: newLocale },
+          settings: { ...profileSettings, locale: newLocale },
         }).catch(() => {});
       }
     },
-    [isAuthenticated, profile, updateProfile]
+    [isAuthenticated, profileSettings, updateProfile]
   );
 
   const t = useCallback(

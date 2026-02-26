@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { SupabaseAuthService } from './supabase-auth';
 import {
   isLocalDevelopment,
@@ -176,19 +176,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return r;
   }, [user, refreshProfile]);
 
-  const value: AuthContextType = {
-    user,
-    profile,
-    session,
-    isLoading,
-    isAuthenticated: !!user,
-    signIn,
-    signUp,
-    signInWithOAuth,
-    signOut,
-    refreshProfile,
-    updateProfile,
-  };
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      profile,
+      session,
+      isLoading,
+      isAuthenticated: !!user,
+      signIn,
+      signUp,
+      signInWithOAuth,
+      signOut,
+      refreshProfile,
+      updateProfile,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user, profile, session, isLoading, signIn, signUp, signInWithOAuth, signOut, refreshProfile, updateProfile]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

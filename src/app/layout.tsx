@@ -1,8 +1,24 @@
 import type { Metadata, Viewport } from 'next';
+import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth';
 import { LocaleProvider } from '@/lib/i18n';
 import { DatabaseProvider } from '@/lib/db/init';
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const playfairDisplay = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['400', '600', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-playfair',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Orbit Journey – Travel Memory',
@@ -20,15 +36,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${playfairDisplay.variable}`}>
       <head>
         <link rel="icon" href="/favicon.ico" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link 
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" 
-          rel="stylesheet" 
-        />
       </head>
       <body>
         <AuthProvider>

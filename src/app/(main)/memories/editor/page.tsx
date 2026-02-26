@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Edit2 } from 'lucide-react';
 import { EditorHeader } from '@/components/editor/EditorHeader';
@@ -24,195 +24,6 @@ const STORAGE_KEY = 'travel-editor-draft';
 function generateId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
-
-function TravelEditorContent() {
-  const router = useRouter();
-  const auth = useOptionalAuth();
-  const { t } = useLocale();
-  const userId = auth?.user?.id ?? null;
-
-  const [editorData, setEditorData] = useState<TravelEditorData>({
-    title: '',
-    description: '',
-    location: '',
-    blocks: [],
-  });
-
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-  const [editingBlock, setEditingBlock] = useState<ContentBlockType | null>(null);
-  const [editingTarget, setEditingTarget] = useState<'title' | 'description' | null>(null);
-  const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
-  const [newlyAddedBlockId, setNewlyAddedBlockId] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [titleFocused, setTitleFocused] = useState(false);
-  const [descriptionFocused, setDescriptionFocused] = useState(false);
-  const saveInProgressRef = useRef(false);
-
-  const searchParams = useSearchParams();
-  const editId = searchParams.get('id');
-
-  // Load: from edit id (memory), from upload (sessionStorage), or draft (localStorage)
-  useEffect(() => {
-    const fromUpload = sessionStorage.getItem('editor-images');
-    if (fromUpload) {
-      try {
-        const imageUrls: string[] = JSON.parse(fromUpload);
-        const description = sessionStorage.getItem('editor-description') || '';
-        const location = sessionStorage.getItem('editor-location') || '';
-        sessionStorage.removeItem('editor-images');
-        sessionStorage.removeItem('editor-description');
-        sessionStorage.removeItem('editor-location');
-        setEditorData({
-          title: '',
-          description: description,
-          location: location,
-          blocks: imageUrls.length
-            ? [
-                {
-                  id: generateId(),
-                  type: 'image',
-                  content: imageUrls[0] ?? '',
-                  order: 0,
-                  metadata: { images: imageUrls },
-                },
-              ]
-            : [],
-        });
-        return;
-      } catch (e) {
-        console.error('Failed to parse editor-images:', e);
-        sessionStorage.removeItem('editor-images');
-        sessionStorage.removeItem('editor-description');
-        sessionStorage.removeItem('editor-location');
-      }
-    }
-
-    if (editId) {
-      MemoryService.getMemory(editId).then((memory) => {
-        if (memory && (memory.type === 'rich-story' || (memory.editorBlocks != null && memory.editorBlocks.length > 0))) {
-          const blocks = memory.editorBlocks ?? [];
-          const normalized = blocks.map((b) => ({
-            ...b,
-            metadata: b.metadata?.images ? { ...b.metadata, images: b.metadata.images } : b.metadata,
-          }));
-          const location = memory.coordinates?.name ?? memory.subtitle ?? '';
-          setEditorData({
-            title: memory.detailTitle ?? memory.title ?? '',
-            description: memory.description ?? '',
-            location: typeof location === 'string' ? location : '',
-            blocks: normalized.length > 0 ? normalized : (memory.richContent ? [] : []),
-          });
-        } else if (memory) {
-          const location = memory.coordinates?.name ?? memory.subtitle ?? '';
-          setEditorData({
-            title: memory.detailTitle ?? memory.title ?? '',
-            description: memory.description ?? '',
-            location: typeof location === 'string' ? location : '',
-            blocks: [],
-          });
-        }
-      });
-      return;
-    }
-
-    const savedDraft = localStorage.getItem(STORAGE_KEY);
-    if (savedDraft) {
-      try {
-        const draft = JSON.parse(savedDraft);
-        setEditorData(draft);
-      } catch (e) {
-        console.error('Failed to load draft:', e);
-      }
-    }
-  }, [editId]);
-
-  // Auto-save to localStorage
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(editorData));
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [editorData]);
-
-  const handleBack = useCallback(() => {
-    const shouldLeave = confirm(t('editor.confirmLeave'));
-    if (shouldLeave) {
-      localStorage.removeItem(STORAGE_KEY);
-      router.back();
-    }
-  }, [router, t]);
-
-  const handleSave = useCallback(async () => {
-    if (saveInProgressRef.current) return;
-    if (!editorData.title.trim()) {
-      alert(t('editor.enterTitle'));
-      return;
-    }
-
-    const allImages = collectImagesFromBlocks(editorData.blocks);
-    if (allImages.length === 0) {
-      alert(t('editor.addOnePhoto'));
-      return;
-    }
-
-    saveInProgressRef.current = true;
-    setIsSaving(true);
-
-    const locationStr = (editorData.location ?? '').trim();
-    const coordinates = locationStr ? resolveCoordinatesForLocation(locationStr) : undefined;
-
-    let blocksToSave = editorData.blocks;
-    try {
-      blocksToSave = await resolveBlobUrlsInBlocks(editorData.blocks, userId);
-    } catch (e) {
-      console.error('Failed to resolve blob URLs for save:', e);
-    }
-    const resolvedImages = collectImagesFromBlocks(blocksToSave);
-
-    const memoryData = {
-      type: 'rich-story' as const,
-      title: editorData.title,
-      subtitle: locationStr || editorData.description.slice(0, 50) || t('editor.travelMemory'),
-      detailTitle: editorData.title,
-      description: editorData.description,
-      image: resolvedImages[0] ?? '',
-      gallery: resolvedImages,
-      color: '#3B82F6',
-      chord: [0.2, 0.4, 0.6],
-      category: t('editor.travelMemory'),
-      richContent: generateRichContent(editorData),
-      editorBlocks: blocksToSave,
-      ...(coordinates && { coordinates }),
-    };
-
-    try {
-      if (editId) {
-        const { data, error } = await updateMemory(userId, editId, memoryData);
-        if (error) throw new Error(error);
-        console.log('Memory updated:', data);
-      } else if (userId) {
-        const { data, error } = await saveMemory(userId, memoryData);
-        if (error) throw new Error(error);
-        console.log('Memory saved:', data);
-      } else {
-        const localMemories = JSON.parse(localStorage.getItem('local-memories') || '[]');
-        const newMemory = { ...memoryData, id: generateId() };
-        localMemories.push(newMemory);
-        localStorage.setItem('local-memories', JSON.stringify(localMemories));
-      }
-
-      localStorage.removeItem(STORAGE_KEY);
-      alert(editId ? t('editor.updateSuccess') : t('editor.saveSuccess'));
-      router.push(editId ? `/memories/${editId}` : '/');
-    } catch (error) {
-      console.error('Failed to save:', error);
-      alert(t('editor.saveFailed'));
-    } finally {
-      saveInProgressRef.current = false;
-      setIsSaving(false);
-    }
-  }, [editorData, userId, router, editId, t]);
 
 /** Collect all image URLs from image, cinematic, and section blocks. */
 function collectImagesFromBlocks(blocks: TravelEditorData['blocks']): string[] {
@@ -271,392 +82,12 @@ async function resolveBlobUrlsInBlocks(
   });
 }
 
-  const handleOpenAddPanel = useCallback(() => {
-    setEditingBlock(null);
-    setIsEditPanelOpen(true);
-  }, []);
-
-  const handleSelectType = useCallback((type: ContentBlockType['type']) => {
-    const newBlock: ContentBlockType = {
-      id: generateId(),
-      type,
-      content: '',
-      order: editorData.blocks.length,
-    };
-
-    setEditorData(prev => ({
-      ...prev,
-      blocks: [...prev.blocks, newBlock],
-    }));
-
-    setEditingBlock(newBlock);
-    setSelectedBlockId(newBlock.id);
-    setNewlyAddedBlockId(newBlock.id);
-    if (type === 'text') {
-      setIsEditPanelOpen(false);
-    }
-  }, [editorData.blocks.length]);
-
-  const handleSelectCinematicTemplate = useCallback((layout: LayoutType) => {
-    const newBlock: ContentBlockType = {
-      id: generateId(),
-      type: 'cinematic',
-      content: '',
-      order: editorData.blocks.length,
-      metadata: {
-        cinematicLayout: layout,
-        cinematicImage: getCinematicPlaceholderImage(),
-      },
-    };
-    setEditorData(prev => ({
-      ...prev,
-      blocks: [...prev.blocks, newBlock],
-    }));
-    setEditingBlock(newBlock);
-    setSelectedBlockId(newBlock.id);
-    setNewlyAddedBlockId(newBlock.id);
-  }, [editorData.blocks.length]);
-
-  const handleSelectSectionTemplate = useCallback((templateId: SectionTemplateId) => {
-    const newBlock: ContentBlockType = {
-      id: generateId(),
-      type: 'section',
-      content: '',
-      order: editorData.blocks.length,
-      metadata: {
-        sectionTemplateId: templateId,
-        sectionData: getDefaultSectionData(templateId),
-      },
-    };
-    setEditorData(prev => ({
-      ...prev,
-      blocks: [...prev.blocks, newBlock],
-    }));
-    setEditingBlock(newBlock);
-    setSelectedBlockId(newBlock.id);
-    setNewlyAddedBlockId(newBlock.id);
-    setIsEditPanelOpen(true);
-  }, [editorData.blocks.length]);
-
-  const handleInsertGeneratedContent = useCallback((html: string) => {
-    const newBlock: ContentBlockType = {
-      id: generateId(),
-      type: 'richtext',
-      content: html,
-      order: editorData.blocks.length,
-    };
-    setEditorData(prev => ({
-      ...prev,
-      blocks: [...prev.blocks, newBlock],
-    }));
-    setSelectedBlockId(newBlock.id);
-    setIsEditPanelOpen(false);
-    setEditingBlock(null);
-  }, [editorData.blocks.length]);
-
-  const handleInsertGeneratedBlocks = useCallback((blocks: AIGeneratedDocBlock[], imageUrls: string[]) => {
-    const baseOrder = editorData.blocks.length;
-    const newBlocks: ContentBlockType[] = blocks.map((b, i) => {
-      const id = generateId();
-      const order = baseOrder + i;
-      if (b.type === 'richtext') {
-        return { id, type: 'richtext', content: b.content ?? '', order };
-      }
-      if (b.type === 'text') {
-        return { id, type: 'text', content: b.content ?? '', order };
-      }
-      if (b.type === 'image') {
-        const idx = Math.max(0, Math.min(b.imageIndex ?? 0, imageUrls.length - 1));
-        const url = imageUrls[idx];
-        return {
-          id,
-          type: 'image',
-          content: url ?? '',
-          order,
-          metadata: { images: url ? [url] : [] },
-        };
-      }
-      return { id, type: 'text', content: '', order };
-    });
-    setEditorData(prev => ({
-      ...prev,
-      blocks: [...prev.blocks, ...newBlocks],
-    }));
-    if (newBlocks.length > 0) setSelectedBlockId(newBlocks[0].id);
-    setIsEditPanelOpen(false);
-    setEditingBlock(null);
-  }, [editorData.blocks.length]);
-
-  const handleTextBlockChange = useCallback((blockId: string, content: string) => {
-    setEditorData(prev => ({
-      ...prev,
-      blocks: prev.blocks.map(b =>
-        b.id === blockId ? { ...b, content } : b
-      ),
-    }));
-  }, []);
-
-  const handleBlockClick = useCallback((blockId: string) => {
-    setSelectedBlockId((prev) => (prev === blockId ? prev : blockId));
-  }, []);
-
-  const handleDeselectBlocks = useCallback(() => {
-    setSelectedBlockId(null);
-  }, []);
-
-  const handleEditBlock = useCallback((blockId: string) => {
-    const block = editorData.blocks.find(b => b.id === blockId);
-    if (block) {
-      setEditingBlock(block);
-      setNewlyAddedBlockId(null);
-      setIsEditPanelOpen(true);
-    }
-  }, [editorData.blocks]);
-
-  const handleSaveBlock = useCallback((updatedBlock: ContentBlockType) => {
-    setNewlyAddedBlockId((prev) => (prev === updatedBlock.id ? null : prev));
-    setEditorData(prev => ({
-      ...prev,
-      blocks: prev.blocks.map(b =>
-        b.id === updatedBlock.id ? updatedBlock : b
-      ),
-    }));
-  }, []);
-
-  const handleDeleteBlock = useCallback(() => {
-    if (!editingBlock) return;
-
-    const shouldDelete = confirm(t('editor.confirmDeleteBlock'));
-    if (shouldDelete) {
-      setEditorData(prev => ({
-        ...prev,
-        blocks: prev.blocks.filter(b => b.id !== editingBlock.id),
-      }));
-      setIsEditPanelOpen(false);
-      setEditingBlock(null);
-      setSelectedBlockId(null);
-    }
-  }, [editingBlock, t]);
-
-  const handleCloseEditPanel = useCallback(() => {
-    setIsEditPanelOpen(false);
-    setEditingBlock(null);
-    setEditingTarget(null);
-    setNewlyAddedBlockId(null);
-  }, []);
-
-  const handleSaveTitle = useCallback((data: { title: string; titleStyle?: TitleStyle }) => {
-    setEditorData(prev => ({ ...prev, title: data.title, titleStyle: data.titleStyle }));
-  }, []);
-
-  const handleSaveDescription = useCallback((data: { description: string; descriptionStyle?: TitleStyle }) => {
-    setEditorData(prev => ({ ...prev, description: data.description, descriptionStyle: data.descriptionStyle }));
-  }, []);
-
-  const handleDiscardBlock = useCallback(() => {
-    if (!editingBlock) return;
-    setEditorData((prev) => ({
-      ...prev,
-      blocks: prev.blocks.filter((b) => b.id !== editingBlock.id),
-    }));
-    setSelectedBlockId(null);
-    setIsEditPanelOpen(false);
-    setEditingBlock(null);
-  }, [editingBlock]);
-
-  const handleCinematicBlockUpdate = useCallback((blockId: string, updates: Partial<StoryBlock>) => {
-    setEditorData(prev => ({
-      ...prev,
-      blocks: prev.blocks.map(b => {
-        if (b.id !== blockId || b.type !== 'cinematic') return b;
-        return {
-          ...b,
-          content: updates.text !== undefined ? updates.text : b.content,
-          metadata: {
-            ...b.metadata,
-            ...(updates.image !== undefined && { cinematicImage: updates.image }),
-            ...(updates.imageFilter !== undefined && { imageFilter: updates.imageFilter }),
-            ...(updates.mood !== undefined && { mood: updates.mood }),
-          },
-        };
-      }),
-    }));
-  }, []);
-
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col animate-fadeIn font-sans bg-[#fbfbfd] text-[#1d1d1f]">
-      <EditorHeader
-        onBack={handleBack}
-        onSave={handleSave}
-        isSaving={isSaving}
-      />
-
-      <div
-        className="no-scrollbar flex-1 overflow-y-auto pb-24 pt-[44px]"
-        onClick={handleDeselectBlocks}
-        role="presentation"
-      >
-        <div className="px-8 pt-4 max-w-2xl mx-auto">
-          {/* Header block: title + location + description — 一体感，默认居中，间距紧凑 */}
-          <header className="space-y-2 text-center">
-            <div
-              className="relative"
-              onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setTitleFocused(false); }}
-            >
-              <input
-                type="text"
-                value={editorData.title}
-                onChange={(e) =>
-                  setEditorData(prev => ({ ...prev, title: e.target.value }))
-                }
-                onFocus={() => setTitleFocused(true)}
-                placeholder={t('editor.title')}
-                className="w-full font-bold focus:outline-none bg-transparent placeholder:text-[#86868b]"
-                style={{
-                  fontSize: editorData.titleStyle?.fontSize === 'small' ? '1.25rem' : editorData.titleStyle?.fontSize === 'large' ? '1.75rem' : '1.5rem',
-                  color: editorData.titleStyle?.textColor ?? '#1d1d1f',
-                  textAlign: editorData.titleStyle?.textAlign ?? 'center',
-                }}
-                maxLength={100}
-              />
-              {titleFocused && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingBlock(null);
-                    setEditingTarget('title');
-                    setIsEditPanelOpen(true);
-                  }}
-                  className="absolute top-0 right-0 z-10 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
-                  aria-label={t('editor.editTitle')}
-                >
-                  <Edit2 size={10} strokeWidth={2.5} />
-                  <span>{t('common.edit')}</span>
-                </button>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="editor-location" className="sr-only">
-                {t('cinematic.location')}
-              </label>
-              <input
-                id="editor-location"
-                type="text"
-                value={editorData.location ?? ''}
-                onChange={(e) =>
-                  setEditorData(prev => ({ ...prev, location: e.target.value }))
-                }
-                placeholder={t('upload.locationPlaceholder')}
-                className="w-full text-sm text-center text-[#86868b] focus:text-[#1d1d1f] focus:outline-none bg-transparent placeholder:text-[#86868b]"
-                maxLength={120}
-              />
-            </div>
-
-            <div
-              className="relative"
-              onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDescriptionFocused(false); }}
-            >
-              <textarea
-                value={editorData.description}
-                onChange={(e) =>
-                  setEditorData(prev => ({ ...prev, description: e.target.value }))
-                }
-                onFocus={() => setDescriptionFocused(true)}
-                placeholder={t('editor.description')}
-                className="w-full resize-none focus:outline-none bg-transparent rounded-xl py-2 placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80 text-sm"
-                style={{
-                  minHeight: 56,
-                  fontSize: editorData.descriptionStyle?.fontSize === 'small' ? 13 : editorData.descriptionStyle?.fontSize === 'large' ? 17 : 14,
-                  color: editorData.descriptionStyle?.textColor ?? '#1d1d1f',
-                  textAlign: editorData.descriptionStyle?.textAlign ?? 'center',
-                }}
-                rows={1}
-                maxLength={500}
-              />
-              {descriptionFocused && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingBlock(null);
-                    setEditingTarget('description');
-                    setIsEditPanelOpen(true);
-                  }}
-                  className="absolute top-0 right-0 z-10 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
-                  aria-label={t('editor.editDescription')}
-                >
-                  <Edit2 size={10} strokeWidth={2.5} />
-                  <span>{t('common.edit')}</span>
-                </button>
-              )}
-            </div>
-          </header>
-
-          {/* Content Blocks — 与 header 拉开间距，块间距 12px */}
-          <div className="space-y-3">
-            {editorData.blocks
-              .sort((a, b) => a.order - b.order)
-              .map((block, index) => (
-                <ContentBlock
-                  key={block.id}
-                  block={block}
-                  index={index}
-                  isSelected={selectedBlockId === block.id}
-                  onClick={() => handleBlockClick(block.id)}
-                  onEdit={() => handleEditBlock(block.id)}
-                  onTextChange={handleTextBlockChange}
-                  onCinematicUpdate={handleCinematicBlockUpdate}
-                />
-              ))}
-          </div>
-
-          {/* Add Block — fixed at bottom, no wrapper background, safe area */}
-          <div
-            className="fixed left-0 right-0 z-10 flex justify-center items-center pointer-events-none"
-            style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}
-          >
-            <div className="pointer-events-auto flex justify-center w-full max-w-[280px] px-4">
-              <AddBlockButton onAddClick={handleOpenAddPanel} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Edit Panel — type picker when block is null; title/description editor when editingTarget set; block editor otherwise */}
-      <EditPanel
-        isOpen={isEditPanelOpen}
-        onClose={handleCloseEditPanel}
-        block={editingBlock}
-        isNewlyAddedBlock={editingBlock != null && editingBlock.id === newlyAddedBlockId}
-        editingTarget={editingTarget}
-        titleData={{ title: editorData.title, titleStyle: editorData.titleStyle }}
-        descriptionData={{ description: editorData.description, descriptionStyle: editorData.descriptionStyle }}
-        onSaveTitle={handleSaveTitle}
-        onSaveDescription={handleSaveDescription}
-        onSave={handleSaveBlock}
-        onDelete={handleDeleteBlock}
-        onDiscard={handleDiscardBlock}
-        onSelectType={handleSelectType}
-        onSelectCinematicTemplate={handleSelectCinematicTemplate}
-        onSelectSectionTemplate={handleSelectSectionTemplate}
-        onInsertGeneratedContent={handleInsertGeneratedContent}
-        onInsertGeneratedBlocks={handleInsertGeneratedBlocks}
-      />
-    </div>
-  );
-}
-
-/**
- * Generate rich HTML content from editor blocks
- * This can be enhanced later with a proper rich text format
- */
 function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
-/** Emit semantic HTML for a section block (for rich story / saved memory). */
 function sectionBlockToHtml(
   templateId: SectionTemplateId | undefined,
   data: SectionBlockData | undefined
@@ -686,21 +117,16 @@ function sectionBlockToHtml(
 
 function generateRichContent(data: TravelEditorData): string {
   let html = '';
-
   data.blocks.forEach((block) => {
     switch (block.type) {
       case 'text':
         html += `<p>${escapeHtml(block.content)}</p>`;
         break;
       case 'richtext':
-        if (block.content) {
-          html += block.content;
-        }
+        if (block.content) html += block.content;
         break;
       case 'image':
-        if (block.content) {
-          html += `<img src="${escapeHtml(block.content)}" alt="Travel memory" />`;
-        }
+        if (block.content) html += `<img src="${escapeHtml(block.content)}" alt="Travel memory" />`;
         break;
       case 'cinematic': {
         const img = block.metadata?.cinematicImage;
@@ -708,10 +134,9 @@ function generateRichContent(data: TravelEditorData): string {
         if (block.content) html += `<p>${escapeHtml(block.content)}</p>`;
         break;
       }
-      case 'section': {
+      case 'section':
         html += sectionBlockToHtml(block.metadata?.sectionTemplateId, block.metadata?.sectionData);
         break;
-      }
       case 'divider': {
         const style = block.metadata?.dividerStyle ?? 'default';
         if (style === 'accent') {
@@ -722,19 +147,539 @@ function generateRichContent(data: TravelEditorData): string {
         break;
       }
       case 'video':
-        if (block.content) {
-          html += `<video src="${escapeHtml(block.content)}" controls></video>`;
-        }
+        if (block.content) html += `<video src="${escapeHtml(block.content)}" controls></video>`;
         break;
       case 'audio':
-        if (block.content) {
-          html += `<audio src="${escapeHtml(block.content)}" controls></audio>`;
-        }
+        if (block.content) html += `<audio src="${escapeHtml(block.content)}" controls></audio>`;
         break;
     }
   });
-
   return html;
+}
+
+function TravelEditorContent() {
+  const router = useRouter();
+  const auth = useOptionalAuth();
+  const { t } = useLocale();
+  const userId = auth?.user?.id ?? null;
+
+  // ─── Split state: header fields vs blocks ───────────────────────────────────
+  // Separating title/description/location from blocks means typing in header
+  // fields does NOT trigger ContentBlock re-renders (blocks state unchanged).
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [location, setLocation] = useState('');
+  const [titleStyle, setTitleStyle] = useState<TitleStyle | undefined>(undefined);
+  const [descriptionStyle, setDescriptionStyle] = useState<TitleStyle | undefined>(undefined);
+  const [blocks, setBlocks] = useState<ContentBlockType[]>([]);
+
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [editingBlock, setEditingBlock] = useState<ContentBlockType | null>(null);
+  const [editingTarget, setEditingTarget] = useState<'title' | 'description' | null>(null);
+  const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+  const [newlyAddedBlockId, setNewlyAddedBlockId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [titleFocused, setTitleFocused] = useState(false);
+  const [descriptionFocused, setDescriptionFocused] = useState(false);
+  const saveInProgressRef = useRef(false);
+  // Refs that are always current — let zero-dependency callbacks read live state
+  const blocksLengthRef = useRef(0);
+  const blocksRef = useRef<ContentBlockType[]>([]);
+  const editingBlockRef = useRef<ContentBlockType | null>(null);
+  useEffect(() => { blocksLengthRef.current = blocks.length; blocksRef.current = blocks; }, [blocks]);
+  useEffect(() => { editingBlockRef.current = editingBlock; }, [editingBlock]);
+
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('id');
+
+  // Load: from edit id (memory), from upload (sessionStorage), or draft (localStorage)
+  useEffect(() => {
+    const fromUpload = sessionStorage.getItem('editor-images');
+    if (fromUpload) {
+      try {
+        const imageUrls: string[] = JSON.parse(fromUpload);
+        const desc = sessionStorage.getItem('editor-description') || '';
+        const loc = sessionStorage.getItem('editor-location') || '';
+        sessionStorage.removeItem('editor-images');
+        sessionStorage.removeItem('editor-description');
+        sessionStorage.removeItem('editor-location');
+        setTitle('');
+        setDescription(desc);
+        setLocation(loc);
+        setBlocks(
+          imageUrls.length
+            ? [{ id: generateId(), type: 'image', content: imageUrls[0] ?? '', order: 0, metadata: { images: imageUrls } }]
+            : []
+        );
+        return;
+      } catch (e) {
+        console.error('Failed to parse editor-images:', e);
+        sessionStorage.removeItem('editor-images');
+        sessionStorage.removeItem('editor-description');
+        sessionStorage.removeItem('editor-location');
+      }
+    }
+
+    if (editId) {
+      MemoryService.getMemory(editId).then((memory) => {
+        if (memory && (memory.type === 'rich-story' || (memory.editorBlocks != null && memory.editorBlocks.length > 0))) {
+          const rawBlocks = memory.editorBlocks ?? [];
+          const normalized = rawBlocks.map((b) => ({
+            ...b,
+            metadata: b.metadata?.images ? { ...b.metadata, images: b.metadata.images } : b.metadata,
+          }));
+          const loc = memory.coordinates?.name ?? memory.subtitle ?? '';
+          setTitle(memory.detailTitle ?? memory.title ?? '');
+          setDescription(memory.description ?? '');
+          setLocation(typeof loc === 'string' ? loc : '');
+          setBlocks(normalized);
+        } else if (memory) {
+          const loc = memory.coordinates?.name ?? memory.subtitle ?? '';
+          setTitle(memory.detailTitle ?? memory.title ?? '');
+          setDescription(memory.description ?? '');
+          setLocation(typeof loc === 'string' ? loc : '');
+          setBlocks([]);
+        }
+      });
+      return;
+    }
+
+    const savedDraft = localStorage.getItem(STORAGE_KEY);
+    if (savedDraft) {
+      try {
+        const draft: TravelEditorData = JSON.parse(savedDraft);
+        setTitle(draft.title ?? '');
+        setDescription(draft.description ?? '');
+        setLocation(draft.location ?? '');
+        setTitleStyle(draft.titleStyle);
+        setDescriptionStyle(draft.descriptionStyle);
+        setBlocks(draft.blocks ?? []);
+      } catch (e) {
+        console.error('Failed to load draft:', e);
+      }
+    }
+  }, [editId]);
+
+  // Auto-save to localStorage (debounced, assembles full data only for storage)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const draft: TravelEditorData = { title, description, location, titleStyle, descriptionStyle, blocks };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [title, description, location, titleStyle, descriptionStyle, blocks]);
+
+  // Stable sorted blocks — avoids creating a new array every render
+  const sortedBlocks = useMemo(
+    () => [...blocks].sort((a, b) => a.order - b.order),
+    [blocks]
+  );
+
+  const handleBack = useCallback(() => {
+    const shouldLeave = confirm(t('editor.confirmLeave'));
+    if (shouldLeave) {
+      localStorage.removeItem(STORAGE_KEY);
+      router.back();
+    }
+  }, [router, t]);
+
+  const handleSave = useCallback(async () => {
+    if (saveInProgressRef.current) return;
+    if (!title.trim()) {
+      alert(t('editor.enterTitle'));
+      return;
+    }
+
+    const allImages = collectImagesFromBlocks(blocks);
+    if (allImages.length === 0) {
+      alert(t('editor.addOnePhoto'));
+      return;
+    }
+
+    saveInProgressRef.current = true;
+    setIsSaving(true);
+
+    const locationStr = (location ?? '').trim();
+    const coordinates = locationStr ? resolveCoordinatesForLocation(locationStr) : undefined;
+
+    let blocksToSave = blocks;
+    try {
+      blocksToSave = await resolveBlobUrlsInBlocks(blocks, userId);
+    } catch (e) {
+      console.error('Failed to resolve blob URLs for save:', e);
+    }
+    const resolvedImages = collectImagesFromBlocks(blocksToSave);
+
+    const editorDataForHtml: TravelEditorData = { title, description, location, blocks: blocksToSave };
+    const memoryData = {
+      type: 'rich-story' as const,
+      title,
+      subtitle: locationStr || description.slice(0, 50) || t('editor.travelMemory'),
+      detailTitle: title,
+      description,
+      image: resolvedImages[0] ?? '',
+      gallery: resolvedImages,
+      color: '#3B82F6',
+      chord: [0.2, 0.4, 0.6],
+      category: t('editor.travelMemory'),
+      richContent: generateRichContent(editorDataForHtml),
+      editorBlocks: blocksToSave,
+      ...(coordinates && { coordinates }),
+    };
+
+    try {
+      if (editId) {
+        const { data, error } = await updateMemory(userId, editId, memoryData);
+        if (error) throw new Error(error);
+        console.log('Memory updated:', data);
+      } else if (userId) {
+        const { data, error } = await saveMemory(userId, memoryData);
+        if (error) throw new Error(error);
+        console.log('Memory saved:', data);
+      } else {
+        const localMemories = JSON.parse(localStorage.getItem('local-memories') || '[]');
+        const newMemory = { ...memoryData, id: generateId() };
+        localMemories.push(newMemory);
+        localStorage.setItem('local-memories', JSON.stringify(localMemories));
+      }
+
+      localStorage.removeItem(STORAGE_KEY);
+      alert(editId ? t('editor.updateSuccess') : t('editor.saveSuccess'));
+      router.push(editId ? `/memories/${editId}` : '/');
+    } catch (error) {
+      console.error('Failed to save:', error);
+      alert(t('editor.saveFailed'));
+    } finally {
+      saveInProgressRef.current = false;
+      setIsSaving(false);
+    }
+  }, [title, description, location, blocks, userId, router, editId, t]);
+
+  const handleOpenAddPanel = useCallback(() => {
+    setEditingBlock(null);
+    setIsEditPanelOpen(true);
+  }, []);
+
+  // Use ref to read current blocks length without making callbacks depend on it
+  const handleSelectType = useCallback((type: ContentBlockType['type']) => {
+    const newBlock: ContentBlockType = {
+      id: generateId(),
+      type,
+      content: '',
+      order: blocksLengthRef.current,
+    };
+    setBlocks(prev => [...prev, newBlock]);
+    setEditingBlock(newBlock);
+    setSelectedBlockId(newBlock.id);
+    setNewlyAddedBlockId(newBlock.id);
+    if (type === 'text') {
+      setIsEditPanelOpen(false);
+    }
+  }, []);
+
+  const handleSelectCinematicTemplate = useCallback((layout: LayoutType) => {
+    const newBlock: ContentBlockType = {
+      id: generateId(),
+      type: 'cinematic',
+      content: '',
+      order: blocksLengthRef.current,
+      metadata: {
+        cinematicLayout: layout,
+        cinematicImage: getCinematicPlaceholderImage(),
+      },
+    };
+    setBlocks(prev => [...prev, newBlock]);
+    setEditingBlock(newBlock);
+    setSelectedBlockId(newBlock.id);
+    setNewlyAddedBlockId(newBlock.id);
+  }, []);
+
+  const handleSelectSectionTemplate = useCallback((templateId: SectionTemplateId) => {
+    const newBlock: ContentBlockType = {
+      id: generateId(),
+      type: 'section',
+      content: '',
+      order: blocksLengthRef.current,
+      metadata: {
+        sectionTemplateId: templateId,
+        sectionData: getDefaultSectionData(templateId),
+      },
+    };
+    setBlocks(prev => [...prev, newBlock]);
+    setEditingBlock(newBlock);
+    setSelectedBlockId(newBlock.id);
+    setNewlyAddedBlockId(newBlock.id);
+    setIsEditPanelOpen(true);
+  }, []);
+
+  const handleInsertGeneratedContent = useCallback((html: string) => {
+    const newBlock: ContentBlockType = {
+      id: generateId(),
+      type: 'richtext',
+      content: html,
+      order: blocksLengthRef.current,
+    };
+    setBlocks(prev => [...prev, newBlock]);
+    setSelectedBlockId(newBlock.id);
+    setIsEditPanelOpen(false);
+    setEditingBlock(null);
+  }, []);
+
+  const handleInsertGeneratedBlocks = useCallback((aiBlocks: AIGeneratedDocBlock[], imageUrls: string[]) => {
+    const baseOrder = blocksLengthRef.current;
+    const newBlocks: ContentBlockType[] = aiBlocks.map((b, i) => {
+      const id = generateId();
+      const order = baseOrder + i;
+      if (b.type === 'richtext') return { id, type: 'richtext', content: b.content ?? '', order };
+      if (b.type === 'text') return { id, type: 'text', content: b.content ?? '', order };
+      if (b.type === 'image') {
+        const idx = Math.max(0, Math.min(b.imageIndex ?? 0, imageUrls.length - 1));
+        const url = imageUrls[idx];
+        return { id, type: 'image', content: url ?? '', order, metadata: { images: url ? [url] : [] } };
+      }
+      return { id, type: 'text', content: '', order };
+    });
+    setBlocks(prev => [...prev, ...newBlocks]);
+    if (newBlocks.length > 0) setSelectedBlockId(newBlocks[0].id);
+    setIsEditPanelOpen(false);
+    setEditingBlock(null);
+  }, []);
+
+  const handleTextBlockChange = useCallback((blockId: string, content: string) => {
+    setBlocks(prev =>
+      prev.map(b => b.id === blockId ? { ...b, content } : b)
+    );
+  }, []);
+
+  const handleBlockClick = useCallback((blockId: string) => {
+    setSelectedBlockId((prev) => (prev === blockId ? prev : blockId));
+  }, []);
+
+  const handleDeselectBlocks = useCallback(() => {
+    setSelectedBlockId(null);
+  }, []);
+
+  const handleEditBlock = useCallback((blockId: string) => {
+    const block = blocksRef.current.find(b => b.id === blockId);
+    if (block) {
+      setEditingBlock(block);
+      setNewlyAddedBlockId(null);
+      setIsEditPanelOpen(true);
+    }
+  }, []);
+
+  const handleSaveBlock = useCallback((updatedBlock: ContentBlockType) => {
+    setNewlyAddedBlockId((prev) => (prev === updatedBlock.id ? null : prev));
+    setBlocks(prev =>
+      prev.map(b => b.id === updatedBlock.id ? updatedBlock : b)
+    );
+  }, []);
+
+  const handleDeleteBlock = useCallback(() => {
+    const block = editingBlockRef.current;
+    if (!block) return;
+    const shouldDelete = confirm(t('editor.confirmDeleteBlock'));
+    if (shouldDelete) {
+      setBlocks(prev => prev.filter(b => b.id !== block.id));
+      setIsEditPanelOpen(false);
+      setEditingBlock(null);
+      setSelectedBlockId(null);
+    }
+  }, [t]);
+
+  const handleCloseEditPanel = useCallback(() => {
+    setIsEditPanelOpen(false);
+    setEditingBlock(null);
+    setEditingTarget(null);
+    setNewlyAddedBlockId(null);
+  }, []);
+
+  const handleSaveTitle = useCallback((data: { title: string; titleStyle?: TitleStyle }) => {
+    setTitle(data.title);
+    setTitleStyle(data.titleStyle);
+  }, []);
+
+  const handleSaveDescription = useCallback((data: { description: string; descriptionStyle?: TitleStyle }) => {
+    setDescription(data.description);
+    setDescriptionStyle(data.descriptionStyle);
+  }, []);
+
+  const handleDiscardBlock = useCallback(() => {
+    const block = editingBlockRef.current;
+    if (!block) return;
+    setBlocks(prev => prev.filter(b => b.id !== block.id));
+    setSelectedBlockId(null);
+    setIsEditPanelOpen(false);
+    setEditingBlock(null);
+  }, []);
+
+  const handleCinematicBlockUpdate = useCallback((blockId: string, updates: Partial<StoryBlock>) => {
+    setBlocks(prev =>
+      prev.map(b => {
+        if (b.id !== blockId || b.type !== 'cinematic') return b;
+        return {
+          ...b,
+          content: updates.text !== undefined ? updates.text : b.content,
+          metadata: {
+            ...b.metadata,
+            ...(updates.image !== undefined && { cinematicImage: updates.image }),
+            ...(updates.imageFilter !== undefined && { imageFilter: updates.imageFilter }),
+            ...(updates.mood !== undefined && { mood: updates.mood }),
+          },
+        };
+      })
+    );
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col animate-fadeIn font-sans bg-[#fbfbfd] text-[#1d1d1f]">
+      <EditorHeader
+        onBack={handleBack}
+        onSave={handleSave}
+        isSaving={isSaving}
+      />
+
+      <div
+        className="no-scrollbar flex-1 overflow-y-auto pb-24 pt-[44px]"
+        onClick={handleDeselectBlocks}
+        role="presentation"
+      >
+        <div className="px-8 pt-4 max-w-2xl mx-auto">
+          <header className="space-y-2 text-center">
+            <div
+              className="relative"
+              onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setTitleFocused(false); }}
+            >
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onFocus={() => setTitleFocused(true)}
+                placeholder={t('editor.title')}
+                className="w-full font-bold focus:outline-none bg-transparent placeholder:text-[#86868b]"
+                style={{
+                  fontSize: titleStyle?.fontSize === 'small' ? '1.25rem' : titleStyle?.fontSize === 'large' ? '1.75rem' : '1.5rem',
+                  color: titleStyle?.textColor ?? '#1d1d1f',
+                  textAlign: titleStyle?.textAlign ?? 'center',
+                }}
+                maxLength={100}
+              />
+              {titleFocused && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingBlock(null);
+                    setEditingTarget('title');
+                    setIsEditPanelOpen(true);
+                  }}
+                  className="absolute top-0 right-0 z-10 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
+                  aria-label={t('editor.editTitle')}
+                >
+                  <Edit2 size={10} strokeWidth={2.5} />
+                  <span>{t('common.edit')}</span>
+                </button>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="editor-location" className="sr-only">
+                {t('cinematic.location')}
+              </label>
+              <input
+                id="editor-location"
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder={t('upload.locationPlaceholder')}
+                className="w-full text-sm text-center text-[#86868b] focus:text-[#1d1d1f] focus:outline-none bg-transparent placeholder:text-[#86868b]"
+                maxLength={120}
+              />
+            </div>
+
+            <div
+              className="relative"
+              onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDescriptionFocused(false); }}
+            >
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onFocus={() => setDescriptionFocused(true)}
+                placeholder={t('editor.description')}
+                className="w-full resize-none focus:outline-none bg-transparent rounded-xl py-2 placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80 text-sm"
+                style={{
+                  minHeight: 56,
+                  fontSize: descriptionStyle?.fontSize === 'small' ? 13 : descriptionStyle?.fontSize === 'large' ? 17 : 14,
+                  color: descriptionStyle?.textColor ?? '#1d1d1f',
+                  textAlign: descriptionStyle?.textAlign ?? 'center',
+                }}
+                rows={1}
+                maxLength={500}
+              />
+              {descriptionFocused && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingBlock(null);
+                    setEditingTarget('description');
+                    setIsEditPanelOpen(true);
+                  }}
+                  className="absolute top-0 right-0 z-10 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
+                  aria-label={t('editor.editDescription')}
+                >
+                  <Edit2 size={10} strokeWidth={2.5} />
+                  <span>{t('common.edit')}</span>
+                </button>
+              )}
+            </div>
+          </header>
+
+          <div className="space-y-3">
+            {sortedBlocks.map((block, index) => (
+              <ContentBlock
+                key={block.id}
+                block={block}
+                index={index}
+                isSelected={selectedBlockId === block.id}
+                onClick={() => handleBlockClick(block.id)}
+                onEdit={() => handleEditBlock(block.id)}
+                onTextChange={handleTextBlockChange}
+                onCinematicUpdate={handleCinematicBlockUpdate}
+              />
+            ))}
+          </div>
+
+          <div
+            className="fixed left-0 right-0 z-10 flex justify-center items-center pointer-events-none"
+            style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}
+          >
+            <div className="pointer-events-auto flex justify-center w-full max-w-[280px] px-4">
+              <AddBlockButton onAddClick={handleOpenAddPanel} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <EditPanel
+        isOpen={isEditPanelOpen}
+        onClose={handleCloseEditPanel}
+        block={editingBlock}
+        isNewlyAddedBlock={editingBlock != null && editingBlock.id === newlyAddedBlockId}
+        editingTarget={editingTarget}
+        titleData={{ title, titleStyle }}
+        descriptionData={{ description, descriptionStyle }}
+        onSaveTitle={handleSaveTitle}
+        onSaveDescription={handleSaveDescription}
+        onSave={handleSaveBlock}
+        onDelete={handleDeleteBlock}
+        onDiscard={handleDiscardBlock}
+        onSelectType={handleSelectType}
+        onSelectCinematicTemplate={handleSelectCinematicTemplate}
+        onSelectSectionTemplate={handleSelectSectionTemplate}
+        onInsertGeneratedContent={handleInsertGeneratedContent}
+        onInsertGeneratedBlocks={handleInsertGeneratedBlocks}
+      />
+    </div>
+  );
 }
 
 export default function TravelEditorPage() {

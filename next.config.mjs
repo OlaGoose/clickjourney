@@ -1,5 +1,13 @@
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      'framer-motion',
+      '@tiptap/react',
+      '@tiptap/starter-kit',
+    ],
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**" },

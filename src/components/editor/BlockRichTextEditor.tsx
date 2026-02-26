@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -28,7 +28,19 @@ interface BlockRichTextEditorProps {
 
 /** Lightweight rich text editor for block panel: text formatting + color only (no image/video/audio). */
 export default function BlockRichTextEditor({ content, onChange, placeholder }: BlockRichTextEditorProps) {
+  // Toolbar tick: throttled so we don't trigger a React re-render on every single
+  // TipTap transaction (every keystroke). We only need to re-render the toolbar
+  // when the active marks/nodes change, not on every character.
   const [, setToolbarTick] = useState(0);
+  const toolbarRafRef = useRef<number | null>(null);
+
+  // Track whether the last HTML change originated from the editor itself (user typing)
+  // vs. from the parent prop. This prevents the content sync effect from calling
+  // setContent() after the editor already emitted the same HTML, which would
+  // trigger an extra onUpdate → onChange → parent re-render cycle.
+  const isInternalUpdateRef = useRef(false);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -55,25 +67,47 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
       },
     },
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      isInternalUpdateRef.current = true;
+      onChangeRef.current(editor.getHTML());
     },
   });
 
+  // Sync external content changes into TipTap — but skip when the update
+  // originated from the editor itself (user typing) to avoid the feedback loop:
+  // user types → onUpdate → onChange → parent sets content prop → this effect
+  // → setContent() → onUpdate fires again.
   useEffect(() => {
     if (!editor) return;
-    if (content !== editor.getHTML()) {
-      editor.commands.setContent(content || '<p></p>');
+    if (isInternalUpdateRef.current) {
+      isInternalUpdateRef.current = false;
+      return;
+    }
+    const current = editor.getHTML();
+    if (content !== current) {
+      editor.commands.setContent(content || '<p></p>', { emitUpdate: false });
     }
   }, [content, editor]);
 
+  // Throttle toolbar re-renders using rAF so each keystroke only schedules one
+  // React update instead of immediately calling setState.
   useEffect(() => {
     if (!editor) return;
-    const onUpdate = () => setToolbarTick((t) => t + 1);
-    editor.on('selectionUpdate', onUpdate);
-    editor.on('transaction', onUpdate);
+    const scheduleToolbarUpdate = () => {
+      if (toolbarRafRef.current !== null) return;
+      toolbarRafRef.current = requestAnimationFrame(() => {
+        toolbarRafRef.current = null;
+        setToolbarTick((t) => t + 1);
+      });
+    };
+    editor.on('selectionUpdate', scheduleToolbarUpdate);
+    editor.on('transaction', scheduleToolbarUpdate);
     return () => {
-      editor.off('selectionUpdate', onUpdate);
-      editor.off('transaction', onUpdate);
+      editor.off('selectionUpdate', scheduleToolbarUpdate);
+      editor.off('transaction', scheduleToolbarUpdate);
+      if (toolbarRafRef.current !== null) {
+        cancelAnimationFrame(toolbarRafRef.current);
+        toolbarRafRef.current = null;
+      }
     };
   }, [editor]);
 

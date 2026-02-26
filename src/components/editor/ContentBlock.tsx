@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { Edit2, Image, Video, Music, Type, FileText, LayoutTemplate, Minus } from 'lucide-react';
 import PhotoGrid from '@/components/PhotoGrid';
 import GalleryModal from '@/components/GalleryModal';
@@ -60,7 +60,7 @@ function contentBlockToStoryBlock(block: ContentBlockType): StoryBlock {
 }
 
 /** Apple light mode only: clean white/gray surfaces, #1d1d1f text. */
-export function ContentBlock({
+export const ContentBlock = memo(function ContentBlock({
   block,
   index = 0,
   isSelected = false,
@@ -336,4 +336,14 @@ export function ContentBlock({
       )}
     </div>
   );
-}
+}, (prev, next) => {
+  // Only re-render when the block data, selection state, or read-only mode changes.
+  // Stable callbacks (wrapped in useCallback) are excluded from comparison to avoid
+  // invalidating the memo on every parent render.
+  return (
+    prev.block === next.block &&
+    prev.isSelected === next.isSelected &&
+    prev.readOnly === next.readOnly &&
+    prev.index === next.index
+  );
+});
