@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { Edit2, Image, Video, Music, Type, FileText, LayoutTemplate, Minus } from 'lucide-react';
+import { useLocale } from '@/lib/i18n';
 import PhotoGrid from '@/components/PhotoGrid';
 import GalleryModal from '@/components/GalleryModal';
 import { GalleryDisplayView } from '@/components/upload/GalleryDisplay';
@@ -70,6 +71,7 @@ export const ContentBlock = memo(function ContentBlock({
   onCinematicUpdate,
   readOnly = false,
 }: ContentBlockProps) {
+  const { t } = useLocale();
   const [showGallery, setShowGallery] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const { ref: textareaRef, syncHeight } = useAutoHeightTextarea(block.type === 'text' ? block.content : '');
@@ -151,12 +153,12 @@ export const ContentBlock = memo(function ContentBlock({
               syncHeight();
             }}
             onInput={syncHeight}
-            placeholder="描述"
+            placeholder={t('editor.description')}
             rows={1}
             maxLength={500}
             style={{ minHeight: TEXTAREA_MIN_HEIGHT_PX, color: textBlockColor }}
             className={`w-full resize-none overflow-hidden focus:outline-none bg-transparent rounded-xl py-3 placeholder:text-[#86868b] focus:bg-[#f5f5f7]/80 ${textBlockAlign} ${textBlockSize}`}
-            aria-label="文本内容"
+            aria-label={t('editor.textContent')}
           />
         );
       case 'richtext': {
@@ -179,7 +181,7 @@ export const ContentBlock = memo(function ContentBlock({
                 dangerouslySetInnerHTML={{ __html: safeHtml }}
               />
             ) : (
-              <p className="text-[#86868b] text-[13px]">富文本</p>
+              <p className="text-[#86868b] text-[13px]">{t('editor.blockRichtext')}</p>
             )}
           </div>
         );
@@ -209,14 +211,14 @@ export const ContentBlock = memo(function ContentBlock({
                 <GalleryDisplayView
                   images={images}
                   onImageClick={openGallery}
-                  ariaLabel="区块照片"
+                  ariaLabel={t('editor.blockPhoto')}
                 />
               ) : (
                 <PhotoGrid
                   images={images}
                   onImageClick={openGallery}
                   totalCount={images.length}
-                  ariaLabel="区块照片"
+                  ariaLabel={t('editor.blockPhoto')}
                 />
               )
             ) : (
@@ -260,7 +262,7 @@ export const ContentBlock = memo(function ContentBlock({
               src={block.content}
               controls
               className="w-full h-8 [&::-webkit-media-controls-panel]:bg-transparent"
-              aria-label="音频播放"
+              aria-label={t('editor.audioPlayback')}
             >
               Your browser does not support the audio tag.
             </audio>
@@ -270,10 +272,10 @@ export const ContentBlock = memo(function ContentBlock({
             className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.1] py-3.5 text-[#86868b] hover:border-black/[0.14] hover:bg-black/[0.02] transition-colors cursor-pointer"
             onClick={(e) => { e.stopPropagation(); if (!readOnly) onClick?.(); }}
             role="button"
-            aria-label="添加音频"
+            aria-label={t('editor.addAudio')}
           >
             <Music size={16} strokeWidth={2} aria-hidden />
-            <span className="text-[13px] font-medium">添加音频</span>
+            <span className="text-[13px] font-medium">{t('editor.addAudio')}</span>
           </div>
         );
       default:
@@ -327,10 +329,10 @@ export const ContentBlock = memo(function ContentBlock({
             onEdit();
           }}
           className="absolute top-2 right-2 flex items-center gap-1 rounded-full pl-2.5 pr-2.5 py-1.5 text-[11px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-200 active:scale-[0.98]"
-          aria-label="编辑内容块"
+          aria-label={t('editor.editContentBlock')}
         >
           <Edit2 size={10} strokeWidth={2.5} />
-          <span>编辑</span>
+          <span>{t('common.edit')}</span>
         </button>
       )}
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { useLocale } from '@/lib/i18n';
 import { fileToUrlOrDataUrl } from '@/lib/upload-media';
 
 interface MediaUploaderProps {
@@ -13,6 +14,7 @@ interface MediaUploaderProps {
 }
 
 export default function MediaUploader({ type, files, onChange, maxFiles = 10, userId }: MediaUploaderProps) {
+  const { t } = useLocale();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -46,16 +48,16 @@ export default function MediaUploader({ type, files, onChange, maxFiles = 10, us
   };
 
   const labels = {
-    image: 'Photos',
-    audio: 'Audio',
-    video: 'Videos',
+    image: t('upload.photosLabel'),
+    audio: t('upload.audioLabel'),
+    video: t('upload.videosLabel'),
   };
 
   const handleFileSelect = async (selectedFiles: FileList | null) => {
     if (!selectedFiles || selectedFiles.length === 0) return;
 
     if (files.length + selectedFiles.length > maxFiles) {
-      alert(`Maximum ${maxFiles} files allowed`);
+      alert(t('upload.maxFilesAllowed').replace('{count}', String(maxFiles)));
       return;
     }
 
@@ -73,7 +75,7 @@ export default function MediaUploader({ type, files, onChange, maxFiles = 10, us
       onChange([...files, ...newFiles]);
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload files');
+      alert(t('upload.uploadFailed'));
     } finally {
       setIsUploading(false);
     }

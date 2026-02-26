@@ -43,7 +43,7 @@ export function SectionBlockRenderer({
               >
                 {item.image && <img src={item.image} alt="" className="w-full h-full object-cover" />}
               </div>
-              <p className="mt-2 text-[13px] font-medium truncate">{item.title || '标题'}</p>
+              <p className="mt-2 text-[13px] font-medium truncate">{item.title || t('editor.title')}</p>
               {item.ctaLabel && (
                 <span className={`text-[12px] font-medium ${linkClass}`}>{item.ctaLabel}</span>
               )}
@@ -108,11 +108,11 @@ export function SectionBlockRenderer({
       const d = data.agenda;
       if (!d?.items?.length) return <SectionPlaceholder label={t('editor.sectionAgenda')} className={base} />;
       return (
-        <section className={`${base} ${className}`} role="article" aria-label="体验旅程">
+        <section className={`${base} ${className}`} role="article" aria-label={t('editor.sectionAgenda')}>
           {/* Header */}
           <div className="pt-5 pb-3">
             <h2 className="text-[22px] font-bold text-[#1d1d1f] leading-snug mb-2">
-              {d.headline || '体验内容'}
+              {d.headline || t('editor.agendaHeadlinePlaceholder')}
             </h2>
             {d.intro && (
               <p className="text-[15px] text-[#6e6e73] leading-relaxed">
@@ -173,10 +173,10 @@ export function SectionBlockRenderer({
                   {/* Text Content */}
                   <div className="flex-1 min-w-0 text-left py-0.5">
                     <h3 className="text-[16px] font-semibold text-[#1d1d1f] leading-tight mb-1.5 group-hover:text-[#007aff] transition-colors duration-200">
-                      {item.title || '标题'}
+                      {item.title || t('editor.title')}
                     </h3>
                     <p className="text-[14px] text-[#6e6e73] leading-relaxed line-clamp-3">
-                      {item.description || '描述'}
+                      {item.description || t('editor.description')}
                     </p>
                   </div>
                 </button>

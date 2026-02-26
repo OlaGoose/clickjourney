@@ -11,6 +11,7 @@ import BlockRichTextEditor from '@/components/editor/BlockRichTextEditor';
 import type { ContentBlock, ContentBlockType, DividerStyle, ImageDisplayMode, SectionBlockData, SectionTemplateId, TitleStyle } from '@/types/editor';
 import type { AIGeneratedDocBlock } from '@/types/ai-document-blocks';
 import type { LayoutType } from '@/types/cinematic';
+import type { MessageKey } from '@/lib/i18n/types';
 import { CINEMATIC_TEMPLATES, ALL_CINEMATIC_LAYOUTS } from '@/lib/editor-cinematic-templates';
 import { SECTION_TEMPLATES, getDefaultSectionData } from '@/lib/editor-section-templates';
 import { CinematicTemplatePreview } from '@/components/editor/CinematicTemplatePreview';
@@ -71,14 +72,28 @@ interface EditPanelProps {
   onSaveDescription?: (data: { description: string; descriptionStyle?: TitleStyle }) => void;
 }
 
-/** 基础内容类型（分割线已并入模板列表）. */
-const BLOCK_TYPES: { type: ContentBlockType; icon: typeof Type; label: string }[] = [
-  { type: 'text', icon: Type, label: '文本' },
-  { type: 'richtext', icon: FileText, label: '富文本' },
-  { type: 'image', icon: ImageIcon, label: '图片' },
-  { type: 'video', icon: VideoIcon, label: '视频' },
-  { type: 'audio', icon: MusicIcon, label: '音频' },
-];
+/** Block type options for type picker; labels come from i18n. */
+function getBlockTypeOptions(t: (k: MessageKey) => string): { type: ContentBlockType; icon: typeof Type; label: string }[] {
+  return [
+    { type: 'text', icon: Type, label: t('editor.blockText') },
+    { type: 'richtext', icon: FileText, label: t('editor.blockRichtext') },
+    { type: 'image', icon: ImageIcon, label: t('editor.blockImage') },
+    { type: 'video', icon: VideoIcon, label: t('editor.blockVideo') },
+    { type: 'audio', icon: MusicIcon, label: t('editor.blockAudio') },
+  ];
+}
+
+/** Cinematic layout label from i18n. */
+function getCinematicLayoutLabel(layout: LayoutType, t: (k: MessageKey) => string): string {
+  const keyMap: Record<LayoutType, MessageKey> = {
+    full_bleed: 'editor.cinematicFullBleed',
+    immersive_focus: 'editor.cinematicImmersiveFocus',
+    magazine_spread: 'editor.cinematicMagazineSpread',
+    portrait_feature: 'editor.cinematicPortraitFeature',
+    minimal_caption: 'editor.cinematicMinimalCaption',
+  };
+  return t(keyMap[layout] ?? 'editor.blockBlock');
+}
 
 /** Apple light mode only: white panel, gray controls, #1d1d1f text. Apple Arcade–inspired layout. */
 /** Returns true if two blocks have the same meaningful content (for cinematic/section template blocks). */
@@ -283,7 +298,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
       setIsRecording(true);
     } catch (err) {
       console.error('Microphone access failed:', err);
-      alert('无法访问麦克风，请检查权限后重试。');
+      alert(t('editor.micPermissionDenied'));
     }
   }, []);
 
@@ -354,11 +369,11 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '生成失败');
-      if (!Array.isArray(data.blocks)) throw new Error('未返回内容块');
+      if (!res.ok) throw new Error(data.error || t('editor.generateFailed'));
+      if (!Array.isArray(data.blocks)) throw new Error(t('editor.generateFailed'));
       setAiGeneratedBlocks(data.blocks);
     } catch (e) {
-      setAiError(e instanceof Error ? e.message : '生成失败，请重试');
+      setAiError(e instanceof Error ? e.message : t('editor.generateFailed'));
     } finally {
       setAiLoading(false);
     }
@@ -514,16 +529,16 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
               type="button"
               onClick={() => setTemplatePanelOpen(false)}
               className="justify-self-start rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] active:scale-95 transition-all duration-200"
-              aria-label="返回"
+              aria-label={t('common.back')}
             >
               <ChevronLeft size={20} strokeWidth={2} />
             </button>
-            <h3 className="text-center text-[17px] font-semibold text-[#1d1d1f] tracking-tight">模板</h3>
+            <h3 className="text-center text-[17px] font-semibold text-[#1d1d1f] tracking-tight">{t('editor.templatePanelTitle')}</h3>
             <button
               type="button"
               onClick={onClose}
               className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] active:scale-95 transition-all duration-200"
-              aria-label="关闭"
+              aria-label={t('common.close')}
             >
               <X size={18} strokeWidth={2} />
             </button>
@@ -539,7 +554,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
               }`}
             >
               <LayoutTemplate size={16} strokeWidth={2} />
-              模板
+              {t('editor.templateTab')}
             </button>
             <button
               type="button"
@@ -551,36 +566,36 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
               }`}
             >
               <Sparkles size={16} strokeWidth={2} />
-              AI
+              {t('editor.aiTab')}
             </button>
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-3">
             {templateTab === 'template' && (
               <div className="space-y-2">
-                <p className="text-[13px] text-[#6e6e73] mb-3">选择布局即插入</p>
-                {unifiedTemplates.map((t) =>
-                  t.kind === 'cinematic' ? (
+                <p className="text-[13px] text-[#6e6e73] mb-3">{t('editor.chooseLayoutToInsert')}</p>
+                {unifiedTemplates.map((tpl) =>
+                  tpl.kind === 'cinematic' ? (
                     <button
-                      key={`c-${t.layout}`}
+                      key={`c-${tpl.layout}`}
                       type="button"
                       onClick={() => {
-                        onSelectCinematicTemplate?.(t.layout);
+                        onSelectCinematicTemplate?.(tpl.layout);
                         setTemplatePanelOpen(false);
                       }}
                       className="w-full flex items-center gap-4 rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99]"
                     >
                       <div className="flex-shrink-0 w-20 h-[52px] rounded-xl overflow-hidden bg-[#f5f5f7]">
-                        <CinematicTemplatePreview layout={t.layout} className="h-full w-full" />
+                        <CinematicTemplatePreview layout={tpl.layout} className="h-full w-full" />
                       </div>
-                      <span className="flex-1">{t.label}</span>
+                      <span className="flex-1">{getCinematicLayoutLabel(tpl.layout, t)}</span>
                       <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
                     </button>
-                  ) : t.kind === 'section' && onSelectSectionTemplate ? (
+                  ) : tpl.kind === 'section' && onSelectSectionTemplate ? (
                     <button
-                      key={`s-${t.id}`}
+                      key={`s-${tpl.id}`}
                       type="button"
                       onClick={() => {
-                        onSelectSectionTemplate(t.id);
+                        onSelectSectionTemplate(tpl.id);
                         setTemplatePanelOpen(false);
                       }}
                       className="w-full flex items-center gap-4 rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors active:scale-[0.99]"
@@ -588,10 +603,10 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                       <div className="flex-shrink-0 w-20 h-[52px] rounded-xl bg-[#f5f5f7] flex items-center justify-center">
                         <LayoutTemplate size={24} strokeWidth={2} className="text-[#86868b]" />
                       </div>
-                      <span className="flex-1">{t.label}</span>
+                      <span className="flex-1">{tpl.label}</span>
                       <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
                     </button>
-                  ) : t.kind === 'divider' && onSelectType ? (
+                  ) : tpl.kind === 'divider' && onSelectType ? (
                     <button
                       key="divider"
                       type="button"
@@ -604,7 +619,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                       <div className="flex-shrink-0 w-20 h-[52px] rounded-xl bg-[#f5f5f7] flex items-center justify-center">
                         <Minus size={24} strokeWidth={2} className="text-[#86868b]" />
                       </div>
-                      <span className="flex-1">{t.label}</span>
+                      <span className="flex-1">{tpl.label}</span>
                       <LayoutTemplate size={18} strokeWidth={2} className="text-[#86868b] flex-shrink-0" />
                     </button>
                   ) : null
@@ -632,7 +647,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                               type="button"
                               onClick={() => setAiImages((p) => p.filter((_, i) => i !== idx))}
                               className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center hover:bg-[#424245] transition-colors"
-                              aria-label="移除"
+                              aria-label={t('common.remove')}
                             >
                               <X size={10} strokeWidth={2.5} />
                             </button>
@@ -667,14 +682,14 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                       className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-black/[0.1] py-3 text-[13px] text-[#6e6e73] hover:bg-black/[0.02] transition-colors"
                     >
                       <ImageIcon size={16} strokeWidth={2} />
-                      图片（最多 {MAX_IMAGES} 张）
+                      {t('editor.aiImagesUpToSix')}
                     </button>
                   )}
                 </div>
                 <textarea
                   value={aiPrompt}
                   onChange={(e) => { setAiPrompt(e.target.value); setAiError(null); }}
-                  placeholder="描述场景或心情…"
+                  placeholder={t('editor.describeScene')}
                   className="w-full min-h-[80px] rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08] focus:border-transparent transition-shadow"
                   rows={3}
                 />
@@ -689,7 +704,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                   ) : (
                     <>
                       <Sparkles size={16} strokeWidth={2} className="inline-block align-middle mr-1.5" />
-                      生成
+                      {t('upload.generate')}
                     </>
                   )}
                 </button>
@@ -700,7 +715,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     onClick={handleInsertAsBlocks}
                     className="w-full rounded-full py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] active:scale-[0.98] flex items-center justify-center gap-2 transition-all"
                   >
-                    插入（{aiGeneratedBlocks.length}）
+                    {t('editor.insert')}（{aiGeneratedBlocks.length}）
                   </button>
                 )}
               </div>
@@ -735,15 +750,15 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
           <div className="grid grid-cols-3 items-center px-5 pb-2">
             <div />
             <h3 className="text-center text-[17px] font-semibold text-[#1d1d1f] tracking-tight">
-              {isTitle ? '编辑标题' : '编辑描述'}
+              {isTitle ? t('editor.editTitle') : t('editor.editDescription')}
             </h3>
-            <button type="button" onClick={onClose} className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] transition-all duration-200 active:scale-95" aria-label="关闭">
+            <button type="button" onClick={onClose} className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] transition-all duration-200 active:scale-95" aria-label={t('common.close')}>
               <X size={18} strokeWidth={2} />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto px-5 pb-8 pt-2 space-y-4">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[12px] text-[#6e6e73] mr-1">样式</span>
+              <span className="text-[12px] text-[#6e6e73] mr-1">{t('editor.styleLabel')}</span>
               <div className="flex rounded-full p-0.5 bg-black/[0.06]">
                 {(['left', 'center', 'right'] as const).map((a) => (
                   <button
@@ -751,7 +766,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     type="button"
                     onClick={() => setFieldStyle((s) => ({ ...s, textAlign: a }))}
                     className={`rounded-full p-2 transition-all ${align === a ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73]'}`}
-                    aria-label={a === 'left' ? '左对齐' : a === 'center' ? '居中' : '右对齐'}
+                    aria-label={a === 'left' ? t('editor.alignLeft') : a === 'center' ? t('editor.alignCenter') : t('editor.alignRight')}
                   >
                     {a === 'left' && <AlignLeft size={16} strokeWidth={2} />}
                     {a === 'center' && <AlignCenter size={16} strokeWidth={2} />}
@@ -767,7 +782,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     onClick={() => setFieldStyle((prev) => ({ ...prev, fontSize: s }))}
                     className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-all ${size === s ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73]'}`}
                   >
-                    {s === 'small' ? '小' : s === 'medium' ? '中' : '大'}
+                    {s === 'small' ? t('editor.sizeSmall') : s === 'medium' ? t('editor.sizeMedium') : t('editor.sizeLarge')}
                   </button>
                 ))}
               </div>
@@ -779,7 +794,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     onClick={() => setFieldStyle((prev) => ({ ...prev, textColor: hex }))}
                     className={`w-6 h-6 rounded-full border-2 transition-all ${color === hex ? 'border-[#1d1d1f] scale-110' : 'border-transparent'}`}
                     style={{ backgroundColor: hex }}
-                    aria-label="颜色"
+                    aria-label={t('editor.color')}
                   />
                 ))}
               </div>
@@ -789,7 +804,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                 type="text"
                 value={fieldValue}
                 onChange={(e) => setFieldValue(e.target.value)}
-                placeholder="标题"
+                placeholder={t('editor.title')}
                 className="w-full font-bold focus:outline-none rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[#1d1d1f] placeholder:text-[#86868b]"
                 style={{
                   fontSize: size === 'small' ? '1.25rem' : size === 'large' ? '1.75rem' : '1.5rem',
@@ -802,7 +817,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
               <textarea
                 value={fieldValue}
                 onChange={(e) => setFieldValue(e.target.value)}
-                placeholder="描述"
+                placeholder={t('editor.description')}
                 rows={5}
                 className="w-full resize-none focus:outline-none rounded-xl border border-black/[0.08] bg-white px-4 py-3 placeholder:text-[#86868b]"
                 style={{
@@ -818,7 +833,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
               onClick={handleSaveField}
               className="w-full rounded-full py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] active:scale-[0.98] transition-all"
             >
-              保存
+              {t('common.save')}
             </button>
           </div>
         </div>
@@ -850,13 +865,13 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
           <div className="grid grid-cols-3 items-center px-5 pb-2">
             <div />
             <h3 className="text-center text-[17px] font-semibold text-[#1d1d1f] tracking-tight">
-              添加内容
+              {t('editor.addContentHeading')}
             </h3>
             <button
               type="button"
               onClick={onClose}
               className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] transition-all duration-200 active:scale-95"
-              aria-label="关闭"
+              aria-label={t('common.close')}
             >
               <X size={18} strokeWidth={2} />
             </button>
@@ -871,9 +886,9 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f5f5f7]">
                   <LayoutTemplate size={26} strokeWidth={2} className="text-[#6e6e73]" />
                 </div>
-                <span className="text-[15px] font-semibold">模板</span>
+                <span className="text-[15px] font-semibold">{t('editor.template')}</span>
               </button>
-              {BLOCK_TYPES.map(({ type, icon: Icon, label }) => (
+              {getBlockTypeOptions(t).map(({ type, icon: Icon, label }) => (
                 <button
                   key={type}
                   type="button"
@@ -992,7 +1007,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
         return (
           <div className="flex-1 flex flex-col px-2 min-h-0">
             <div className="flex items-center gap-2 flex-wrap px-2 pb-2 border-b border-black/[0.06] mb-2">
-              <span className="text-[12px] text-[#6e6e73] mr-1">字体</span>
+              <span className="text-[12px] text-[#6e6e73] mr-1">{t('editor.fontLabel')}</span>
               <div className="flex rounded-full p-0.5 bg-black/[0.06]">
                 {(['left', 'center', 'right'] as const).map((align) => (
                   <button
@@ -1001,7 +1016,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     onClick={() => setTextAlign(align)}
                     className={`rounded-full p-2 transition-all ${textAlign === align ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73]'}`}
                     aria-pressed={textAlign === align}
-                    aria-label={align === 'left' ? '左对齐' : align === 'center' ? '居中' : '右对齐'}
+                    aria-label={align === 'left' ? t('editor.alignLeft') : align === 'center' ? t('editor.alignCenter') : t('editor.alignRight')}
                   >
                     {align === 'left' && <AlignLeft size={16} strokeWidth={2} />}
                     {align === 'center' && <AlignCenter size={16} strokeWidth={2} />}
@@ -1018,7 +1033,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition-all ${fontSize === size ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-[#6e6e73]'}`}
                     aria-pressed={fontSize === size}
                   >
-                    {size === 'small' ? '小' : size === 'medium' ? '中' : '大'}
+                    {size === 'small' ? t('editor.sizeSmall') : size === 'medium' ? t('editor.sizeMedium') : t('editor.sizeLarge')}
                   </button>
                 ))}
               </div>
@@ -1031,7 +1046,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     className={`w-6 h-6 rounded-full border-2 transition-all ${textColor === hex ? 'border-[#1d1d1f] scale-110' : 'border-transparent'}`}
                     style={{ backgroundColor: hex }}
                     aria-pressed={textColor === hex}
-                    aria-label="颜色"
+                    aria-label={t('editor.color')}
                   />
                 ))}
               </div>
@@ -1040,7 +1055,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
               ref={textareaRef}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder=""
+              placeholder={t('editor.content')}
               className="flex-1 min-h-0 w-full resize-none bg-transparent px-4 py-3.5 leading-relaxed rounded-xl focus:outline-none placeholder:text-[#86868b] focus:bg-black/[0.02] transition-colors"
               style={{
                 fontSize: fontSize === 'small' ? 14 : fontSize === 'medium' ? 15 : 17,
@@ -1059,7 +1074,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
               <BlockRichTextEditor
                 content={content}
                 onChange={setContent}
-                placeholder="内容"
+                placeholder={t('editor.content')}
               />
             </div>
           </div>
@@ -1068,7 +1083,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
       case 'divider':
         return (
           <div className="flex-1 px-4 space-y-4">
-            <p className="text-[13px] font-medium text-[#6e6e73]">样式</p>
+            <p className="text-[13px] font-medium text-[#6e6e73]">{t('editor.styleLabel')}</p>
             <div className="flex flex-wrap gap-2">
               {(['thin', 'default', 'accent'] as const).map((s) => (
                 <button
@@ -1082,7 +1097,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                   }`}
                   aria-pressed={dividerStyle === s}
                 >
-                  {s === 'thin' ? '细线' : s === 'default' ? '默认' : '带点'}
+                  {s === 'thin' ? t('editor.dividerThin') : s === 'default' ? t('editor.dividerDefault') : t('editor.dividerAccent')}
                 </button>
               ))}
             </div>
@@ -1116,7 +1131,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                   aria-pressed={imageDisplayMode === 'grid'}
                 >
                   <LayoutGrid size={14} strokeWidth={2} />
-                  网格
+                  {t('editor.grid')}
                 </button>
                 <button
                   type="button"
@@ -1129,7 +1144,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                   aria-pressed={imageDisplayMode === 'gallery'}
                 >
                   <Images size={14} strokeWidth={2} />
-                  相册
+                  {t('editor.gallery')}
                 </button>
               </div>
             </div>
@@ -1138,14 +1153,14 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                 {imageDisplayMode === 'gallery' ? (
                   <GalleryDisplayView
                     images={images}
-                    ariaLabel="编辑区块照片"
+                    ariaLabel={t('editor.editBlockPhoto')}
                     className="max-h-[320px]"
                   />
                 ) : (
                   <PhotoGrid
                     images={images}
                     totalCount={images.length}
-                    ariaLabel="编辑区块照片"
+                    ariaLabel={t('editor.editBlockPhoto')}
                     className="max-h-[320px]"
                   />
                 )}
@@ -1160,7 +1175,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     className="flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] transition-colors"
                   >
                     <Upload size={14} strokeWidth={2} />
-                    添加（{images.length}/{MAX_IMAGES}）
+                    {t('editor.add')}（{images.length}/{MAX_IMAGES}）
                   </button>
                 )}
               </div>
@@ -1173,7 +1188,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                 className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.1] hover:bg-black/[0.02] transition-colors active:scale-[0.99]"
               >
                 <ImageIcon size={28} className="text-[#86868b]" strokeWidth={1.5} />
-                <span className="text-[13px] text-[#6e6e73]">添加图片</span>
+                <span className="text-[13px] text-[#6e6e73]">{t('editor.addImage')}</span>
               </button>
             )}
           </div>
@@ -1202,7 +1217,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                   className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-[14px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] transition-all duration-200 active:scale-[0.98]"
                 >
                   <Upload size={16} strokeWidth={2} />
-                  替换视频
+                  {t('editor.replaceVideo')}
                 </button>
               </div>
             ) : (
@@ -1212,7 +1227,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                 className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.1] hover:bg-black/[0.02] transition-colors active:scale-[0.99]"
               >
                 <VideoIcon size={28} className="text-[#86868b]" strokeWidth={1.5} />
-                <span className="text-[13px] text-[#6e6e73]">添加视频</span>
+                <span className="text-[13px] text-[#6e6e73]">{t('editor.addVideo')}</span>
               </button>
             )}
           </div>
@@ -1245,39 +1260,39 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
               className="hidden"
             />
             <div ref={cinematicLayoutDropdownRef} className="relative">
-              <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">布局</label>
+              <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.layoutLabel')}</label>
               <button
                 type="button"
                 onClick={() => setCinematicLayoutDropdownOpen((o) => !o)}
                 className="w-full flex items-center justify-between rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] focus:outline-none focus:ring-1 focus:ring-black/[0.08] hover:bg-black/[0.02] transition-colors"
                 aria-expanded={cinematicLayoutDropdownOpen}
                 aria-haspopup="listbox"
-                aria-label="选择布局"
+                aria-label={t('editor.selectLayout')}
               >
-                <span>{ALL_CINEMATIC_LAYOUTS.find((t) => t.layout === cinematicLayout)?.label ?? cinematicLayout}</span>
+                <span>{getCinematicLayoutLabel(cinematicLayout, t)}</span>
                 <ChevronDown size={18} strokeWidth={2} className={`text-[#86868b] flex-shrink-0 transition-transform ${cinematicLayoutDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
               {cinematicLayoutDropdownOpen && (
                 <ul
                   role="listbox"
                   className="absolute left-0 right-0 top-full z-10 mt-1 rounded-xl border border-black/[0.08] bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
-                  aria-label="布局选项"
+                  aria-label={t('editor.layoutOptions')}
                 >
-                  {ALL_CINEMATIC_LAYOUTS.map((t) => (
-                    <li key={t.layout} role="option" aria-selected={cinematicLayout === t.layout}>
+                  {ALL_CINEMATIC_LAYOUTS.map((layoutOpt) => (
+                    <li key={layoutOpt.layout} role="option" aria-selected={cinematicLayout === layoutOpt.layout}>
                       <button
                         type="button"
                         onClick={() => {
-                          setCinematicLayout(t.layout);
+                          setCinematicLayout(layoutOpt.layout);
                           setCinematicLayoutDropdownOpen(false);
                         }}
                         className={`w-full text-left px-4 py-2.5 text-[15px] transition-colors ${
-                          cinematicLayout === t.layout
+                          cinematicLayout === layoutOpt.layout
                             ? 'bg-black/[0.06] text-[#1d1d1f] font-medium'
                             : 'text-[#1d1d1f] hover:bg-black/[0.04]'
                         }`}
                       >
-                        {t.label}
+                        {getCinematicLayoutLabel(layoutOpt.layout, t)}
                       </button>
                     </li>
                   ))}
@@ -1310,7 +1325,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                   disabled={uploadingImageSlot === 'cinematic'}
                   className="w-full rounded-full py-2.5 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  更换图片
+                  {t('editor.replaceImage')}
                 </button>
               </div>
             ) : uploadingImageSlot === 'cinematic' ? (
@@ -1325,15 +1340,15 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                 className="flex h-32 w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-black/[0.1] hover:bg-black/[0.02]"
               >
                 <ImageIcon size={24} className="text-[#86868b]" />
-                <span className="text-[13px] text-[#6e6e73]">添加图片</span>
+                <span className="text-[13px] text-[#6e6e73]">{t('editor.addImage')}</span>
               </button>
             )}
             <div>
-              <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">图注 / 文案</label>
+              <label className="block text-[13px] font-medium text-[#6e6e73] mb-1.5">{t('editor.captionOrCopy')}</label>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="描述这个瞬间..."
+                placeholder={t('editor.describeMoment')}
                 rows={3}
                 className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
               />
@@ -1550,7 +1565,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                         agenda: { ...prev.agenda!, headline: e.target.value },
                       }))
                     }
-                    placeholder="体验内容"
+                    placeholder={t('editor.agendaHeadlinePlaceholder')}
                     className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08]"
                   />
                 </div>
@@ -1566,7 +1581,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                         agenda: { ...prev.agenda!, intro: e.target.value },
                       }))
                     }
-                    placeholder="精心设计的行程，让每一步都充满期待。"
+                    placeholder={t('editor.agendaIntroPlaceholder')}
                     rows={2}
                     className="w-full rounded-xl border border-black/[0.08] bg-white px-4 py-2.5 text-[15px] text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-1 focus:ring-black/[0.08] resize-none"
                   />
@@ -1690,7 +1705,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
             />
             {content ? (
               <>
-                <div className="rounded-2xl bg-black/[0.04] ring-1 ring-black/[0.06] overflow-hidden" role="region" aria-label="音频播放">
+                <div className="rounded-2xl bg-black/[0.04] ring-1 ring-black/[0.06] overflow-hidden" role="region" aria-label={t('editor.audioPlayback')}>
                   <audio
                     src={content}
                     controls
@@ -1711,7 +1726,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     className="flex-1 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] transition-colors active:scale-[0.98]"
                   >
                     <Upload size={14} strokeWidth={2} aria-hidden />
-                    替换
+                    {t('editor.replace')}
                   </button>
                   <button
                     type="button"
@@ -1719,7 +1734,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                     className="flex-1 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] transition-colors active:scale-[0.98]"
                   >
                     <Mic size={14} strokeWidth={2} aria-hidden />
-                    重录
+                    {t('editor.rerecord')}
                   </button>
                 </div>
               </>
@@ -1731,7 +1746,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                   className="flex-1 flex items-center justify-center gap-2 rounded-full py-3.5 text-[14px] font-semibold bg-black/[0.06] text-[#1d1d1f] hover:bg-black/[0.09] transition-all duration-200 active:scale-[0.98]"
                 >
                   <Upload size={18} strokeWidth={2} />
-                  上传音频
+                  {t('editor.uploadAudio')}
                 </button>
                 <button
                   type="button"
@@ -1748,7 +1763,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                   ) : (
                     <Mic size={18} strokeWidth={2} />
                   )}
-                  {isRecording ? '停止' : '录制'}
+                  {isRecording ? t('editor.stop') : t('editor.record')}
                 </button>
               </div>
             )}
@@ -1791,15 +1806,15 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                 onClick={() => setDeleteConfirmOpen(false)}
                 className="justify-self-start rounded-full px-3.5 py-2 text-[13px] font-semibold text-[#6e6e73] hover:bg-black/[0.05] transition-all duration-200 active:scale-95"
               >
-                取消
+                {t('common.cancel')}
               </button>
-              <p className="justify-self-center text-[14px] font-medium text-[#1d1d1f] text-center">确定删除？</p>
+              <p className="justify-self-center text-[14px] font-medium text-[#1d1d1f] text-center">{t('editor.confirmDeleteTitle')}</p>
               <button
                 type="button"
                 onClick={() => { setDeleteConfirmOpen(false); onDelete(); }}
                 className="justify-self-end rounded-full px-3.5 py-2 text-[13px] font-semibold text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-all duration-200 active:scale-95"
               >
-                删除
+                {t('editor.delete')}
               </button>
             </>
           ) : (
@@ -1810,23 +1825,23 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
                 className="justify-self-start flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold text-[#ff3b30] hover:bg-[#ff3b30]/10 transition-all duration-200 active:scale-95"
               >
                 <Trash2 size={14} strokeWidth={2} />
-                删除
+                {t('editor.delete')}
               </button>
               <h3 className="justify-self-center text-[17px] font-semibold text-[#1d1d1f] tracking-tight">
-                {block.type === 'text' && '文本'}
-                {block.type === 'richtext' && '富文本'}
-                {block.type === 'image' && '图片'}
-                {block.type === 'video' && '视频'}
-                {block.type === 'audio' && '音频'}
-                {block.type === 'cinematic' && (ALL_CINEMATIC_LAYOUTS.find((t) => t.layout === block.metadata?.cinematicLayout)?.label ?? '区块')}
-                {block.type === 'section' && (sectionTemplateId === 'marquee' ? t('editor.sectionMarquee') : sectionTemplateId === 'friends' ? t('editor.sectionFriends') : sectionTemplateId === 'agenda' ? t('editor.sectionAgenda') : '区块')}
-                {block.type === 'divider' && '分割线'}
+                {block.type === 'text' && t('editor.blockText')}
+                {block.type === 'richtext' && t('editor.blockRichtext')}
+                {block.type === 'image' && t('editor.blockImage')}
+                {block.type === 'video' && t('editor.blockVideo')}
+                {block.type === 'audio' && t('editor.blockAudio')}
+                {block.type === 'cinematic' && getCinematicLayoutLabel(block.metadata?.cinematicLayout ?? 'full_bleed', t)}
+                {block.type === 'section' && (sectionTemplateId === 'marquee' ? t('editor.sectionMarquee') : sectionTemplateId === 'friends' ? t('editor.sectionFriends') : sectionTemplateId === 'agenda' ? t('editor.sectionAgenda') : t('editor.blockBlock'))}
+                {block.type === 'divider' && t('editor.sectionDivider')}
               </h3>
               <button
                 type="button"
                 onClick={handleClose}
                 className="justify-self-end rounded-full p-2.5 text-[#1d1d1f] hover:bg-black/[0.04] transition-all duration-200 active:scale-95"
-                aria-label="关闭"
+                aria-label={t('common.close')}
               >
                 <X size={18} strokeWidth={2} />
               </button>
@@ -1842,7 +1857,7 @@ export function EditPanel({ isOpen, onClose, block, isNewlyAddedBlock, onSave, o
             onClick={handleSave}
             className="w-full rounded-full py-3 text-[15px] font-semibold bg-[#1d1d1f] text-white hover:bg-[#424245] transition-colors active:scale-[0.98]"
           >
-            完成
+            {t('editor.done')}
           </button>
         </div>
       </div>

@@ -8,6 +8,7 @@ import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
+import { useLocale } from '@/lib/i18n';
 
 const PRESET_COLORS = [
   '#1d1d1f',
@@ -28,16 +29,10 @@ interface BlockRichTextEditorProps {
 
 /** Lightweight rich text editor for block panel: text formatting + color only (no image/video/audio). */
 export default function BlockRichTextEditor({ content, onChange, placeholder }: BlockRichTextEditorProps) {
-  // Toolbar tick: throttled so we don't trigger a React re-render on every single
-  // TipTap transaction (every keystroke). We only need to re-render the toolbar
-  // when the active marks/nodes change, not on every character.
+  const { t } = useLocale();
   const [, setToolbarTick] = useState(0);
   const toolbarRafRef = useRef<number | null>(null);
 
-  // Track whether the last HTML change originated from the editor itself (user typing)
-  // vs. from the parent prop. This prevents the content sync effect from calling
-  // setContent() after the editor already emitted the same HTML, which would
-  // trigger an extra onUpdate → onChange → parent re-render cycle.
   const isInternalUpdateRef = useRef(false);
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
@@ -49,7 +44,7 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
         heading: { levels: [1, 2, 3] },
       }),
       Placeholder.configure({
-        placeholder: placeholder || '输入内容…',
+        placeholder: placeholder ?? t('editor.inputPlaceholder'),
       }),
       Link.configure({
         openOnClick: false,
@@ -135,8 +130,8 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={btnClass(editor.isActive('bold'))}
-          title="粗体"
-          aria-label="粗体"
+          title={t('editor.bold')}
+          aria-label={t('editor.bold')}
         >
           <strong className="text-sm">B</strong>
         </button>
@@ -144,8 +139,8 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
           type="button"
           onClick={() => editor.chain().focus().toggleItalic().run()}
           className={btnClass(editor.isActive('italic'))}
-          title="斜体"
-          aria-label="斜体"
+          title={t('editor.italic')}
+          aria-label={t('editor.italic')}
         >
           <em className="text-sm">I</em>
         </button>
@@ -154,7 +149,7 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
           type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           className={btnClass(editor.isActive('heading', { level: 1 }))}
-          title="标题 1"
+          title={t('editor.heading1')}
         >
           <span className="text-xs font-bold">H1</span>
         </button>
@@ -162,7 +157,7 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
           type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           className={btnClass(editor.isActive('heading', { level: 2 }))}
-          title="标题 2"
+          title={t('editor.heading2')}
         >
           <span className="text-xs font-bold">H2</span>
         </button>
@@ -170,7 +165,7 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
           type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
           className={btnClass(editor.isActive('heading', { level: 3 }))}
-          title="标题 3"
+          title={t('editor.heading3')}
         >
           <span className="text-xs font-bold">H3</span>
         </button>
@@ -179,7 +174,7 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
           type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           className={btnClass(editor.isActive('bulletList'))}
-          title="无序列表"
+          title={t('editor.bulletList')}
         >
           •
         </button>
@@ -187,7 +182,7 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
           type="button"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           className={btnClass(editor.isActive('orderedList'))}
-          title="有序列表"
+          title={t('editor.numberedList')}
         >
           <span className="text-xs font-medium">1.</span>
         </button>
@@ -195,7 +190,7 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
           type="button"
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           className={btnClass(editor.isActive('blockquote'))}
-          title="引用"
+          title={t('editor.quote')}
         >
           &quot;
         </button>
@@ -204,7 +199,7 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
           type="button"
           onClick={() => editor.chain().focus().setTextAlign('left').run()}
           className={btnClass(editor.isActive({ textAlign: 'left' }))}
-          title="左对齐"
+          title={t('editor.alignLeft')}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="3" y1="6" x2="21" y2="6" />
@@ -216,7 +211,7 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
           type="button"
           onClick={() => editor.chain().focus().setTextAlign('center').run()}
           className={btnClass(editor.isActive({ textAlign: 'center' }))}
-          title="居中"
+          title={t('editor.alignCenter')}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="3" y1="6" x2="21" y2="6" />
@@ -228,7 +223,7 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
           type="button"
           onClick={() => editor.chain().focus().setTextAlign('right').run()}
           className={btnClass(editor.isActive({ textAlign: 'right' }))}
-          title="右对齐"
+          title={t('editor.alignRight')}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="3" y1="6" x2="21" y2="6" />
@@ -237,7 +232,7 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
           </svg>
         </button>
         <span className="w-px h-5 bg-black/10 mx-0.5" aria-hidden />
-        <div className="flex items-center gap-0.5" role="group" aria-label="文字颜色">
+        <div className="flex items-center gap-0.5" role="group" aria-label={t('editor.textColorLabel')}>
           {PRESET_COLORS.map((hex) => (
             <button
               key={hex}
@@ -246,16 +241,16 @@ export default function BlockRichTextEditor({ content, onChange, placeholder }: 
               className="h-6 w-6 rounded-md border border-black/10 shrink-0 hover:ring-2 hover:ring-black/10 transition-shadow"
               style={{ backgroundColor: hex }}
               title={hex}
-              aria-label={`颜色 ${hex}`}
+              aria-label={`${t('editor.color')} ${hex}`}
             />
           ))}
           <button
             type="button"
             onClick={() => editor.chain().focus().unsetColor().run()}
             className={btnClass(false)}
-            title="清除颜色"
+            title={t('editor.clearColor')}
           >
-            <span className="text-[10px] font-medium text-[#86868b]">清除</span>
+            <span className="text-[10px] font-medium text-[#86868b]">{t('editor.clear')}</span>
           </button>
         </div>
       </div>
